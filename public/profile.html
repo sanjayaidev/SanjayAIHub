@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SanjayAIHub · Profile</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0c10;
+            min-height: 100vh;
+            padding: 16px;
+            color: #eef0f7;
+        }
+
+        .dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(18, 22, 28, 0.85);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-radius: 40px;
+            box-shadow: 0 30px 60px -12px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.04);
+            overflow: hidden;
+            min-height: 92vh;
+        }
+
+        /* ── Header ── */
+        .profile-header {
+            padding: 24px 32px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            color: #8896b0;
+            padding: 8px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: #eef2f9;
+        }
+
+        .header-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #f0f4fe;
+        }
+
+        .header-title i {
+            color: #00e8a2;
+            margin-right: 10px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-badge.active {
+            background: rgba(0,232,162,0.12);
+            color: #00e8a2;
+            border: 1px solid rgba(0,232,162,0.2);
+        }
+
+        .status-badge.inactive {
+            background: rgba(255,90,90,0.1);
+            color: #ff6b6b;
+            border: 1px solid rgba(255,90,90,0.15);
+        }
+
+        /* ── Main Layout ── */
+        .profile-body {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        @media (max-width: 900px) {
+            .profile-body {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ── Sidebar (Profile Nav) ── */
+        .profile-sidebar {
+            background: rgba(12, 16, 22, 0.6);
+            border-right: 1px solid rgba(255,255,255,0.04);
+            padding: 24px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .profile-avatar-section {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            margin-bottom: 16px;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00e8a2, #00b37a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: #060d0b;
+            margin: 0 auto 10px;
+            box-shadow: 0 8px 24px -6px rgba(0,232,162,0.3);
+        }
+
+        .profile-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #f0f4fe;
+        }
+
+        .profile-email {
+            font-size: 13px;
+            color: #8896b0;
+        }
+
+        .profile-plan {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 2px 14px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .profile-plan.trial { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
+        .profile-plan.basic { background: rgba(77,142,255,0.12); color: #4d8eff; border: 1px solid rgba(77,142,255,0.2); }
+        .profile-plan.pro { background: rgba(167,139,250,0.12); color: #a78bfa; border: 1px solid rgba(167,139,250,0.2); }
+        .profile-plan.enterprise { background: rgba(0,232,162,0.12); color: #00e8a2; border: 1px solid rgba(0,232,162,0.2); }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            color: #8896b0;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid transparent;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.04);
+            color: #eef2f9;
+        }
+
+        .nav-item.active {
+            background: rgba(0,232,162,0.08);
+            color: #00e8a2;
+            border-color: rgba(0,232,162,0.15);
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .nav-item .badge {
+            margin-left: auto;
+            font-size: 10px;
+            background: rgba(255,255,255,0.06);
+            padding: 1px 8px;
+            border-radius: 10px;
+            color: #5b6a84;
+        }
+
+        /* ── Content Area ── */
+        .profile-content {
+            padding: 24px 32px;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
+        .profile-content::-webkit-scrollbar { width: 4px; }
+        .profile-content::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(8px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .tab-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #f0f4fe;
+            margin-bottom: 4px;
+        }
+
+        .tab-subtitle {
+            color: #8896b0;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        /* ── Cards ── */
+        .card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 20px 24px;
+            margin-bottom: 16px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #eef2f9;
+        }
+
+        .card-title i {
+            color: #00e8a2;
+            margin-right: 8px;
+        }
+
+        /* ── API Key Form ── */
+        .api-key-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        @media (max-width: 600px) {
+            .api-key-group {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .api-key-group .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6a7a94;
+            margin-bottom: 4px;
+        }
+
+        .form-label .required {
+            color: #ff6b6b;
+        }
+
+        .form-input {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: #eef2f9;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: #00e8a2;
+            box-shadow: 0 0 0 4px rgba(0,232,162,0.08);
+        }
+
+        .form-input::placeholder {
+            color: #4d5872;
+        }
+
+        .form-input.password-input {
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 1px;
+        }
+
+        .form-hint {
+            font-size: 11px;
+            color: #6a7a94;
+            margin-top: 4px;
+        }
+
+        .form-hint i {
+            color: #00e8a2;
+            margin-right: 4px;
+        }
+
+        .btn {
+            padding: 8px 20px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: #00e8a2;
+            color: #060d0b;
+            box-shadow: 0 8px 24px -8px rgba(0,232,162,0.3);
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.08);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            color: #8896b0;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.1);
+            color: #eef2f9;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: #060d0b;
+        }
+
+        .btn-success:hover {
+            filter: brightness(1.05);
+        }
+
+        .btn-danger {
+            background: rgba(255,90,90,0.1);
+            color: #ff9b9b;
+            border: 1px solid rgba(255,90,90,0.15);
+        }
+
+        .btn-danger:hover {
+            background: rgba(255,90,90,0.2);
+        }
+
+        .btn-sm {
+            padding: 5px 14px;
+            font-size: 11px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        /* ── API Key Status Indicators ── */
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .api-status .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .api-status .dot.configured {
+            background: #00e8a2;
+        }
+
+        .api-status .dot.missing {
+            background: #ff6b6b;
+        }
+
+        .api-status .dot.testing {
+            background: #fbbf24;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* ── Module Access Grid ── */
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .module-access-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: 0.2s;
+        }
+
+        .module-access-item:hover {
+            border-color: rgba(255,255,255,0.1);
+        }
+
+        .module-access-item .icon {
+            font-size: 18px;
+            width: 32px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .module-access-item .info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .module-access-item .info .name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #eef2f9;
+        }
+
+        .module-access-item .info .tier {
+            font-size: 10px;
+            color: #6a7a94;
+        }
+
+        .module-access-item .access-badge {
+            font-size: 10px;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .module-access-item .access-badge.allowed {
+            background: rgba(0,232,162,0.12);
+            color: #00e8a2;
+        }
+
+        .module-access-item .access-badge.limited {
+            background: rgba(251,191,36,0.12);
+            color: #fbbf24;
+        }
+
+        .module-access-item .access-badge.blocked {
+            background: rgba(255,90,90,0.1);
+            color: #ff6b6b;
+        }
+
+        .module-access-item .usage-progress {
+            width: 60px;
+            height: 4px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 4px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .module-access-item .usage-progress .fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        .module-access-item .usage-progress .fill.low { background: #00e8a2; }
+        .module-access-item .usage-progress .fill.medium { background: #fbbf24; }
+        .module-access-item .usage-progress .fill.high { background: #ff6b6b; }
+
+        /* ── Plan Cards ── */
+        .plan-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 14px;
+            margin-top: 8px;
+        }
+
+        .plan-card {
+            background: rgba(255,255,255,0.03);
+            border: 2px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 18px 20px;
+            text-align: center;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+
+        .plan-card:hover {
+            border-color: rgba(255,255,255,0.12);
+            transform: translateY(-2px);
+        }
+
+        .plan-card.current {
+            border-color: #00e8a2;
+            background: rgba(0,232,162,0.06);
+        }
+
+        .plan-card .plan-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #f0f4fe;
+        }
+
+        .plan-card .plan-price {
+            font-size: 24px;
+            font-weight: 700;
+            color: #00e8a2;
+            margin: 6px 0;
+        }
+
+        .plan-card .plan-price small {
+            font-size: 13px;
+            font-weight: 400;
+            color: #6a7a94;
+        }
+
+        .plan-card .plan-features {
+            font-size: 12px;
+            color: #8896b0;
+            line-height: 1.8;
+            margin: 8px 0;
+        }
+
+        .plan-card .plan-features i {
+            color: #00e8a2;
+            margin-right: 4px;
+        }
+
+        .plan-card .current-badge {
+            font-size: 10px;
+            font-weight: 600;
+            color: #00e8a2;
+            background: rgba(0,232,162,0.12);
+            padding: 2px 12px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1a1f29;
+            color: #eef2f9;
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            transform: translateY(80px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 999;
+            font-size: 13px;
+            max-width: 400px;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-color: rgba(0,232,162,0.3);
+        }
+
+        .toast.error {
+            border-color: rgba(255,90,90,0.3);
+            color: #ff9b9b;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 600px) {
+            .dashboard { border-radius: 0; min-height: 100vh; }
+            body { padding: 0; }
+            .profile-header { padding: 16px; }
+            .header-title { font-size: 18px; }
+            .profile-content { padding: 16px; }
+            .profile-sidebar { padding: 16px; }
+            .module-grid { grid-template-columns: 1fr; }
+            .plan-grid { grid-template-columns: 1fr; }
+            .profile-body { min-height: auto; }
+            .profile-content { max-height: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+
+    <!-- HEADER -->
+    <header class="profile-header">
+        <div class="header-left">
+            <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Back</a>
+            <span class="header-title"><i class="fas fa-user-cog"></i> Profile</span>
+        </div>
+        <div class="header-right">
+            <span class="status-badge active"><i class="fas fa-circle" style="font-size:8px;"></i> Active</span>
+        </div>
+    </header>
+
+    <!-- BODY -->
+    <div class="profile-body">
+
+        <!-- SIDEBAR NAV -->
+        <aside class="profile-sidebar">
+            <div class="profile-avatar-section">
+                <div class="profile-avatar" id="profileAvatar"><i class="fas fa-user"></i></div>
+                <div class="profile-name" id="profileNameDisplay">Loading…</div>
+                <div class="profile-email" id="profileEmailDisplay"></div>
+                <span class="profile-plan trial" id="profilePlanBadge">Trial</span>
+            </div>
+
+            <div class="nav-item active" data-tab="profile">
+                <i class="fas fa-id-card"></i> Profile
+                <span class="badge">edit</span>
+            </div>
+            <div class="nav-item" data-tab="api-keys">
+                <i class="fas fa-key"></i> API Keys
+                <span class="badge">6</span>
+            </div>
+            <div class="nav-item" data-tab="modules">
+                <i class="fas fa-th-large"></i> Module Access
+                <span class="badge">16</span>
+            </div>
+            <div class="nav-item" data-tab="plan">
+                <i class="fas fa-crown"></i> Subscription
+                <span class="badge">upgrade</span>
+            </div>
+            <div class="nav-item" data-tab="usage">
+                <i class="fas fa-chart-bar"></i> Usage
+                <span class="badge">stats</span>
+            </div>
+
+            <div style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 12px;">
+                <div class="nav-item" style="color: #ff6b6b;" onclick="if(confirm('Logout?')){ AUTH.logout(); }">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </div>
+            </div>
+        </aside>
+
+        <!-- CONTENT -->
+        <div class="profile-content">
+
+            <!-- TAB: Profile -->
+            <div class="tab-content active" id="tab-profile">
+                <div class="tab-title">Profile Settings</div>
+                <div class="tab-subtitle">Update your personal information</div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title"><i class="fas fa-user"></i> Personal Information</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div>
+                            <label class="form-label">Full Name</label>
+                            <input class="form-input" type="text" id="profileFullName" placeholder="Full Name" />
+                        </div>
+                        <div>
+                            <label class="form-label">Username</label>
+                            <input class="form-input" type="text" id="profileUsername" placeholder="Username" />
+                        </div>
+                        <div style="grid-column:1/-1;">
+                            <label class="form-label">Email</label>
+                            <input class="form-input" type="email" id="profileEmail" placeholder="Email" />
+                        </div>
+                        <div style="grid-column:1/-1;">
+                            <label class="form-label">Current Password <span style="color:#6a7a94;font-weight:400;">(required to change password)</span></label>
+                            <input class="form-input password-input" type="password" placeholder="Enter current password" id="profileCurrentPassword" />
+                        </div>
+                        <div style="grid-column:1/-1;">
+                            <label class="form-label">New Password</label>
+                            <input class="form-input password-input" type="password" placeholder="Leave blank to keep current" id="profileNewPassword" />
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" id="saveProfileBtn"><i class="fas fa-save"></i> Save Changes</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: API Keys -->
+            <div class="tab-content" id="tab-api-keys">
+                <div class="tab-title">API Keys</div>
+                <div class="tab-subtitle">Configure your AI provider API keys. Keys are encrypted and stored securely.</div>
+
+                <!-- Alibaba -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title"><i class="fas fa-cloud"></i> Alibaba Cloud</span>
+                        <span class="api-status">
+                            <span class="dot missing"></span> <span id="alibabaStatus">Not configured</span>
+                        </span>
+                    </div>
+                    <div class="api-key-group">
+                        <div>
+                            <label class="form-label">Workspace ID <span class="required">*</span></label>
+                            <input class="form-input" type="text" placeholder="ws_xxxxxxxxxxxxxx" id="alibabaWorkspace" />
+                        </div>
+                        <div>
+                            <label class="form-label">API Key <span class="required">*</span></label>
+                            <input class="form-input password-input" type="password" placeholder="sk-xxxxxxxxxxxxxx" id="alibabaKey" />
+                        </div>
+                        <div class="full-width">
+                            <div class="form-hint"><i class="fas fa-info-circle"></i> Used for: Text-to-Image, Image Edit, Text-to-Video, Image-to-Video, Video-to-Video</div>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary btn-sm" onclick="saveApiKey('alibaba')"><i class="fas fa-save"></i> Save</button>
+                        <button class="btn btn-secondary btn-sm" onclick="testApiKey('alibaba')"><i class="fas fa-check"></i> Test</button>
+                        <button class="btn btn-danger btn-sm" onclick="removeApiKey('alibaba')"><i class="fas fa-trash"></i> Remove</button>
+                    </div>
+                </div>
+
+                <!-- Cloudflare -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title"><i class="fas fa-bolt"></i> Cloudflare Workers AI</span>
+                        <span class="api-status">
+                            <span class="dot missing"></span> <span id="cloudflareStatus">Not configured</span>
+                        </span>
+                    </div>
+                    <div class="api-key-group">
+                        <div>
+                            <label class="form-label">Account ID <span class="required">*</span></label>
+                            <input class="form-input" type="text" placeholder="xxxxxxxxxxxxxxxx" id="cloudflareAccount" />
+                        </div>
+                        <div>
+                            <label class="form-label">API Key <span class="required">*</span></label>
+                            <input class="form-input password-input" type="password" placeholder="xxxxxxxxxxxxxxxx" id="cloudflareKey" />
+                        </div>
+                        <div class="full-width">
+                            <div class="form-hint"><i class="fas fa-info-circle"></i> Used for: Text-to-Speech, Voice Cloning (fallback)</div>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary btn-sm" onclick="saveApiKey('cloudflare')"><i class="fas fa-save"></i> Save</button>
+                        <button class="btn btn-secondary btn-sm" onclick="testApiKey('cloudflare')"><i class="fas fa-check"></i> Test</button>
+                        <button class="btn btn-danger btn-sm" onclick="removeApiKey('cloudflare')"><i class="fas fa-trash"></i> Remove</button>
+                    </div>
+                </div>
+
+                <!-- NVIDIA -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title"><i class="fas fa-microchip"></i> NVIDIA</span>
+                        <span class="api-status">
+                            <span class="dot missing"></span> <span id="nvidiaStatus">Not configured</span>
+                        </span>
+                    </div>
+                    <div class="api-key-group">
+                        <div class="full-width">
+                            <label class="form-label">API Key <span class="required">*</span></label>
+                            <input class="form-input password-input" type="password" placeholder="nv-xxxxxxxxxxxxxx" id="nvidiaKey" />
+                        </div>
+                        <div class="full-width">
+                            <div class="form-hint"><i class="fas fa-info-circle"></i> Used for: Text-to-Image, Image-to-Image (optional)</div>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary btn-sm" onclick="saveApiKey('nvidia')"><i class="fas fa-save"></i> Save</button>
+                        <button class="btn btn-secondary btn-sm" onclick="testApiKey('nvidia')"><i class="fas fa-check"></i> Test</button>
+                        <button class="btn btn-danger btn-sm" onclick="removeApiKey('nvidia')"><i class="fas fa-trash"></i> Remove</button>
+                    </div>
+                </div>
+
+                <!-- ElevenLabs -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title"><i class="fas fa-volume-up"></i> ElevenLabs</span>
+                        <span class="api-status">
+                            <span class="dot missing"></span> <span id="elevenlabsStatus">Not configured</span>
+                        </span>
+                    </div>
+                    <div class="api-key-group">
+                        <div class="full-width">
+                            <label class="form-label">API Key <span class="required">*</span></label>
+                            <input class="form-input password-input" type="password" placeholder="xxxxxxxxxxxxxxxx" id="elevenlabsKey" />
+                        </div>
+                        <div class="full-width">
+                            <div class="form-hint"><i class="fas fa-info-circle"></i> Used for: Text-to-Speech, Voice Cloning (high quality)</div>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary btn-sm" onclick="saveApiKey('elevenlabs')"><i class="fas fa-save"></i> Save</button>
+                        <button class="btn btn-secondary btn-sm" onclick="testApiKey('elevenlabs')"><i class="fas fa-check"></i> Test</button>
+                        <button class="btn btn-danger btn-sm" onclick="removeApiKey('elevenlabs')"><i class="fas fa-trash"></i> Remove</button>
+                    </div>
+                </div>
+
+                <!-- Pixazo -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title"><i class="fas fa-palette"></i> Pixazo</span>
+                        <span class="api-status">
+                            <span class="dot missing"></span> <span id="pixazoStatus">Not configured</span>
+                        </span>
+                    </div>
+                    <div class="api-key-group">
+                        <div class="full-width">
+                            <label class="form-label">API Key <span class="required">*</span></label>
+                            <input class="form-input password-input" type="password" placeholder="px-xxxxxxxxxxxxxx" id="pixazoKey" />
+                        </div>
+                        <div class="full-width">
+                            <div class="form-hint"><i class="fas fa-info-circle"></i> Used for: Image-to-Image, Image Edit (creative styles)</div>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary btn-sm" onclick="saveApiKey('pixazo')"><i class="fas fa-save"></i> Save</button>
+                        <button class="btn btn-secondary btn-sm" onclick="testApiKey('pixazo')"><i class="fas fa-check"></i> Test</button>
+                        <button class="btn btn-danger btn-sm" onclick="removeApiKey('pixazo')"><i class="fas fa-trash"></i> Remove</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Module Access -->
+            <div class="tab-content" id="tab-modules">
+                <div class="tab-title">Module Access</div>
+                <div class="tab-subtitle">Your access level and usage limits for each AI module</div>
+
+                <div class="module-grid" id="moduleGrid">
+                    <!-- Rendered by JS -->
+                </div>
+            </div>
+
+            <!-- TAB: Plan -->
+            <div class="tab-content" id="tab-plan">
+                <div class="tab-title">Subscription Plan</div>
+                <div class="tab-subtitle">Upgrade to unlock more modules and higher usage limits</div>
+
+                <div class="plan-grid" id="planGrid">
+                    <div class="plan-card" data-tier="trial">
+                        <div class="plan-name">Trial</div>
+                        <div class="plan-price">$0 <small>/month</small></div>
+                        <div class="plan-features">
+                            <i class="fas fa-check"></i> 5 modules<br />
+                            <i class="fas fa-check"></i> 5 uses per module<br />
+                            <i class="fas fa-check"></i> Basic chat (NVIDIA text models)<br />
+                            <i class="fas fa-times" style="color:#ff6b6b;"></i> Image/Video generation
+                        </div>
+                        <span class="current-badge" style="display:none;">Current Plan</span>
+                    </div>
+
+                    <div class="plan-card" data-tier="basic">
+                        <div class="plan-name">Basic</div>
+                        <div class="plan-price">$9 <small>/month</small></div>
+                        <div class="plan-features">
+                            <i class="fas fa-check"></i> 10 modules<br />
+                            <i class="fas fa-check"></i> 50 uses per module<br />
+                            <i class="fas fa-check"></i> Chat + vision (Alibaba)<br />
+                            <i class="fas fa-check"></i> Image generation<br />
+                            <i class="fas fa-check"></i> Voice cloning
+                        </div>
+                        <span class="current-badge" style="display:none;">Current Plan</span>
+                        <button class="btn btn-primary btn-sm plan-upgrade-btn" style="margin-top:10px;width:100%;justify-content:center;">Upgrade</button>
+                    </div>
+
+                    <div class="plan-card" data-tier="pro">
+                        <div class="plan-name">Pro</div>
+                        <div class="plan-price">$29 <small>/month</small></div>
+                        <div class="plan-features">
+                            <i class="fas fa-check"></i> 14 modules<br />
+                            <i class="fas fa-check"></i> Unlimited uses<br />
+                            <i class="fas fa-check"></i> Video generation<br />
+                            <i class="fas fa-check"></i> Text-to-Music<br />
+                            <i class="fas fa-check"></i> Priority support
+                        </div>
+                        <span class="current-badge" style="display:none;">Current Plan</span>
+                        <button class="btn btn-primary btn-sm plan-upgrade-btn" style="margin-top:10px;width:100%;justify-content:center;">Upgrade</button>
+                    </div>
+
+                    <div class="plan-card" data-tier="enterprise">
+                        <div class="plan-name">Enterprise</div>
+                        <div class="plan-price">$99 <small>/month</small></div>
+                        <div class="plan-features">
+                            <i class="fas fa-check"></i> All 16 modules<br />
+                            <i class="fas fa-check"></i> Unlimited uses<br />
+                            <i class="fas fa-check"></i> All features<br />
+                            <i class="fas fa-check"></i> Custom integrations<br />
+                            <i class="fas fa-check"></i> 24/7 support
+                        </div>
+                        <span class="current-badge" style="display:none;">Current Plan</span>
+                        <button class="btn btn-primary btn-sm plan-upgrade-btn" style="margin-top:10px;width:100%;justify-content:center;">Contact Sales</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Usage -->
+            <div class="tab-content" id="tab-usage">
+                <div class="tab-title">Usage Statistics</div>
+                <div class="tab-subtitle">Track your API usage across all modules</div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title"><i class="fas fa-calendar-alt"></i> This Month</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:12px;" id="usageStats">
+                        <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:10px;text-align:center;">
+                            <div style="font-size:24px;font-weight:700;color:#00e8a2;">12</div>
+                            <div style="font-size:12px;color:#6a7a94;">Chat Messages</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:10px;text-align:center;">
+                            <div style="font-size:24px;font-weight:700;color:#4d8eff;">8</div>
+                            <div style="font-size:12px;color:#6a7a94;">Images Generated</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:10px;text-align:center;">
+                            <div style="font-size:24px;font-weight:700;color:#a78bfa;">3</div>
+                            <div style="font-size:12px;color:#6a7a94;">Videos Created</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:10px;text-align:center;">
+                            <div style="font-size:24px;font-weight:700;color:#fbbf24;">5</div>
+                            <div style="font-size:12px;color:#6a7a94;">TTS Generations</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:10px;text-align:center;">
+                            <div style="font-size:24px;font-weight:700;color:#f472b6;">42</div>
+                            <div style="font-size:12px;color:#6a7a94;">Total Credits Used</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:10px;text-align:center;">
+                            <div style="font-size:24px;font-weight:700;color:#34d38e;">158</div>
+                            <div style="font-size:12px;color:#6a7a94;">Remaining Credits</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="/js/auth.js"></script>
+<script>
+(function() {
+    // ── Auth guard ──
+    if (!window.AUTH || !AUTH.isLoggedIn()) {
+        window.location.href = '/login.html';
+        return;
+    }
+
+    // ── Toast ──
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        clearTimeout(toast._timeout);
+        toast._timeout = setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // ── Tab Navigation ──
+    document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
+        item.addEventListener('click', function() {
+            document.querySelectorAll('.nav-item[data-tab]').forEach(el => el.classList.remove('active'));
+            this.classList.add('active');
+            const tabId = this.dataset.tab;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+        });
+    });
+
+    // Icon fallback for module keys the client doesn't otherwise know about.
+    // (modules.icon exists in the DB but isn't returned by /api/auth/modules/access yet —
+    // this map is just a display fallback, not hardcoded module data.)
+    const MODULE_ICON_FALLBACK = {
+        'chatbot': '💬', 'coding-agent': '💻', 'social-content': '✍️',
+        'message-writer': '🌍', 'text-to-image': '🖼️', 'prompt-library': '📚',
+        'text-to-speech': '🔊', 'image-edit': '🎨', 'voice-clone': '🗣️',
+        'text-to-video': '🎬', 'image-to-video': '📹', 'text-to-music': '🎵',
+        'design-studio': '🎯', 'video-to-video': '🎞️', 'chatbot-maker': '🤖',
+        'mcp-integrator': '🔌'
+    };
+
+    let currentUser = null;
+
+    // ── Load current user profile ──
+    async function loadProfile() {
+        try {
+            const res = await fetch('/api/auth/me', { headers: AUTH.getAuthHeader() });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load profile');
+
+            currentUser = data.user;
+            AUTH.updateUser(currentUser);
+
+            document.getElementById('profileNameDisplay').textContent = currentUser.full_name || currentUser.username;
+            document.getElementById('profileEmailDisplay').textContent = currentUser.email;
+            document.getElementById('profileAvatar').innerHTML =
+                (currentUser.full_name || currentUser.username || '?').trim().charAt(0).toUpperCase() || '<i class="fas fa-user"></i>';
+
+            const tier = currentUser.subscription_tier || 'trial';
+            const planBadge = document.getElementById('profilePlanBadge');
+            planBadge.textContent = tier.charAt(0).toUpperCase() + tier.slice(1);
+            planBadge.className = 'profile-plan ' + tier;
+
+            const statusBadge = document.querySelector('.status-badge');
+            if (currentUser.is_active === false) {
+                statusBadge.className = 'status-badge inactive';
+                statusBadge.innerHTML = '<i class="fas fa-circle" style="font-size:8px;"></i> Inactive';
+            } else {
+                statusBadge.className = 'status-badge active';
+                statusBadge.innerHTML = '<i class="fas fa-circle" style="font-size:8px;"></i> Active';
+            }
+
+            document.getElementById('profileFullName').value = currentUser.full_name || '';
+            document.getElementById('profileUsername').value = currentUser.username || '';
+            document.getElementById('profileEmail').value = currentUser.email || '';
+
+            highlightCurrentPlan(tier);
+        } catch (error) {
+            console.error('Load profile error:', error);
+            showToast('Failed to load profile', 'error');
+        }
+    }
+
+    function highlightCurrentPlan(tier) {
+        document.querySelectorAll('.plan-card').forEach(card => {
+            const isCurrent = card.dataset.tier === tier;
+            card.classList.toggle('current', isCurrent);
+            const badge = card.querySelector('.current-badge');
+            if (badge) badge.style.display = isCurrent ? 'inline-block' : 'none';
+            const upgradeBtn = card.querySelector('.plan-upgrade-btn');
+            if (upgradeBtn) upgradeBtn.style.display = isCurrent ? 'none' : 'inline-flex';
+        });
+    }
+
+    // ── Save profile changes ──
+    document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+        const full_name = document.getElementById('profileFullName').value.trim();
+        const username = document.getElementById('profileUsername').value.trim();
+        const email = document.getElementById('profileEmail').value.trim();
+        const current_password = document.getElementById('profileCurrentPassword').value;
+        const new_password = document.getElementById('profileNewPassword').value;
+
+        if (!full_name || !username || !email) {
+            showToast('Full name, username, and email are required', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('saveProfileBtn');
+        btn.disabled = true;
+
+        try {
+            const body = { full_name, username, email };
+            if (new_password) {
+                body.current_password = current_password;
+                body.new_password = new_password;
+            }
+
+            const res = await fetch('/api/auth/me', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', ...AUTH.getAuthHeader() },
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to save profile');
+
+            currentUser = data.user;
+            AUTH.updateUser(currentUser);
+            document.getElementById('profileCurrentPassword').value = '';
+            document.getElementById('profileNewPassword').value = '';
+            document.getElementById('profileNameDisplay').textContent = currentUser.full_name || currentUser.username;
+            document.getElementById('profileEmailDisplay').textContent = currentUser.email;
+            showToast('Profile updated successfully', 'success');
+        } catch (error) {
+            console.error('Save profile error:', error);
+            showToast(error.message || 'Failed to save profile', 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // ── API Keys ──
+    const PROVIDER_FIELD_MAP = {
+        alibaba: { workspace: 'alibabaWorkspace', key: 'alibabaKey', statusId: 'alibabaStatus' },
+        cloudflare: { account: 'cloudflareAccount', key: 'cloudflareKey', statusId: 'cloudflareStatus' },
+        nvidia: { key: 'nvidiaKey', statusId: 'nvidiaStatus' },
+        elevenlabs: { key: 'elevenlabsKey', statusId: 'elevenlabsStatus' },
+        pixazo: { key: 'pixazoKey', statusId: 'pixazoStatus' },
+    };
+
+    function setKeyStatus(provider, configured) {
+        const config = PROVIDER_FIELD_MAP[provider];
+        const statusEl = document.getElementById(config.statusId);
+        statusEl.textContent = configured ? 'Configured' : 'Not configured';
+        statusEl.parentElement.querySelector('.dot').className = 'dot ' + (configured ? 'configured' : 'missing');
+    }
+
+    async function loadApiKeys() {
+        try {
+            const res = await fetch('/api/keys', { headers: AUTH.getAuthHeader() });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load API keys');
+
+            data.keys.forEach(k => {
+                const config = PROVIDER_FIELD_MAP[k.provider];
+                if (!config) return;
+                setKeyStatus(k.provider, !!k.configured && k.is_active !== false);
+                // Secrets are never returned by the API — only non-secret fields
+                // (workspace / account IDs) are pre-filled.
+                if (config.workspace && k.workspace_id) {
+                    document.getElementById(config.workspace).value = k.workspace_id;
+                }
+                if (config.account && k.account_id) {
+                    document.getElementById(config.account).value = k.account_id;
+                }
+            });
+        } catch (error) {
+            console.error('Load API keys error:', error);
+            showToast('Failed to load API key status', 'error');
+        }
+    }
+
+    window.saveApiKey = async function(provider) {
+        const config = PROVIDER_FIELD_MAP[provider];
+        const data = { provider };
+
+        if (config.workspace) {
+            const workspace = document.getElementById(config.workspace).value.trim();
+            if (!workspace) { showToast('Workspace ID is required', 'error'); return; }
+            data.workspace_id = workspace;
+        }
+
+        if (config.account) {
+            const account = document.getElementById(config.account).value.trim();
+            if (!account) { showToast('Account ID is required', 'error'); return; }
+            data.account_id = account;
+        }
+
+        const key = document.getElementById(config.key).value.trim();
+        if (!key) { showToast('API Key is required', 'error'); return; }
+        data.api_key = key;
+
+        const statusEl = document.getElementById(config.statusId);
+        statusEl.textContent = 'Saving...';
+        statusEl.parentElement.querySelector('.dot').className = 'dot testing';
+
+        try {
+            const res = await fetch('/api/keys', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...AUTH.getAuthHeader() },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (!res.ok || !result.success) throw new Error(result.message || 'Failed to save key');
+
+            setKeyStatus(provider, true);
+            document.getElementById(config.key).value = '';
+            showToast(`${provider.charAt(0).toUpperCase() + provider.slice(1)} API key saved!`, 'success');
+        } catch (error) {
+            console.error('Save API key error:', error);
+            setKeyStatus(provider, false);
+            showToast(error.message || 'Failed to save API key', 'error');
+        }
+    };
+
+    window.testApiKey = async function(provider) {
+        const config = PROVIDER_FIELD_MAP[provider];
+        const statusEl = document.getElementById(config.statusId);
+        statusEl.textContent = 'Testing...';
+        statusEl.parentElement.querySelector('.dot').className = 'dot testing';
+
+        try {
+            const res = await fetch(`/api/keys/${provider}/test`, {
+                method: 'POST',
+                headers: AUTH.getAuthHeader()
+            });
+            const result = await res.json();
+            const ok = res.ok && result.success;
+            statusEl.textContent = ok ? '✅ Connected' : '❌ Failed';
+            statusEl.parentElement.querySelector('.dot').className = 'dot ' + (ok ? 'configured' : 'missing');
+            showToast(result.message || (ok ? `${provider} connection successful!` : `${provider} connection failed.`), ok ? 'success' : 'error');
+        } catch (error) {
+            console.error('Test API key error:', error);
+            statusEl.textContent = '❌ Failed';
+            statusEl.parentElement.querySelector('.dot').className = 'dot missing';
+            showToast('Connection test failed', 'error');
+        }
+    };
+
+    window.removeApiKey = async function(provider) {
+        if (!confirm(`Remove ${provider} API key?`)) return;
+        const config = PROVIDER_FIELD_MAP[provider];
+
+        try {
+            const res = await fetch(`/api/keys/${provider}`, {
+                method: 'DELETE',
+                headers: AUTH.getAuthHeader()
+            });
+            const result = await res.json();
+            if (!res.ok || !result.success) throw new Error(result.message || 'Failed to remove key');
+
+            if (config.workspace) document.getElementById(config.workspace).value = '';
+            if (config.account) document.getElementById(config.account).value = '';
+            document.getElementById(config.key).value = '';
+            setKeyStatus(provider, false);
+            showToast(`${provider} API key removed`, 'info');
+        } catch (error) {
+            console.error('Remove API key error:', error);
+            showToast(error.message || 'Failed to remove API key', 'error');
+        }
+    };
+
+    // ── Module Access ──
+    async function loadModuleAccess() {
+        const grid = document.getElementById('moduleGrid');
+        try {
+            const res = await fetch('/api/auth/modules/access', { headers: AUTH.getAuthHeader() });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load module access');
+
+            const badgeEl = document.querySelector('.nav-item[data-tab="modules"] .badge');
+            if (badgeEl) badgeEl.textContent = data.modules.length;
+
+            grid.innerHTML = data.modules.map(m => {
+                const used = m.used_count || 0;
+                const limit = m.usage_limit; // null/undefined = unlimited
+                const pct = limit ? Math.min((used / limit) * 100, 100) : 0;
+                const fillClass = pct < 50 ? 'low' : pct < 80 ? 'medium' : 'high';
+
+                let status, statusClass;
+                if (!m.is_allowed) { status = 'Locked'; statusClass = 'blocked'; }
+                else if (limit && used >= limit) { status = 'Limited'; statusClass = 'limited'; }
+                else { status = 'Allowed'; statusClass = 'allowed'; }
+
+                const tierLabel = (m.required_tier || 'trial');
+                const icon = MODULE_ICON_FALLBACK[m.module_key] || '🧩';
+
+                return `
+                    <div class="module-access-item">
+                        <span class="icon">${icon}</span>
+                        <div class="info">
+                            <div class="name">${m.name}</div>
+                            <div class="tier">${tierLabel.charAt(0).toUpperCase() + tierLabel.slice(1)} tier</div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+                            <span class="access-badge ${statusClass}">${status}</span>
+                            ${limit ? `
+                                <div style="display:flex;align-items:center;gap:6px;">
+                                    <span style="font-size:10px;color:#6a7a94;">${used}/${limit}</span>
+                                    <div class="usage-progress">
+                                        <div class="fill ${fillClass}" style="width:${pct}%;"></div>
+                                    </div>
+                                </div>
+                            ` : '<span style="font-size:10px;color:#6a7a94;">Unlimited</span>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (error) {
+            console.error('Load module access error:', error);
+            grid.innerHTML = '<div style="color:#8896b0;font-size:13px;">Failed to load module access.</div>';
+        }
+    }
+
+    // ── Usage Stats ──
+    async function loadUsageStats() {
+        const container = document.getElementById('usageStats');
+        try {
+            const res = await fetch('/api/modules/usage/summary', { headers: AUTH.getAuthHeader() });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load usage stats');
+
+            const stats = [
+                { value: data.chatMessages, label: 'Chat Messages', color: '#00e8a2' },
+                { value: data.imagesGenerated, label: 'Images Generated', color: '#4d8eff' },
+                { value: data.videosCreated, label: 'Videos Created', color: '#a78bfa' },
+                { value: data.ttsGenerations, label: 'TTS Generations', color: '#fbbf24' },
+                { value: data.creditsUsed, label: 'Total Credits Used', color: '#f472b6' },
+                { value: data.creditsRemaining, label: 'Remaining Credits', color: '#34d38e' },
+            ];
+
+            container.innerHTML = stats.map(s => `
+                <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:10px;text-align:center;">
+                    <div style="font-size:24px;font-weight:700;color:${s.color};">${s.value ?? 0}</div>
+                    <div style="font-size:12px;color:#6a7a94;">${s.label}</div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Load usage stats error:', error);
+            container.innerHTML = '<div style="color:#8896b0;font-size:13px;">Failed to load usage stats.</div>';
+        }
+    }
+
+    // ── Init ──
+    loadProfile();
+    loadApiKeys();
+    loadModuleAccess();
+    loadUsageStats();
+
+})();
+</script>
+
+</body>
+</html>

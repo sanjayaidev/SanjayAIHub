@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SanjayAIHub · Simple Chatbots</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0c10;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .dashboard {
+      max-width: 1100px;
+      width: 100%;
+      height: 92vh;
+      max-height: 820px;
+      background: rgba(18, 22, 28, 0.8);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 40px;
+      box-shadow: 0 30px 60px -12px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.04);
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: rgba(12, 16, 22, 0.6);
+      border-right: 1px solid rgba(255,255,255,0.04);
+      padding: 28px 18px 24px 18px;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+      padding-left: 6px;
+      flex-shrink: 0;
+    }
+
+    .brand-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, #00e8a2, #00b37a);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; color: #060d0b;
+      box-shadow: 0 8px 24px -6px rgba(0,232,162,0.4);
+    }
+
+    .brand-text h1 { font-size: 22px; font-weight: 700; color: #f0f4fe; letter-spacing: -0.3px; }
+    .brand-text span { font-size: 13px; color: #8896b0; display: block; margin-top: 2px; }
+
+    .model-picker-block { flex-shrink: 0; margin-bottom: 20px; padding: 0 4px; }
+    .model-picker-block label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #6a7a94; display: block; margin-bottom: 6px; }
+    .model-picker-block select {
+      width: 100%; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+      padding: 10px 14px; color: #eef2f9; font-size: 13px;
+      font-family: 'Inter', sans-serif; outline: none; cursor: pointer;
+    }
+    .model-picker-block select optgroup { color: #eef2f9; font-weight: 600; }
+    .model-picker-block select optgroup option { font-weight: 400; }
+    .model-picker-block select option { background: #1a1f29; color: #eef2f9; }
+
+    .new-thread-btn {
+      width: 100%; background: rgba(0,232,162,0.12);
+      border: 1px solid rgba(0,232,162,0.3); color: #00e8a2;
+      border-radius: 12px; padding: 10px 12px; font-size: 13px;
+      font-weight: 500; font-family: 'Inter', sans-serif;
+      cursor: pointer; margin-top: 8px;
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; transition: 0.2s;
+    }
+    .new-thread-btn:hover { background: rgba(0,232,162,0.22); }
+
+    .thread-panel-label {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+      color: #6a7a94; padding: 0 4px; margin-bottom: 8px; flex-shrink: 0;
+    }
+
+    .thread-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 2px; }
+    .thread-list::-webkit-scrollbar { width: 4px; }
+    .thread-list::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
+
+    .thread-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 12px; cursor: pointer;
+      color: #9aabca; font-size: 13px; transition: 0.15s;
+      border: 1px solid transparent;
+      position: relative;
+    }
+    .thread-row:hover { background: rgba(255,255,255,0.03); color: #d0d9ec; }
+    .thread-row.active { background: rgba(0,232,162,0.13); border-color: rgba(0,232,162,0.22); color: #f0f4fe; }
+    .thread-row .thread-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .thread-row .thread-time { font-size: 11px; color: #5b6a84; flex-shrink: 0; }
+    .thread-empty { color: #5b6a84; font-size: 12.5px; padding: 10px 12px; line-height: 1.5; }
+
+    /* ── Thread Actions ── */
+    .thread-row .thread-actions {
+      display: none;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .thread-row:hover .thread-actions {
+      display: flex;
+    }
+    .thread-row .thread-actions .action-btn {
+      background: transparent;
+      border: none;
+      color: #6a7a94;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      transition: 0.15s;
+    }
+    .thread-row .thread-actions .action-btn:hover {
+      color: #eef2f9;
+      background: rgba(255,255,255,0.06);
+    }
+    .thread-row .thread-actions .action-btn.delete:hover {
+      color: #ff6b6b;
+      background: rgba(255,80,80,0.12);
+    }
+    .thread-row .thread-actions .action-btn.rename:hover {
+      color: #fbbf24;
+      background: rgba(251,191,36,0.12);
+    }
+
+    /* ── Inline Rename Input ── */
+    .thread-row .rename-input {
+      flex: 1;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid #00e8a2;
+      color: #f0f4fe;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      outline: none;
+      min-width: 0;
+      width: 100%;
+    }
+    .thread-row .rename-input:focus {
+      border-color: #00e8a2;
+      box-shadow: 0 0 0 3px rgba(0,232,162,0.15);
+    }
+
+    .sidebar-footer { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.04); flex-shrink: 0; }
+    .sidebar-footer .user-card { display: flex; align-items: center; gap: 12px; padding: 4px; }
+    .user-avatar { width: 36px; height: 36px; background: #2a3140; border-radius: 40px; display: flex; align-items: center; justify-content: center; color: #b6c2da; font-weight: 600; }
+    .user-info { font-size: 13.5px; color: #d0d9ec; }
+    .user-info small { display: block; font-size: 11.5px; color: #6a7a94; }
+
+    .provider-badge {
+      font-size: 10px; padding: 2px 10px; border-radius: 10px; margin-left: 8px;
+      border: 1px solid rgba(255,255,255,0.1); color: #8896b0; background: rgba(255,255,255,0.04);
+    }
+    .provider-badge.nvidia { color: #76b900; border-color: rgba(118,185,0,0.3); background: rgba(118,185,0,0.1); }
+    .provider-badge.alibaba { color: #ff6a00; border-color: rgba(255,106,0,0.3); background: rgba(255,106,0,0.1); }
+
+    .key-banner {
+      display: none; align-items: center; gap: 12px; margin: 0 28px 12px 28px;
+      padding: 12px 16px; border-radius: 14px; background: rgba(251,191,36,0.1);
+      border: 1px solid rgba(251,191,36,0.25); color: #fbbf24; font-size: 13px; flex-shrink: 0;
+    }
+    .key-banner.visible { display: flex; }
+    .key-banner a { color: #fbbf24; text-decoration: underline; font-weight: 600; }
+    .key-banner i { font-size: 16px; }
+
+    .main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+
+    .chat-header {
+      padding: 18px 28px; border-bottom: 1px solid rgba(255,255,255,0.04);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0; gap: 12px;
+    }
+    .header-title { display: flex; align-items: center; gap: 12px; }
+    .header-title i { color: #00e8a2; font-size: 18px; }
+    .header-title span { color: #eef2f9; font-weight: 600; font-size: 15px; }
+    .header-title small { color: #6a7a94; font-size: 12.5px; margin-left: 6px; }
+    .header-title .vision-badge {
+      font-size: 10px; background: rgba(244,114,182,0.15); color: #f472b6;
+      padding: 2px 10px; border-radius: 10px; border: 1px solid rgba(244,114,182,0.2);
+      margin-left: 8px; display: none;
+    }
+    .header-title .vision-badge.visible { display: inline-block; }
+
+    .job-status-pill {
+      display: none; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 40px;
+      background: rgba(0,232,162,0.12); border: 1px solid rgba(0,232,162,0.25);
+      color: #00e8a2; font-size: 12.5px; font-weight: 500;
+    }
+    .job-status-pill.visible { display: flex; }
+    .job-status-pill .spinner {
+      width: 12px; height: 12px;
+      border: 2px solid rgba(0,232,162,0.3);
+      border-top-color: #00e8a2; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .chat-messages {
+      flex: 1; padding: 24px 28px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth;
+    }
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
+
+    .message {
+      max-width: 80%; padding: 14px 20px; border-radius: 24px;
+      font-size: 15px; line-height: 1.6;
+      animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25); word-break: break-word;
+    }
+    .message .msg-text { white-space: pre-wrap; }
+    .message .msg-text :first-child { margin-top: 0; }
+    .message .msg-text :last-child { margin-bottom: 0; }
+    .message .msg-text p { margin: 0.5em 0; }
+    .message .msg-text pre { background: rgba(0,0,0,0.3); padding: 10px 14px; border-radius: 8px; overflow-x: auto; margin: 0.5em 0; }
+    .message .msg-text code { background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9em; }
+    .message .msg-text pre code { background: transparent; padding: 0; }
+    .message .msg-text ul, .message .msg-text ol { margin: 0.5em 0; padding-left: 1.5em; }
+    .message .msg-text blockquote { border-left: 3px solid rgba(0,232,162,0.5); padding-left: 12px; margin: 0.5em 0; color: #00e8a2; }
+    @keyframes slideUp { 0% { opacity:0; transform:translateY(14px) scale(0.96); } 100% { opacity:1; transform:translateY(0) scale(1); } }
+    .message.user { align-self: flex-end; background: linear-gradient(145deg,#2d3440,#1e232e); border-bottom-right-radius: 6px; color: #eef4fd; border: 1px solid rgba(255,255,255,0.03); }
+    .message.ai { align-self: flex-start; background: rgba(40,46,58,0.7); border-bottom-left-radius: 6px; color: #eef4fd; border: 1px solid rgba(255,255,255,0.03); }
+    .message .msg-icon { margin-right: 10px; color: #00e8a2; }
+    .message .timestamp { font-size: 10px; opacity: 0.35; margin-top: 6px; text-align: right; }
+    .message .attachment-media { display: block; max-width: 100%; border-radius: 14px; margin-top: 8px; }
+    .message .attachment-media.audio-player { width: 100%; margin-top: 8px; }
+    .message img.attachment-media { cursor: pointer; }
+
+    .empty-state {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: #5b6a84; gap: 10px; text-align: center; padding: 0 40px;
+    }
+    .empty-state i { font-size: 32px; color: #3a4356; }
+    .empty-state p { font-size: 14px; line-height: 1.6; }
+
+    .chat-input-area {
+      padding: 16px 24px 24px 24px; border-top: 1px solid rgba(255,255,255,0.04);
+      display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;
+      background: rgba(0,0,0,0.1);
+    }
+
+    .input-row {
+      display: flex; gap: 12px; align-items: flex-end;
+    }
+
+    .input-wrapper {
+      flex: 1; display: flex; background: rgba(255,255,255,0.04);
+      border-radius: 30px; border: 1px solid rgba(255,255,255,0.06);
+      padding: 4px 4px 4px 22px; transition: 0.2s; position: relative;
+    }
+    .input-wrapper:focus-within { border-color: #00e8a2; box-shadow: 0 0 0 4px rgba(0,232,162,0.12); }
+    .input-wrapper input {
+      width: 100%; background: transparent; border: none; padding: 14px 0;
+      font-size: 15px; color: #f0f4fc; outline: none; font-family: 'Inter', sans-serif;
+    }
+    .input-wrapper input::placeholder { color: #5b6a84; }
+    .input-wrapper button {
+      background: #00e8a2; border: none; border-radius: 30px; padding: 10px 24px;
+      color: #060d0b; font-weight: 700; font-size: 14px;
+      display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s;
+      box-shadow: 0 8px 24px -8px rgba(0,232,162,0.4); font-family: 'Inter', sans-serif;
+    }
+    .input-wrapper button:hover { filter: brightness(1.08); transform: scale(1.02); }
+    .input-wrapper button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .attach-btn {
+      background: transparent !important; border: 1px solid rgba(255,255,255,0.1) !important;
+      border-radius: 30px !important; padding: 10px 14px !important; color: #8896b0 !important;
+      font-weight: 500 !important; font-size: 14px !important; display: flex !important;
+      align-items: center !important; gap: 8px !important; cursor: pointer !important;
+      transition: 0.2s !important; box-shadow: none !important; margin-right: 4px !important;
+    }
+    .attach-btn:hover { border-color: #00e8a2 !important; color: #00e8a2 !important; background: rgba(0,232,162,0.05) !important; }
+    .attach-btn .badge {
+      font-size: 9px; background: rgba(0,232,162,0.15); color: #00e8a2;
+      padding: 1px 6px; border-radius: 8px; margin-left: 4px;
+    }
+    .attach-btn .badge.media { background: rgba(244,114,182,0.15); color: #f472b6; }
+    .attach-btn.hidden { display: none !important; }
+
+    .attach-group {
+      display: flex; gap: 4px; align-items: center;
+    }
+
+    .attachment-preview {
+      display: none; align-items: center; gap: 10px; padding: 8px 16px;
+      background: rgba(0,232,162,0.08); border-radius: 14px;
+      max-width: 100%; margin-right: 24px;
+    }
+    .attachment-preview.visible { display: flex; }
+    .attachment-preview .file-icon { font-size: 18px; color: #00e8a2; }
+    .attachment-preview .file-name { flex: 1; font-size: 13px; color: #eef2f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .attachment-preview .file-size { font-size: 11px; color: #6a7a94; margin-left: 8px; }
+    .attachment-preview .remove-attach {
+      background: transparent; border: none; color: #6a7a94; cursor: pointer;
+      font-size: 16px; padding: 4px; display: flex; align-items: center; justify-content: center;
+    }
+    .attachment-preview .remove-attach:hover { color: #ff6b6b; }
+
+    .attachment-preview .file-type-badge {
+      font-size: 9px; text-transform: uppercase; font-weight: 600;
+      padding: 2px 8px; border-radius: 10px; margin-right: 8px;
+    }
+    .attachment-preview .file-type-badge.text { background: rgba(0,232,162,0.15); color: #00e8a2; }
+    .attachment-preview .file-type-badge.image { background: rgba(244,114,182,0.15); color: #f472b6; }
+
+    @media (max-width: 640px) {
+      .dashboard { flex-direction: column; height: 98vh; border-radius: 28px; }
+      .sidebar { width: 100%; min-width: unset; max-height: 260px; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.04); }
+      .chat-header { padding: 12px 16px; }
+      .message { max-width: 92%; }
+      .input-row { flex-wrap: wrap; }
+      .attach-group { flex: 1; justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+<div class="dashboard">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fas fa-comment-dots"></i></div>
+      <div class="brand-text"><h1>SanjayAIHub</h1><span>Simple Chatbots</span></div>
+    </div>
+
+    <div class="model-picker-block">
+      <label>Model <span id="modelProviderLabel" style="text-transform:none;letter-spacing:0;color:#4a5568;"></span></label>
+      <select id="modelSelect">
+        <option value="">Loading models…</option>
+      </select>
+      <button class="new-thread-btn" id="newThreadBtn"><i class="fas fa-plus"></i> New conversation</button>
+    </div>
+
+    <div class="thread-panel-label">History</div>
+    <div class="thread-list" id="threadList">
+      <div class="thread-empty">No conversations yet.</div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
+        <div class="user-info" id="userCardInfo">…</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <div class="main-area">
+    <div class="chat-header">
+      <div class="header-title">
+        <i class="fas fa-comment-dots"></i>
+        <span id="headerTitle">New conversation</span>
+        <small id="headerModelLabel"></small>
+        <span class="vision-badge" id="visionBadge">🖼️ Vision</span>
+        <span class="provider-badge" id="providerBadge" style="display:none;"></span>
+      </div>
+      <div class="job-status-pill" id="jobStatusPill">
+        <div class="spinner"></div>
+        <span id="jobStatusText">Generating…</span>
+      </div>
+    </div>
+
+    <!-- MISSING API KEY BANNER -->
+    <div class="key-banner" id="keyBanner">
+      <i class="fas fa-triangle-exclamation"></i>
+      <span id="keyBannerText"></span>
+    </div>
+
+    <!-- CHAT MESSAGES -->
+    <div class="chat-messages" id="chatMessages">
+      <div class="empty-state" id="emptyState">
+        <i class="fas fa-comment-dots"></i>
+        <p>Pick a model and start typing — conversations are saved in History.</p>
+      </div>
+    </div>
+
+    <!-- ATTACHMENT PREVIEW -->
+    <div class="attachment-preview" id="attachmentPreview">
+      <span class="file-type-badge text" id="fileTypeBadge">TEXT</span>
+      <i class="fas fa-file-alt file-icon"></i>
+      <span class="file-name" id="attachmentFileName"></span>
+      <span class="file-size" id="attachmentFileSize"></span>
+      <button class="remove-attach" id="removeAttachBtn" title="Remove attachment"><i class="fas fa-times"></i></button>
+    </div>
+
+    <!-- INPUT AREA -->
+    <div class="chat-input-area">
+      <div class="input-row">
+        <div class="attach-group">
+          <button class="attach-btn" id="textAttachBtn" title="Attach text file"><i class="fas fa-file-lines"></i> <span class="badge">TXT</span></button>
+          <button class="attach-btn hidden" id="mediaAttachBtn" title="Attach image"><i class="fas fa-image"></i> <span class="badge media">IMG</span></button>
+        </div>
+        <div class="input-wrapper">
+          <input type="text" id="chatInput" placeholder="Ask SanjayAIHub anything…" />
+          <button id="sendMsgBtn"><i class="fas fa-paper-plane"></i> Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden file inputs -->
+<input type="file" id="textFileInput" accept=".txt,.md,.markdown,.json,.csv,.js,.ts,.jsx,.tsx,.py,.html,.css,.xml,.yaml,.yml,.sql,.sh,.bash,.log" style="display:none;" />
+<input type="file" id="mediaFileInput" accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.svg" style="display:none;" />
+<script src="/js/auth.js"></script>   <!-- ← Must load first -->
+<script src="/js/modules.js"></script>
+<script>
+(function () {
+  // ── DOM refs ──
+  const modelSelect    = document.getElementById('modelSelect');
+  const modelProviderLabel = document.getElementById('modelProviderLabel');
+  const newThreadBtn   = document.getElementById('newThreadBtn');
+  const threadList     = document.getElementById('threadList');
+  const chatMessages   = document.getElementById('chatMessages');
+  const emptyState     = document.getElementById('emptyState');
+  const chatInput      = document.getElementById('chatInput');
+  const sendBtn        = document.getElementById('sendMsgBtn');
+  const textAttachBtn  = document.getElementById('textAttachBtn');
+  const mediaAttachBtn = document.getElementById('mediaAttachBtn');
+  const textFileInput  = document.getElementById('textFileInput');
+  const mediaFileInput = document.getElementById('mediaFileInput');
+  const attachmentPreview = document.getElementById('attachmentPreview');
+  const attachmentFileName = document.getElementById('attachmentFileName');
+  const attachmentFileSize = document.getElementById('attachmentFileSize');
+  const fileTypeBadge   = document.getElementById('fileTypeBadge');
+  const removeAttachBtn = document.getElementById('removeAttachBtn');
+  const headerTitle    = document.getElementById('headerTitle');
+  const headerModelLabel = document.getElementById('headerModelLabel');
+  const visionBadge    = document.getElementById('visionBadge');
+  const providerBadge  = document.getElementById('providerBadge');
+  const jobStatusPill  = document.getElementById('jobStatusPill');
+  const jobStatusText  = document.getElementById('jobStatusText');
+  const keyBanner      = document.getElementById('keyBanner');
+  const keyBannerText  = document.getElementById('keyBannerText');
+  const userAvatar     = document.getElementById('userAvatar');
+  const userCardInfo   = document.getElementById('userCardInfo');
+
+  // ── State ──
+  let catalog          = null;
+  let activeModel      = null;
+  let activeThreadId   = null;
+  let conversation      = [];
+  let isBusy            = false;
+  let currentAttachment = null;
+  let threads          = [];
+
+  // ── Auth check ──
+  function checkAuth() {
+    const token = localStorage.getItem('session_token');
+    if (!token) {
+      window.location.href = '/login.html';
+      return false;
+    }
+    return true;
+  }
+
+  // ── Helpers ──
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : str;
+    return div.innerHTML;
+  }
+
+  function showEmptyState(show) { 
+    emptyState.style.display = show ? 'flex' : 'none'; 
+  }
+  
+  function clearMessages() { 
+    chatMessages.innerHTML = ''; 
+    chatMessages.appendChild(emptyState); 
+  }
+
+  function addMessage(role, content, attachments, timestampIso) {
+    showEmptyState(false);
+    const type = role === 'user' ? 'user' : 'ai';
+    const div = document.createElement('div');
+    div.className = `message ${type}`;
+    let textHtml = '';
+    if (content) {
+      if (type === 'ai') {
+        textHtml = `<span class="msg-text">${marked.parse(content)}</span>`;
+      } else {
+        textHtml = `<span class="msg-text">${escapeHtml(content)}</span>`;
+      }
+    }
+    const iconPart = type === 'ai' ? '<i class="fas fa-robot msg-icon"></i> ' : '';
+    let attHtml = '';
+    if (attachments && attachments.length) {
+      attachments.forEach((a) => {
+        if (a.type === 'image') attHtml += `<img class="attachment-media" src="${escapeHtml(a.url)}" onclick="window.open(this.src)" />`;
+        if (a.type === 'audio') attHtml += `<audio class="attachment-media audio-player" src="${escapeHtml(a.url)}" controls></audio>`;
+        if (a.type === 'text') attHtml += `<div class="attachment-media" style="background:rgba(255,255,255,0.05);padding:12px;border-radius:8px;font-family:monospace;font-size:12px;max-height:200px;overflow:auto;white-space:pre-wrap;">${escapeHtml(a.content)}</div>`;
+      });
+    }
+    div.innerHTML = `${iconPart}${textHtml}${attHtml}`;
+    const ts = document.createElement('div');
+    ts.className = 'timestamp';
+    const d = timestampIso ? new Date(timestampIso) : new Date();
+    ts.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    div.appendChild(ts);
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return div;
+  }
+
+  function updateMessageText(div, text) {
+    const span = div.querySelector('.msg-text');
+    if (span) span.innerHTML = marked.parse(text);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function setBusy(busy) { 
+    isBusy = busy; 
+    sendBtn.disabled = busy; 
+    sendBtn.innerHTML = busy ? '<i class="fas fa-spinner fa-spin"></i>' : '<i class="fas fa-paper-plane"></i> Send';
+  }
+  
+  function setJobStatus(visible, text) {
+    jobStatusPill.classList.toggle('visible', visible);
+    if (text) jobStatusText.textContent = text;
+  }
+
+  function formatThreadTime(iso) {
+    const d = new Date(iso), now = new Date();
+    return d.toDateString() === now.toDateString()
+      ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+
+  function isVisionModel(modelId) {
+    return !!catalog && catalog.vision.includes(modelId);
+  }
+
+  function updateAttachmentButtons() {
+    const isVision = isVisionModel(activeModel);
+    mediaAttachBtn.classList.toggle('hidden', !isVision);
+    visionBadge.classList.toggle('visible', isVision);
+    textAttachBtn.classList.remove('hidden');
+
+    if (catalog) {
+      providerBadge.style.display = 'inline-block';
+      providerBadge.textContent = catalog.provider === 'nvidia' ? 'NVIDIA' : 'Alibaba Cloud';
+      providerBadge.className = 'provider-badge ' + catalog.provider;
+    }
+  }
+
+  // ── API Calls ──
+  function getAuthHeader() {
+    const token = localStorage.getItem('session_token');
+    return { 'Authorization': `Bearer ${token}` };
+  }
+
+  // ── Load Model Catalog ──
+ async function loadModelCatalog() {
+  try {
+    const response = await fetch('/api/chat/chatbot/models', { headers: getAuthHeader() });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.message || 'Failed to load models');
+    catalog = data;
+  } catch (error) {
+    console.error('Load model catalog error:', error);
+    catalog = { 
+      provider: 'nvidia', 
+      tier: 'trial', 
+      text: [], 
+      vision: [],
+      default: null,
+      modelProviders: { 
+        nvidia: [], 
+        nvidiaText: [], 
+        nvidiaVision: [],
+        alibaba: [], 
+        alibabaVision: [] 
+      },
+      multilingual: [],
+      hasNvidiaKey: false,
+      hasAlibabaKey: false
+    };
+  }
+
+  modelSelect.innerHTML = '';
+
+  const hasNvidiaKey = catalog.hasNvidiaKey || false;
+  const hasAlibabaKey = catalog.hasAlibabaKey || false;
+  const multilingualModels = catalog.multilingual || [];
+
+  // ── NVIDIA Text Models ──
+  const nvidiaTextModels = catalog.modelProviders?.nvidiaText || [];
+  if (nvidiaTextModels.length > 0 && hasNvidiaKey) {
+    const grp = document.createElement('optgroup');
+    grp.label = '🔵 NVIDIA Text Models';
+    nvidiaTextModels.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      const isMultilingual = multilingualModels.includes(m);
+      opt.textContent = m + (isMultilingual ? ' 🌍' : '');
+      if (isMultilingual) opt.style.color = '#fbbf24';
+      grp.appendChild(opt);
+    });
+    modelSelect.appendChild(grp);
+  }
+
+  // ── NVIDIA Vision Models ──
+  const nvidiaVisionModels = catalog.modelProviders?.nvidiaVision || [];
+  if (nvidiaVisionModels.length > 0 && hasNvidiaKey) {
+    const grp = document.createElement('optgroup');
+    grp.label = '🖼️ NVIDIA Vision Models (Image Support)';
+    nvidiaVisionModels.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m + ' 📷';
+      grp.appendChild(opt);
+    });
+    modelSelect.appendChild(grp);
+  }
+
+  // ── Alibaba Text Models (paid only) ──
+  const alibabaTextModels = catalog.modelProviders?.alibaba || [];
+  if (alibabaTextModels.length > 0 && hasAlibabaKey) {
+    const grp = document.createElement('optgroup');
+    grp.label = '🟠 Alibaba Text Models';
+    alibabaTextModels.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      grp.appendChild(opt);
+    });
+    modelSelect.appendChild(grp);
+  }
+
+  // ── Alibaba Vision Models (paid only) ──
+  const alibabaVisionModels = catalog.modelProviders?.alibabaVision || [];
+  if (alibabaVisionModels.length > 0 && hasAlibabaKey) {
+    const grp = document.createElement('optgroup');
+    grp.label = '🖼️ Alibaba Vision Models (Image Support)';
+    alibabaVisionModels.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m + ' 📷';
+      grp.appendChild(opt);
+    });
+    modelSelect.appendChild(grp);
+  }
+
+  // If no models available with keys, show message
+  if (!modelSelect.options.length) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    const msg = (!hasNvidiaKey && !hasAlibabaKey) 
+      ? '⚠️ No API keys configured. Add in Profile > API Keys'
+      : '⚠️ No models available';
+    opt.textContent = msg;
+    modelSelect.appendChild(opt);
+  }
+
+  // Set default model
+  activeModel = catalog.default || (modelSelect.options[0] && modelSelect.options[0].value) || '';
+  modelSelect.value = activeModel;
+
+  modelProviderLabel.textContent = catalog.tier
+    ? `(${catalog.tier.charAt(0).toUpperCase() + catalog.tier.slice(1)} tier)`
+    : '';
+
+  headerModelLabel.textContent = activeModel;
+  updateAttachmentButtons();
+  updateKeyBanner();
+}
+  // ── Key Banner ──
+  async function updateKeyBanner() {
+    if (!catalog) return;
+    try {
+      const response = await fetch('/api/keys', { headers: getAuthHeader() });
+      const data = await response.json();
+      if (!response.ok || !data.success) return;
+      const keyInfo = data.keys.find(k => k.provider === catalog.provider);
+      const configured = keyInfo && keyInfo.configured;
+      if (!configured) {
+        const providerName = catalog.provider === 'nvidia' ? 'NVIDIA' : 'Alibaba Cloud';
+        keyBannerText.innerHTML = `Add your ${providerName} API key in <a href="/profile.html">Profile &gt; API Keys</a> to start chatting.`;
+        keyBanner.classList.add('visible');
+      } else {
+        keyBanner.classList.remove('visible');
+      }
+    } catch (error) {
+      console.error('Key status check error:', error);
+    }
+  }
+
+  // ── Attachment handling ──
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function handleFileSelect(file, isMedia) {
+    if (!file) return;
+
+    if (!isMedia) {
+      const allowedText = ['txt', 'md', 'markdown', 'json', 'csv', 'js', 'ts', 'jsx', 'tsx', 'py', 'html', 'css', 'xml', 'yaml', 'yml', 'sql', 'sh', 'bash', 'log'];
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!allowedText.includes(ext)) {
+        alert('Invalid file type. Allowed: ' + allowedText.join(', '));
+        return;
+      }
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      currentAttachment = {
+        file: file,
+        name: file.name,
+        type: isMedia ? 'image' : 'text',
+        url: isMedia ? URL.createObjectURL(file) : null,
+        content: e.target.result,
+        isMedia: isMedia,
+        size: file.size
+      };
+
+      attachmentFileName.textContent = file.name;
+      attachmentFileSize.textContent = formatFileSize(file.size);
+      
+      if (isMedia) {
+        fileTypeBadge.textContent = '🖼️ IMAGE';
+        fileTypeBadge.className = 'file-type-badge image';
+        const icon = attachmentPreview.querySelector('.file-icon');
+        icon.className = 'fas fa-image file-icon';
+        icon.style.color = '#f472b6';
+      } else {
+        fileTypeBadge.textContent = '📄 TEXT';
+        fileTypeBadge.className = 'file-type-badge text';
+        const icon = attachmentPreview.querySelector('.file-icon');
+        icon.className = 'fas fa-file-alt file-icon';
+        icon.style.color = '#00e8a2';
+      }
+      
+      attachmentPreview.classList.add('visible');
+    };
+    
+    if (isMedia) {
+      reader.readAsDataURL(file);
+    } else {
+      reader.readAsText(file);
+    }
+  }
+
+  function clearAttachment() {
+    if (currentAttachment && currentAttachment.url) {
+      URL.revokeObjectURL(currentAttachment.url);
+    }
+    currentAttachment = null;
+    attachmentPreview.classList.remove('visible');
+    textFileInput.value = '';
+    mediaFileInput.value = '';
+  }
+
+  // ── Fetch Threads ──
+  async function fetchThreads() {
+    try {
+      const response = await fetch('/api/chat/threads', {
+        headers: getAuthHeader()
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch threads');
+      const data = await response.json();
+      threads = data.threads || [];
+      return threads;
+    } catch (error) {
+      console.error('Fetch threads error:', error);
+      return [];
+    }
+  }
+
+  // ── Fetch Thread Messages ──
+  async function fetchThreadMessages(threadId) {
+    try {
+      const response = await fetch(`/api/chat/threads/${threadId}/messages`, {
+        headers: getAuthHeader()
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch messages');
+      const data = await response.json();
+      return data.messages || [];
+    } catch (error) {
+      console.error('Fetch messages error:', error);
+      return [];
+    }
+  }
+
+  // ── Rename Thread ──
+  async function renameThread(threadId, newTitle) {
+    try {
+      const response = await fetch(`/api/chat/threads/${threadId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader()
+        },
+        body: JSON.stringify({ title: newTitle })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to rename thread');
+      return data;
+    } catch (error) {
+      console.error('Rename thread error:', error);
+      throw error;
+    }
+  }
+
+  // ── Delete Thread ──
+  async function deleteThread(threadId) {
+    try {
+      const response = await fetch(`/api/chat/threads/${threadId}`, {
+        method: 'DELETE',
+        headers: getAuthHeader()
+      });
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to delete thread');
+      return data;
+    } catch (error) {
+      console.error('Delete thread error:', error);
+      throw error;
+    }
+  }
+
+  // ── Send Message ──
+  async function sendMessage(text, attachment) {
+    const messages = conversation.map(m => ({
+      role: m.role,
+      content: m.content
+    }));
+
+    let userContent = text || '';
+    let imageDataUrl = null;
+    if (attachment) {
+      if (attachment.isMedia) {
+        userContent = text || 'What is this image?';
+        imageDataUrl = attachment.content;
+      } else {
+        userContent = text ? `${text}\n\nFile: ${attachment.name}\n${attachment.content}` : `File: ${attachment.name}\n${attachment.content}`;
+      }
+    }
+
+    messages.push({ role: 'user', content: userContent });
+
+    try {
+      const response = await fetch('/api/chat/chatbot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader()
+        },
+        body: JSON.stringify({
+          messages: messages,
+          model: activeModel,
+          threadId: activeThreadId,
+          title: activeThreadId ? null : (text || 'New conversation').slice(0, 50),
+          imageDataUrl: imageDataUrl
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send message');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Send message error:', error);
+      throw error;
+    }
+  }
+
+  // ── Thread Functions ──
+  async function refreshThreadList() {
+    const threads = await fetchThreads();
+    renderThreadList(threads);
+    return threads;
+  }
+
+  async function createThread() {
+    activeThreadId = null;
+    conversation = [];
+    clearMessages();
+    showEmptyState(true);
+    headerTitle.textContent = 'New conversation';
+    await refreshThreadList();
+    clearAttachment();
+  }
+
+  // ── Render Thread List with actions ──
+  function renderThreadList(threads) {
+    threadList.innerHTML = '';
+    if (!threads.length) {
+      threadList.innerHTML = '<div class="thread-empty">No conversations yet.</div>';
+      return;
+    }
+    threads.forEach((t) => {
+      const row = document.createElement('div');
+      row.className = 'thread-row' + (t.id === activeThreadId ? ' active' : '');
+      row.dataset.threadId = t.id;
+      
+      const icon = document.createElement('i');
+      icon.className = 'fas fa-message';
+      icon.style.fontSize = '12px';
+      icon.style.color = '#5b6a84';
+      
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'thread-title';
+      titleSpan.textContent = t.title;
+      
+      const time = document.createElement('span');
+      time.className = 'thread-time';
+      time.textContent = formatThreadTime(t.updated_at || t.created_at);
+      
+      // Actions container
+      const actions = document.createElement('span');
+      actions.className = 'thread-actions';
+      
+      // Rename button
+      const renameBtn = document.createElement('button');
+      renameBtn.className = 'action-btn rename';
+      renameBtn.innerHTML = '<i class="fas fa-pen"></i>';
+      renameBtn.title = 'Rename';
+      renameBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        startRename(row, t.id, t.title);
+      });
+      
+      // Delete button
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'action-btn delete';
+      deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+      deleteBtn.title = 'Delete';
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleDeleteThread(t.id);
+      });
+      
+      actions.appendChild(renameBtn);
+      actions.appendChild(deleteBtn);
+      
+      row.appendChild(icon);
+      row.appendChild(titleSpan);
+      row.appendChild(time);
+      row.appendChild(actions);
+      
+      row.addEventListener('click', () => selectThread(t.id));
+      threadList.appendChild(row);
+    });
+  }
+
+  // ── Inline Rename ──
+  function startRename(row, threadId, currentTitle) {
+    const titleSpan = row.querySelector('.thread-title');
+    const actions = row.querySelector('.thread-actions');
+    const time = row.querySelector('.thread-time');
+    
+    // Hide title, show input
+    titleSpan.style.display = 'none';
+    actions.style.display = 'none';
+    if (time) time.style.display = 'none';
+    
+    const input = document.createElement('input');
+    input.className = 'rename-input';
+    input.type = 'text';
+    input.value = currentTitle;
+    input.maxLength = 100;
+    
+    // Insert after icon
+    const icon = row.querySelector('i');
+    row.insertBefore(input, icon.nextSibling);
+    input.focus();
+    input.select();
+    
+    const finishRename = async () => {
+      const newTitle = input.value.trim();
+      if (newTitle && newTitle !== currentTitle) {
+        try {
+          await renameThread(threadId, newTitle);
+          await refreshThreadList();
+          // Re-select the current thread if it was active
+          if (activeThreadId === threadId) {
+            headerTitle.textContent = newTitle;
+          }
+        } catch (error) {
+          alert(error.message || 'Failed to rename thread');
+          // Revert
+          await refreshThreadList();
+        }
+      } else {
+        // Just revert the UI
+        titleSpan.style.display = '';
+        actions.style.display = '';
+        if (time) time.style.display = '';
+        input.remove();
+      }
+    };
+    
+    const cancelRename = () => {
+      titleSpan.style.display = '';
+      actions.style.display = '';
+      if (time) time.style.display = '';
+      input.remove();
+    };
+    
+    input.addEventListener('blur', finishRename);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        input.blur();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelRename();
+      }
+    });
+  }
+
+  // ── Delete Thread ──
+  async function handleDeleteThread(threadId) {
+    if (!confirm('Delete this conversation?')) return;
+    
+    try {
+      await deleteThread(threadId);
+      
+      // If the deleted thread was active, reset to new conversation
+      if (activeThreadId === threadId) {
+        activeThreadId = null;
+        conversation = [];
+        clearMessages();
+        showEmptyState(true);
+        headerTitle.textContent = 'New conversation';
+      }
+      
+      await refreshThreadList();
+    } catch (error) {
+      alert(error.message || 'Failed to delete thread');
+    }
+  }
+
+  // ── Select Thread ──
+  async function selectThread(threadId) {
+    activeThreadId = threadId;
+    conversation = [];
+    clearMessages();
+    showEmptyState(false);
+    
+    const messages = await fetchThreadMessages(threadId);
+    const thread = threads.find(t => t.id === threadId);
+    if (thread) headerTitle.textContent = thread.title;
+    
+    messages.forEach((m) => {
+      addMessage(m.role, m.content, null, m.created_at);
+      conversation.push({ role: m.role, content: m.content || '' });
+    });
+    
+    if (!messages.length) showEmptyState(true);
+    await refreshThreadList();
+  }
+
+  // ── Send Message Handler ──
+  async function handleSend() {
+    const text = chatInput.value.trim();
+    if ((!text && !currentAttachment) || isBusy) return;
+    
+    const attachmentToSend = currentAttachment;
+    chatInput.value = '';
+    setBusy(true);
+    setJobStatus(true, 'Generating response...');
+    
+    try {
+      const userAttachments = attachmentToSend && attachmentToSend.isMedia
+        ? [{ type: 'image', url: attachmentToSend.url }]
+        : (attachmentToSend ? [{ type: 'text', content: attachmentToSend.content }] : null);
+      addMessage('user', text || (attachmentToSend && !attachmentToSend.isMedia ? `📎 ${attachmentToSend.name}` : ''), userAttachments);
+      conversation.push({ role: 'user', content: text || '' });
+      
+      const aiDiv = addMessage('assistant', '…');
+      
+      const result = await sendMessage(text, attachmentToSend);
+      
+      if (result.data.threadId && !activeThreadId) {
+        activeThreadId = result.data.threadId;
+        headerTitle.textContent = text.slice(0, 50) || 'New conversation';
+        await refreshThreadList();
+      }
+      
+      const reply = result.data.message || 'Sorry, I could not generate a response.';
+      updateMessageText(aiDiv, reply);
+      conversation.push({ role: 'assistant', content: reply });
+      
+      if (activeThreadId && (!headerTitle.textContent || headerTitle.textContent === 'New conversation')) {
+        const shortTitle = text.slice(0, 50) || 'New conversation';
+        headerTitle.textContent = shortTitle;
+        await refreshThreadList();
+      }
+      
+      clearAttachment();
+      
+    } catch (error) {
+      addMessage('assistant', `⚠️ ${error.message || 'Something went wrong. Please try again.'}`);
+    } finally {
+      setBusy(false);
+      setJobStatus(false);
+    }
+  }
+
+  // ── Model change ──
+  function handleModelChange() {
+    activeModel = modelSelect.value;
+    headerModelLabel.textContent = activeModel;
+    updateAttachmentButtons();
+    createThread();
+  }
+
+  // ── Populate sidebar user card ──
+  function renderUserCard() {
+  // Try multiple ways to get user data
+  let user = null;
+  
+  // Try AUTH first
+  if (window.AUTH) {
+    user = AUTH.getUser();
+  }
+  
+  // If AUTH fails, try direct localStorage (backward compatibility)
+  if (!user) {
+    try {
+      const userData = localStorage.getItem('user') || localStorage.getItem('user_data');
+      if (userData) user = JSON.parse(userData);
+    } catch (e) {}
+  }
+  
+  if (!user) {
+    userAvatar.innerHTML = '<i class="fas fa-user"></i>';
+    userCardInfo.innerHTML = 'Guest <small>Trial tier</small>';
+    return;
+  }
+  
+  const displayName = user.full_name || user.username || 'User';
+  const initial = displayName.trim().charAt(0).toUpperCase() || '?';
+  const tierLabel = (user.subscription_tier || 'trial').charAt(0).toUpperCase() + (user.subscription_tier || 'trial').slice(1);
+  userAvatar.innerHTML = initial;
+  userCardInfo.innerHTML = `${escapeHtml(displayName)} <small>${escapeHtml(tierLabel)} tier</small>`;
+}
+
+  // ── Event wiring ──
+  modelSelect.addEventListener('change', handleModelChange);
+  newThreadBtn.addEventListener('click', createThread);
+  sendBtn.addEventListener('click', handleSend);
+  chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } });
+  
+  textAttachBtn.addEventListener('click', () => textFileInput.click());
+  mediaAttachBtn.addEventListener('click', () => mediaFileInput.click());
+  
+  textFileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) handleFileSelect(e.target.files[0], false);
+  });
+  mediaFileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) handleFileSelect(e.target.files[0], true);
+  });
+  
+  removeAttachBtn.addEventListener('click', clearAttachment);
+
+  // ── Boot ──
+  (async function init() {
+    if (!checkAuth()) return;
+
+    if (window.AUTH) {
+      await AUTH.verifySession();
+      renderUserCard();
+    }
+
+    await loadModelCatalog();
+
+    try {
+      await refreshThreadList();
+      if (threads.length) {
+        await selectThread(threads[0].id);
+      } else {
+        showEmptyState(true);
+      }
+    } catch (error) {
+      console.error('Init error:', error);
+      showEmptyState(true);
+    }
+  })();
+
+})();
+</script>
+</body>
+</html>

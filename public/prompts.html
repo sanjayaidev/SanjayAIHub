@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SanjayAIHub · Prompt Library</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0c10;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            width: 100%;
+            height: 92vh;
+            max-height: 920px;
+            background: rgba(18, 22, 28, 0.85);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-radius: 40px;
+            box-shadow: 0 30px 60px -12px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.04);
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 240px;
+            min-width: 240px;
+            background: rgba(12, 16, 22, 0.7);
+            border-right: 1px solid rgba(255,255,255,0.04);
+            padding: 18px 12px 14px 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+            padding: 0 6px;
+            flex-shrink: 0;
+        }
+
+        .brand-icon {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, #00e8a2, #00b37a);
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; color: #060d0b;
+            box-shadow: 0 8px 24px -6px rgba(0,232,162,0.3);
+            flex-shrink: 0;
+        }
+
+        .brand-text h1 { font-size: 18px; font-weight: 700; color: #f0f4fe; letter-spacing: -0.3px; }
+        .brand-text span { font-size: 11px; color: #8896b0; display: block; margin-top: 1px; }
+
+        .sidebar-section { flex-shrink: 0; margin-bottom: 2px; }
+        .sidebar-section-label {
+            font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px;
+            color: #4d5872; padding: 4px 8px 4px 8px; font-weight: 700;
+        }
+
+        .sidebar-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 7px 12px; border-radius: 8px;
+            color: #8896b0; font-size: 12.5px; cursor: pointer;
+            transition: 0.15s; font-weight: 500;
+            user-select: none; border: 1px solid transparent;
+        }
+        .sidebar-item:hover { background: rgba(255,255,255,0.04); color: #eef2f9; }
+        .sidebar-item.active { 
+            background: rgba(0,232,162,0.1); 
+            color: #00e8a2; 
+            border-color: rgba(0,232,162,0.12);
+        }
+        .sidebar-item i { width: 16px; font-size: 14px; text-align: center; flex-shrink: 0; }
+        .sidebar-item .badge {
+            margin-left: auto;
+            font-size: 8px;
+            background: rgba(255,255,255,0.06);
+            padding: 1px 7px;
+            border-radius: 8px;
+            color: #5b6a84;
+            font-weight: 600;
+        }
+
+        .sidebar-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.04);
+            margin: 6px 8px 8px 8px;
+            flex-shrink: 0;
+        }
+
+        .back-hub {
+            margin-top: auto;
+            border-top: 1px solid rgba(255,255,255,0.04);
+            padding-top: 10px;
+            flex-shrink: 0;
+        }
+
+        /* ── Main Content ── */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        /* ── Header ── */
+        .chat-header {
+            padding: 12px 22px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            min-height: 50px;
+            gap: 10px;
+        }
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .header-left .page-title { color: #eef2f9; font-weight: 600; font-size: 15px; }
+        .header-left .page-subtitle { color: #6a7a94; font-size: 12px; margin-left: 6px; font-weight: 400; }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* ── Filter Bar ── */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 12px 20px 12px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.02);
+            flex-shrink: 0;
+            align-items: flex-end;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex: 1;
+            min-width: 120px;
+        }
+        .filter-group label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6a7a94;
+            font-weight: 600;
+        }
+        .filter-group select,
+        .filter-group input {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 7px 10px;
+            color: #eef2f9;
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: 0.2s;
+            width: 100%;
+            cursor: pointer;
+        }
+        .filter-group select option { background: #1a1f29; color: #eef2f9; }
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: #00e8a2;
+            box-shadow: 0 0 0 3px rgba(0,232,162,0.08);
+        }
+
+        /* ── Prompt Library Layout ── */
+        .prompt-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ── Prompt List ── */
+        .prompt-list {
+            width: 45%;
+            min-width: 320px;
+            overflow-y: auto;
+            padding: 12px 14px;
+            border-right: 1px solid rgba(255,255,255,0.04);
+            flex-shrink: 0;
+        }
+        .prompt-list::-webkit-scrollbar { width: 4px; }
+        .prompt-list::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
+
+        .prompt-list-item {
+            display: flex;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+            background: rgba(255,255,255,0.02);
+        }
+        .prompt-list-item:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.06);
+        }
+        .prompt-list-item.active {
+            background: rgba(0,232,162,0.08);
+            border-color: rgba(0,232,162,0.2);
+        }
+
+        .prompt-list-item .prompt-thumb {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            flex-shrink: 0;
+            overflow: hidden;
+            background: rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: #3a4356;
+        }
+        .prompt-list-item .prompt-thumb img,
+        .prompt-list-item .prompt-thumb video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .prompt-list-item .prompt-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .prompt-list-item .prompt-info .headline {
+            font-size: 13px;
+            font-weight: 600;
+            color: #eef2f9;
+            margin-bottom: 3px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .prompt-list-item .prompt-info .desc {
+            font-size: 11px;
+            color: #6a7a94;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .prompt-list-item .prompt-info .meta {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+            font-size: 10px;
+            color: #4d5872;
+        }
+        .prompt-list-item .prompt-info .meta .tag {
+            background: rgba(255,255,255,0.06);
+            padding: 1px 8px;
+            border-radius: 8px;
+            color: #6a7a94;
+        }
+        .prompt-list-item .prompt-info .meta .tag.category-t2i { color: #00e8a2; background: rgba(0,232,162,0.1); }
+        .prompt-list-item .prompt-info .meta .tag.category-t2v { color: #4d8eff; background: rgba(77,142,255,0.1); }
+        .prompt-list-item .prompt-info .meta .tag.category-edit { color: #f472b6; background: rgba(244,114,182,0.1); }
+        .prompt-list-item .prompt-info .meta .tag.category-i2v { color: #a78bfa; background: rgba(167,139,250,0.1); }
+        .prompt-list-item .prompt-info .meta .tag.category-v2v { color: #fbbf24; background: rgba(251,191,36,0.1); }
+
+        .prompt-list-empty {
+            color: #5b6a84;
+            text-align: center;
+            padding: 40px 20px;
+            font-size: 13px;
+        }
+
+        /* ── Prompt Preview ── */
+        .prompt-preview {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background: rgba(255,255,255,0.02);
+        }
+        .prompt-preview::-webkit-scrollbar { width: 4px; }
+        .prompt-preview::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
+
+        .preview-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #5b6a84;
+            gap: 10px;
+            text-align: center;
+        }
+        .preview-empty i { font-size: 40px; color: #3a4356; }
+        .preview-empty p { font-size: 13px; line-height: 1.6; }
+
+        .preview-header {
+            flex-shrink: 0;
+        }
+        .preview-header .preview-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #eef2f9;
+            margin-bottom: 4px;
+        }
+        .preview-header .preview-category {
+            font-size: 12px;
+            color: #6a7a94;
+        }
+        .preview-header .preview-category .cat-badge {
+            background: rgba(0,232,162,0.1);
+            color: #00e8a2;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .preview-media {
+            flex-shrink: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(255,255,255,0.03);
+            position: relative;
+            max-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .preview-media img,
+        .preview-media video {
+            width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        .preview-media .media-placeholder {
+            padding: 40px;
+            color: #4d5872;
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .preview-media .media-placeholder i { font-size: 48px; color: #3a4356; }
+
+        .preview-prompt-box {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 14px 16px;
+            flex-shrink: 0;
+        }
+        .preview-prompt-box .label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6a7a94;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .preview-prompt-box .prompt-text {
+            color: #eef2f9;
+            font-size: 14px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .preview-actions {
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+        .preview-actions button {
+            padding: 8px 18px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary {
+            background: #00e8a2;
+            color: #060d0b;
+            box-shadow: 0 8px 24px -8px rgba(0,232,162,0.3);
+        }
+        .btn-primary:hover { filter: brightness(1.08); }
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            color: #8896b0;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); color: #eef2f9; }
+
+        /* ── Loading ── */
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+            color: #5b6a84;
+            grid-column: 1 / -1;
+        }
+        .loading-spinner .spinner {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            border: 3px solid rgba(0,232,162,0.15);
+            border-top-color: #00e8a2;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1a1f29;
+            color: #eef2f9;
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            transform: translateY(80px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 999;
+            font-size: 13px;
+            max-width: 400px;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { border-color: rgba(0,232,162,0.3); }
+        .toast.error { border-color: rgba(255,90,90,0.3); color: #ff9b9b; }
+
+        /* ── Mobile Sidebar Overlay ── */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 999;
+            backdrop-filter: blur(2px);
+        }
+        .sidebar-overlay.visible { display: block; }
+        .hamburger-btn {
+            display: none;
+            background: transparent;
+            border: none;
+            color: #8896b0;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 1024px) {
+            .prompt-list { width: 40%; min-width: 260px; }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard { border-radius: 0; height: 100vh; max-height: none; }
+            body { padding: 0; }
+
+            .hamburger-btn { display: flex; }
+            .sidebar {
+                position: fixed;
+                left: -260px;
+                top: 0; bottom: 0;
+                width: 260px;
+                z-index: 1000;
+                transition: left 0.3s ease;
+                box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+                background: rgba(12,16,22,0.98);
+                border-radius: 0;
+            }
+            .sidebar.mobile-open { left: 0; }
+
+            .prompt-layout { flex-direction: column; }
+            .prompt-list {
+                width: 100%;
+                min-width: unset;
+                max-height: 45vh;
+                border-right: none;
+                border-bottom: 1px solid rgba(255,255,255,0.04);
+            }
+            .prompt-preview { padding: 12px 14px; }
+            .preview-media { max-height: 250px; }
+            .preview-media img,
+            .preview-media video { max-height: 250px; }
+            .filter-bar { padding: 10px 14px; }
+            .filter-group { min-width: 80px; }
+            .chat-header { padding: 8px 14px; flex-wrap: wrap; }
+            .header-right { flex-wrap: wrap; }
+            .prompt-list-item .prompt-thumb { width: 60px; height: 60px; }
+        }
+
+        @media (max-width: 480px) {
+            .filter-bar { flex-direction: column; gap: 8px; }
+            .filter-group { min-width: 100%; }
+            .preview-header .preview-title { font-size: 17px; }
+            .prompt-list-item .prompt-info .headline { font-size: 12px; }
+        }
+
+        @media (min-width: 769px) {
+            .hamburger-btn { display: none !important; }
+            .sidebar-overlay { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon"><i class="fas fa-book"></i></div>
+            <div class="brand-text">
+                <h1>SanjayAIHub</h1>
+                <span>Prompt Library</span>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Categories</div>
+            <div class="sidebar-item active" data-category="all">
+                <i class="fas fa-th-large"></i> <span>All Prompts</span>
+                <span class="badge" id="countAll">0</span>
+            </div>
+            <div class="sidebar-item" data-category="t2i">
+                <i class="fas fa-image"></i> <span>Text to Image</span>
+                <span class="badge" id="countT2I">0</span>
+            </div>
+            <div class="sidebar-item" data-category="t2v">
+                <i class="fas fa-video"></i> <span>Text to Video</span>
+                <span class="badge" id="countT2V">0</span>
+            </div>
+            <div class="sidebar-item" data-category="edit">
+                <i class="fas fa-pen-fancy"></i> <span>Image Edit</span>
+                <span class="badge" id="countEdit">0</span>
+            </div>
+            <div class="sidebar-item" data-category="i2v">
+                <i class="fas fa-film"></i> <span>Image to Video</span>
+                <span class="badge" id="countI2V">0</span>
+            </div>
+            <div class="sidebar-item" data-category="v2v">
+                <i class="fas fa-rotate"></i> <span>Video to Video</span>
+                <span class="badge" id="countV2V">0</span>
+            </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="back-hub">
+            <div class="sidebar-item" onclick="window.location.href='/'">
+                <i class="fas fa-arrow-left"></i> <span>Back to Hub</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="header-left">
+                <button class="hamburger-btn" id="hamburgerBtn"><i class="fas fa-bars"></i></button>
+                <span class="page-title">Prompt Library</span>
+                <span class="page-subtitle">Curated prompts with video previews</span>
+            </div>
+            <div class="header-right">
+                <span style="font-size:11px;color:#6a7a94;" id="promptCount">0 prompts</span>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Sub-Category</label>
+                <select id="subCategoryFilter">
+                    <option value="">All Sub-Categories</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Search</label>
+                <input type="text" id="searchFilter" placeholder="Search prompts..." />
+            </div>
+            <div class="filter-group">
+                <label>Sort By</label>
+                <select id="sortFilter">
+                    <option value="newest">Newest</option>
+                    <option value="popular">Most Popular</option>
+                    <option value="views">Most Viewed</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Prompt Layout -->
+        <div class="prompt-layout">
+
+            <!-- Prompt List -->
+            <div class="prompt-list" id="promptList">
+                <div class="loading-spinner"><div class="spinner"></div> Loading prompts...</div>
+            </div>
+
+            <!-- Prompt Preview -->
+            <div class="prompt-preview" id="promptPreview">
+                <div class="preview-empty">
+                    <i class="fas fa-hand-pointer"></i>
+                    <p>Select a prompt from the list to preview it here</p>
+                    <p style="font-size:11px;color:#4d5872;">Video previews render directly from Instagram</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+    // ── Mock Prompt Data ──
+    const MOCK_PROMPTS = [
+        // Text to Image
+        {
+            id: 1,
+            headline: "Cyberpunk City at Night",
+            description: "A futuristic cityscape with neon lights and flying cars",
+            category: "t2i",
+            sub_category: "Urban",
+            full_prompt: "Cyberpunk city at night, neon lights, flying cars, rain, holographic billboards, futuristic architecture, 8k, photorealistic, cinematic lighting, purple and blue color scheme",
+            tags: ["cyberpunk", "city", "neon", "futuristic"],
+            media_type: "image",
+            demo_url: "https://picsum.photos/seed/cyberpunk/800/600",
+            max_images_allowed: 4,
+            views: 1234,
+            popular: true
+        },
+        {
+            id: 2,
+            headline: "Fantasy Dragon in Mountains",
+            description: "A majestic dragon soaring over misty mountain peaks",
+            category: "t2i",
+            sub_category: "Fantasy",
+            full_prompt: "Epic fantasy dragon, soaring over misty mountain peaks, storm clouds, lightning, dramatic lighting, highly detailed, digital art, concept art",
+            tags: ["dragon", "fantasy", "mountains", "epic"],
+            media_type: "image",
+            demo_url: "https://picsum.photos/seed/dragon/800/600",
+            max_images_allowed: 4,
+            views: 2345,
+            popular: true
+        },
+        {
+            id: 3,
+            headline: "Minimalist Japanese Garden",
+            description: "A serene Japanese garden with cherry blossoms and koi pond",
+            category: "t2i",
+            sub_category: "Nature",
+            full_prompt: "Japanese garden, cherry blossoms, koi pond, stone lantern, bamboo, zen, peaceful, warm sunlight, depth of field, 4k, photorealistic",
+            tags: ["japanese", "garden", "cherry blossom", "zen"],
+            media_type: "image",
+            demo_url: "https://picsum.photos/seed/garden/800/600",
+            max_images_allowed: 4,
+            views: 876,
+            popular: false
+        },
+        // Text to Video
+        {
+            id: 4,
+            headline: "Ocean Waves at Sunset",
+            description: "Calm ocean waves crashing on a sandy beach at golden hour",
+            category: "t2v",
+            sub_category: "Nature",
+            full_prompt: "Ocean waves crashing on beach, sunset, golden hour, warm colors, smooth motion, cinematic, 4k, slow motion, peaceful",
+            tags: ["ocean", "waves", "sunset", "beach"],
+            media_type: "video",
+            demo_url: "https://www.instagram.com/reel/Cx4V_5uP8XU/embed",
+            max_images_allowed: 1,
+            views: 3456,
+            popular: true
+        },
+        {
+            id: 5,
+            headline: "Urban Traffic Timelapse",
+            description: "A timelapse of city traffic at night with light trails",
+            category: "t2v",
+            sub_category: "Urban",
+            full_prompt: "Night city traffic timelapse, light trails, busy intersection, skyscrapers, neon lights, motion blur, cinematic, 4k",
+            tags: ["traffic", "city", "night", "timelapse"],
+            media_type: "video",
+            demo_url: "https://www.instagram.com/reel/Cx4WZ_5P8XU/embed",
+            max_images_allowed: 1,
+            views: 567,
+            popular: false
+        },
+        // Image Edit
+        {
+            id: 6,
+            headline: "Turn Sketch to Realistic",
+            description: "Convert a simple sketch into a photorealistic image",
+            category: "edit",
+            sub_category: "Style Transfer",
+            full_prompt: "Convert this sketch into a photorealistic image, detailed, cinematic lighting, high resolution, 8k, with shadows and reflections",
+            tags: ["sketch", "realistic", "convert", "style"],
+            media_type: "image",
+            demo_url: "https://picsum.photos/seed/sketch/800/600",
+            max_images_allowed: 1,
+            views: 789,
+            popular: false
+        },
+        {
+            id: 7,
+            headline: "Change Season: Summer to Winter",
+            description: "Transform a summer landscape into a winter wonderland",
+            category: "edit",
+            sub_category: "Season Change",
+            full_prompt: "Transform this scene from summer to winter, add snow, frozen lake, bare trees, winter atmosphere, cold colors, 4k",
+            tags: ["season", "winter", "snow", "transform"],
+            media_type: "image",
+            demo_url: "https://picsum.photos/seed/winter/800/600",
+            max_images_allowed: 1,
+            views: 432,
+            popular: false
+        },
+        // Image to Video
+        {
+            id: 8,
+            headline: "Animate a Portrait",
+            description: "Bring a still portrait to life with subtle animation",
+            category: "i2v",
+            sub_category: "Portrait",
+            full_prompt: "Animate this portrait: subtle head turn, eye blink, hair movement, natural expressions, smooth animation, 4k, cinematic",
+            tags: ["portrait", "animate", "face", "expression"],
+            media_type: "video",
+            demo_url: "https://www.instagram.com/reel/Cx4XZ_5P8XU/embed",
+            max_images_allowed: 1,
+            views: 654,
+            popular: false
+        },
+        {
+            id: 9,
+            headline: "City Skyline Transformation",
+            description: "Transform a static city skyline into a dynamic animated scene",
+            category: "i2v",
+            sub_category: "Cityscape",
+            full_prompt: "Animate city skyline: moving clouds, car light trails, blinking building lights, smooth transitions, cinematic, 4k",
+            tags: ["city", "skyline", "animation", "dynamic"],
+            media_type: "video",
+            demo_url: "https://www.instagram.com/reel/Cx4Ya_5P8XU/embed",
+            max_images_allowed: 1,
+            views: 321,
+            popular: false
+        },
+        // Video to Video
+        {
+            id: 10,
+            headline: "Stylize Dance Video",
+            description: "Transform a dance video into animated style",
+            category: "v2v",
+            sub_category: "Style Transfer",
+            full_prompt: "Convert this dance video to anime style, cel-shaded animation, smooth motion, vibrant colors, dynamic camera, 4k",
+            tags: ["dance", "anime", "style", "transfer"],
+            media_type: "video",
+            demo_url: "https://www.instagram.com/reel/Cx4Zr_5P8XU/embed",
+            max_images_allowed: 1,
+            views: 987,
+            popular: true
+        },
+        {
+            id: 11,
+            headline: "Color Grade & Enhance",
+            description: "Apply professional color grading to any video",
+            category: "v2v",
+            sub_category: "Color Grading",
+            full_prompt: "Apply cinematic color grade to this video: warm tones, increased contrast, film grain, cinematic look, 4k, professional",
+            tags: ["color", "grade", "cinematic", "enhance"],
+            media_type: "video",
+            demo_url: "https://www.instagram.com/reel/Cx4ap_5P8XU/embed",
+            max_images_allowed: 1,
+            views: 543,
+            popular: false
+        },
+        // More Text to Image
+        {
+            id: 12,
+            headline: "Cute Cat in Space",
+            description: "An adorable cat astronaut floating in space",
+            category: "t2i",
+            sub_category: "Cute",
+            full_prompt: "Cute cat astronaut, floating in space, colorful nebula, stars, helmet with visor, playful, digital art, 4k, vibrant colors",
+            tags: ["cat", "space", "cute", "astronaut"],
+            media_type: "image",
+            demo_url: "https://picsum.photos/seed/cat/800/600",
+            max_images_allowed: 4,
+            views: 2100,
+            popular: true
+        },
+        {
+            id: 13,
+            headline: "Underwater Coral Paradise",
+            description: "Vibrant coral reef teeming with colorful fish",
+            category: "t2i",
+            sub_category: "Nature",
+            full_prompt: "Underwater scene, coral reef, colorful fish, sea turtles, sunlight rays through water, ocean, 4k, photorealistic, vibrant colors",
+            tags: ["underwater", "coral", "fish", "ocean"],
+            media_type: "image",
+            demo_url: "https://picsum.photos/seed/coral/800/600",
+            max_images_allowed: 4,
+            views: 1567,
+            popular: false
+        },
+        // More Text to Video
+        {
+            id: 14,
+            headline: "Aurora Borealis Timelapse",
+            description: "Northern lights dancing across the arctic sky",
+            category: "t2v",
+            sub_category: "Nature",
+            full_prompt: "Aurora borealis timelapse, night sky, stars, green and purple lights, arctic landscape, cinematic, smooth motion, 4k",
+            tags: ["aurora", "northern lights", "arctic", "timelapse"],
+            media_type: "video",
+            demo_url: "https://www.instagram.com/reel/Cx4bq_5P8XU/embed",
+            max_images_allowed: 1,
+            views: 876,
+            popular: true
+        },
+        // More Image Edit
+        {
+            id: 15,
+            headline: "Add Dramatic Lighting",
+            description: "Add dramatic studio lighting to any portrait",
+            category: "edit",
+            sub_category: "Lighting",
+            full_prompt: "Add dramatic lighting to this portrait: side lighting, shadows, rim light, professional studio setup, cinematic look, 4k",
+            tags: ["lighting", "dramatic", "portrait", "studio"],
+            media_type: "image",
+            demo_url: "https://picsum.photos/seed/lighting/800/600",
+            max_images_allowed: 1,
+            views: 654,
+            popular: false
+        }
+    ];
+
+    // ── Category Labels ──
+    const CATEGORY_LABELS = {
+        't2i': 'Text to Image',
+        't2v': 'Text to Video',
+        'edit': 'Image Edit',
+        'i2v': 'Image to Video',
+        'v2v': 'Video to Edit'
+    };
+
+    const CATEGORY_ICONS = {
+        't2i': 'fa-image',
+        't2v': 'fa-video',
+        'edit': 'fa-pen-fancy',
+        'i2v': 'fa-film',
+        'v2v': 'fa-rotate'
+    };
+
+    // ── State ──
+    let prompts = [...MOCK_PROMPTS];
+    let filteredPrompts = [...prompts];
+    let selectedPromptId = null;
+    let currentCategory = 'all';
+    let currentSubCategory = '';
+    let currentSearch = '';
+    let currentSort = 'newest';
+
+    // ── DOM refs ──
+    const promptList = document.getElementById('promptList');
+    const promptPreview = document.getElementById('promptPreview');
+    const subCategoryFilter = document.getElementById('subCategoryFilter');
+    const searchFilter = document.getElementById('searchFilter');
+    const sortFilter = document.getElementById('sortFilter');
+    const promptCount = document.getElementById('promptCount');
+    const toastEl = document.getElementById('toast');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+    // ── Toast ──
+    function showToast(message, type = 'info') {
+        toastEl.textContent = message;
+        toastEl.className = `toast ${type} show`;
+        clearTimeout(toastEl._timeout);
+        toastEl._timeout = setTimeout(() => toastEl.classList.remove('show'), 3000);
+    }
+
+    // ── Mobile sidebar ──
+    hamburgerBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('mobile-open');
+        sidebarOverlay.classList.toggle('visible');
+    });
+    sidebarOverlay.addEventListener('click', () => {
+        sidebar.classList.remove('mobile-open');
+        sidebarOverlay.classList.remove('visible');
+    });
+
+    // ── Sidebar category filter ──
+    document.querySelectorAll('.sidebar-item[data-category]').forEach(item => {
+        item.addEventListener('click', () => {
+            document.querySelectorAll('.sidebar-item[data-category]').forEach(el => el.classList.remove('active'));
+            item.classList.add('active');
+            currentCategory = item.dataset.category;
+            applyFilters();
+            // Close mobile sidebar
+            sidebar.classList.remove('mobile-open');
+            sidebarOverlay.classList.remove('visible');
+        });
+    });
+
+    // ── Filter functions ──
+    function updateSubCategories() {
+        const categories = currentCategory === 'all' 
+            ? ['t2i', 't2v', 'edit', 'i2v', 'v2v']
+            : [currentCategory];
+        
+        const subCats = new Set();
+        prompts.forEach(p => {
+            if (categories.includes(p.category) && p.sub_category) {
+                subCats.add(p.sub_category);
+            }
+        });
+
+        subCategoryFilter.innerHTML = '<option value="">All Sub-Categories</option>';
+        [...subCats].sort().forEach(sc => {
+            subCategoryFilter.innerHTML += `<option value="${escapeHtml(sc)}">${escapeHtml(sc)}</option>`;
+        });
+    }
+
+    function applyFilters() {
+        const categories = currentCategory === 'all' 
+            ? ['t2i', 't2v', 'edit', 'i2v', 'v2v']
+            : [currentCategory];
+        
+        filteredPrompts = prompts.filter(p => {
+            // Category filter
+            if (!categories.includes(p.category)) return false;
+            // Sub-category filter
+            if (currentSubCategory && p.sub_category !== currentSubCategory) return false;
+            // Search filter
+            if (currentSearch) {
+                const search = currentSearch.toLowerCase();
+                return p.headline.toLowerCase().includes(search) ||
+                       p.description.toLowerCase().includes(search) ||
+                       p.full_prompt.toLowerCase().includes(search) ||
+                       p.tags.some(t => t.toLowerCase().includes(search));
+            }
+            return true;
+        });
+
+        // Sort
+        switch (currentSort) {
+            case 'popular':
+                filteredPrompts.sort((a, b) => (b.popular ? 1 : 0) - (a.popular ? 1 : 0) || b.views - a.views);
+                break;
+            case 'views':
+                filteredPrompts.sort((a, b) => b.views - a.views);
+                break;
+            case 'newest':
+            default:
+                filteredPrompts.sort((a, b) => b.id - a.id);
+                break;
+        }
+
+        updateCounts();
+        renderPromptList();
+
+        // Select first prompt if available and none selected
+        if (filteredPrompts.length > 0) {
+            if (!selectedPromptId || !filteredPrompts.some(p => p.id === selectedPromptId)) {
+                selectPrompt(filteredPrompts[0].id);
+            } else {
+                renderPreview(selectedPromptId);
+            }
+        } else {
+            selectedPromptId = null;
+            showEmptyPreview();
+        }
+    }
+
+    function updateCounts() {
+        const counts = { all: prompts.length, t2i: 0, t2v: 0, edit: 0, i2v: 0, v2v: 0 };
+        prompts.forEach(p => {
+            if (counts[p.category] !== undefined) counts[p.category]++;
+        });
+        document.getElementById('countAll').textContent = counts.all;
+        document.getElementById('countT2I').textContent = counts.t2i;
+        document.getElementById('countT2V').textContent = counts.t2v;
+        document.getElementById('countEdit').textContent = counts.edit;
+        document.getElementById('countI2V').textContent = counts.i2v;
+        document.getElementById('countV2V').textContent = counts.v2v;
+        promptCount.textContent = `${filteredPrompts.length} prompts`;
+    }
+
+    // ── Render Prompt List ──
+    function renderPromptList() {
+        if (filteredPrompts.length === 0) {
+            promptList.innerHTML = `<div class="prompt-list-empty">No prompts found matching your filters</div>`;
+            return;
+        }
+
+        promptList.innerHTML = filteredPrompts.map(p => {
+            const isActive = p.id === selectedPromptId;
+            const catLabel = CATEGORY_LABELS[p.category] || p.category;
+            const catClass = `category-${p.category}`;
+            const icon = CATEGORY_ICONS[p.category] || 'fa-file';
+            const isVideo = p.media_type === 'video';
+            const thumbIcon = isVideo ? '▶️' : '🖼️';
+            
+            return `
+                <div class="prompt-list-item ${isActive ? 'active' : ''}" onclick="selectPrompt(${p.id})" data-id="${p.id}">
+                    <div class="prompt-thumb">
+                        ${isVideo ? 
+                            `<video src="${escapeHtml(p.demo_url)}" muted loop playsinline preload="metadata"></video>` :
+                            `<img src="${escapeHtml(p.demo_url)}" alt="${escapeHtml(p.headline)}" loading="lazy" onerror="this.style.display='none';this.parentElement.textContent='${thumbIcon}'" />`
+                        }
+                    </div>
+                    <div class="prompt-info">
+                        <div class="headline">${escapeHtml(p.headline)}</div>
+                        <div class="desc">${escapeHtml(p.description)}</div>
+                        <div class="meta">
+                            <span class="tag ${catClass}">${escapeHtml(catLabel)}</span>
+                            ${p.sub_category ? `<span class="tag">${escapeHtml(p.sub_category)}</span>` : ''}
+                            ${p.popular ? `<span class="tag" style="color:#fbbf24;background:rgba(251,191,36,0.1);">⭐ Popular</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Auto-play videos on hover
+        document.querySelectorAll('.prompt-list-item .prompt-thumb video').forEach(video => {
+            video.addEventListener('mouseenter', () => { video.play(); });
+            video.addEventListener('mouseleave', () => { video.pause(); video.currentTime = 0; });
+        });
+    }
+
+    // ── Select Prompt ──
+    window.selectPrompt = function(id) {
+        selectedPromptId = id;
+        renderPromptList();
+        renderPreview(id);
+        // Close mobile sidebar if open
+        sidebar.classList.remove('mobile-open');
+        sidebarOverlay.classList.remove('visible');
+    };
+
+    // ── Render Preview ──
+    function renderPreview(id) {
+        const prompt = prompts.find(p => p.id === id);
+        if (!prompt) {
+            showEmptyPreview();
+            return;
+        }
+
+        const catLabel = CATEGORY_LABELS[prompt.category] || prompt.category;
+        const catClass = `category-${prompt.category}`;
+        const isVideo = prompt.media_type === 'video';
+        const icon = CATEGORY_ICONS[prompt.category] || 'fa-file';
+
+        promptPreview.innerHTML = `
+            <div class="preview-header">
+                <div class="preview-title">${escapeHtml(prompt.headline)}</div>
+                <div class="preview-category">
+                    <span class="cat-badge ${catClass}">${escapeHtml(catLabel)}</span>
+                    ${prompt.sub_category ? ` → ${escapeHtml(prompt.sub_category)}` : ''}
+                    <span style="color:#4d5872;margin-left:12px;">👁️ ${prompt.views} views</span>
+                    ${prompt.popular ? '<span style="color:#fbbf24;margin-left:8px;">⭐ Popular</span>' : ''}
+                </div>
+            </div>
+
+            <div class="preview-media">
+                ${isVideo ? 
+                    `<video src="${escapeHtml(prompt.demo_url)}" controls autoplay muted loop playsinline style="width:100%;max-height:400px;object-fit:contain;border-radius:12px;"></video>` :
+                    `<img src="${escapeHtml(prompt.demo_url)}" alt="${escapeHtml(prompt.headline)}" style="width:100%;max-height:400px;object-fit:contain;border-radius:12px;" onerror="this.parentElement.innerHTML='<div class=\\'media-placeholder\\'><i class=\\'fas ${icon}\\'></i><span>No image available</span></div>'" />`
+                }
+            </div>
+
+            <div class="preview-prompt-box">
+                <div class="label"><i class="fas fa-quote-right"></i> Full Prompt</div>
+                <div class="prompt-text">${escapeHtml(prompt.full_prompt)}</div>
+            </div>
+
+            <div class="preview-actions">
+                <button class="btn-primary" onclick="copyPrompt(${prompt.id})">
+                    <i class="fas fa-copy"></i> Copy Prompt
+                </button>
+                <button class="btn-secondary" onclick="usePrompt(${prompt.id})">
+                    <i class="fas fa-wand-magic-sparkles"></i> Use in Generator
+                </button>
+                ${prompt.tags && prompt.tags.length > 0 ? `
+                    <span style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-left:auto;">
+                        ${prompt.tags.map(t => `<span style="font-size:10px;color:#6a7a94;background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:8px;">#${escapeHtml(t)}</span>`).join('')}
+                    </span>
+                ` : ''}
+            </div>
+        `;
+
+        // Auto-play video in preview
+        const video = promptPreview.querySelector('video');
+        if (video) {
+            video.play().catch(() => {});
+        }
+    }
+
+    function showEmptyPreview() {
+        promptPreview.innerHTML = `
+            <div class="preview-empty">
+                <i class="fas fa-hand-pointer"></i>
+                <p>Select a prompt from the list to preview it here</p>
+                <p style="font-size:11px;color:#4d5872;">Video previews render directly from Instagram</p>
+            </div>
+        `;
+    }
+
+    // ── Actions ──
+    window.copyPrompt = function(id) {
+        const prompt = prompts.find(p => p.id === id);
+        if (!prompt) return;
+        navigator.clipboard.writeText(prompt.full_prompt).then(() => {
+            showToast('Prompt copied to clipboard!', 'success');
+        }).catch(() => {
+            // Fallback
+            const textarea = document.createElement('textarea');
+            textarea.value = prompt.full_prompt;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('Prompt copied to clipboard!', 'success');
+        });
+    };
+
+    window.usePrompt = function(id) {
+        const prompt = prompts.find(p => p.id === id);
+        if (!prompt) return;
+        showToast(`Opening "${prompt.headline}" in Generator...`, 'info');
+        // In a real implementation, this would navigate to the generator with the prompt pre-filled
+        // window.location.href = `/generator?prompt=${encodeURIComponent(prompt.full_prompt)}`;
+    };
+
+    // ── Filter event listeners ──
+    subCategoryFilter.addEventListener('change', () => {
+        currentSubCategory = subCategoryFilter.value;
+        applyFilters();
+    });
+
+    searchFilter.addEventListener('input', debounce(() => {
+        currentSearch = searchFilter.value;
+        applyFilters();
+    }, 400));
+
+    sortFilter.addEventListener('change', () => {
+        currentSort = sortFilter.value;
+        applyFilters();
+    });
+
+    // ── Debounce helper ──
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+
+    // ── Escape HTML ──
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ── Init ──
+    function init() {
+        updateSubCategories();
+        applyFilters();
+        // Select first prompt by default
+        if (filteredPrompts.length > 0) {
+            selectPrompt(filteredPrompts[0].id);
+        }
+    }
+
+    init();
+
+})();
+</script>
+</body>
+</html>

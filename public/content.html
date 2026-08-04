@@ -1,0 +1,1908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SanjayAIHub · Social Content, Resume & Email</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0c10;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            width: 100%;
+            height: 92vh;
+            max-height: 920px;
+            background: rgba(18, 22, 28, 0.85);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-radius: 40px;
+            box-shadow: 0 30px 60px -12px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.04);
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 260px;
+            min-width: 260px;
+            background: rgba(12, 16, 22, 0.8);
+            border-right: 1px solid rgba(255,255,255,0.04);
+            padding: 18px 10px 14px 10px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        .sidebar::-webkit-scrollbar { width: 3px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            padding: 0 6px;
+            flex-shrink: 0;
+        }
+
+        .brand-icon {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, #00e8a2, #00b37a);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: #060d0b;
+            box-shadow: 0 8px 24px -6px rgba(0,232,162,0.3);
+            flex-shrink: 0;
+        }
+
+        .brand-text h1 { font-size: 17px; font-weight: 700; color: #f0f4fe; letter-spacing: -0.3px; }
+        .brand-text span { font-size: 10px; color: #8896b0; display: block; margin-top: 0px; }
+
+        .sidebar-section { flex-shrink: 0; margin-bottom: 2px; }
+        .sidebar-section-label {
+            font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px;
+            color: #4d5872; padding: 4px 8px 3px 8px; font-weight: 700;
+        }
+
+        .sidebar-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 5px 10px; border-radius: 8px;
+            color: #8896b0; font-size: 12px; cursor: pointer;
+            transition: 0.15s; font-weight: 500;
+            user-select: none; border: 1px solid transparent;
+        }
+        .sidebar-item:hover { background: rgba(255,255,255,0.04); color: #eef2f9; }
+        .sidebar-item.active { 
+            background: rgba(0,232,162,0.1); 
+            color: #00e8a2; 
+            border-color: rgba(0,232,162,0.12);
+        }
+        .sidebar-item i { width: 16px; font-size: 13px; text-align: center; flex-shrink: 0; }
+        .sidebar-item .badge {
+            margin-left: auto;
+            font-size: 7.5px;
+            background: rgba(255,255,255,0.06);
+            padding: 1px 6px;
+            border-radius: 8px;
+            color: #5b6a84;
+            font-weight: 600;
+        }
+
+        .sidebar-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.04);
+            margin: 4px 8px 6px 8px;
+            flex-shrink: 0;
+        }
+
+        /* ── Sidebar Groups (Dropdowns) ── */
+        .sidebar-group { display: flex; flex-direction: column; }
+        .sidebar-group .sub-items {
+            display: none;
+            flex-direction: column;
+            gap: 1px;
+            margin-left: 26px;
+            margin-top: 2px;
+        }
+        .sidebar-group.expanded .sub-items { display: flex; }
+        .sidebar-group .sub-items .sidebar-item {
+            font-size: 10.5px;
+            padding: 3px 8px;
+            font-weight: 400;
+            border: none;
+        }
+        .sidebar-group .sub-items .sidebar-item i { font-size: 10px; width: 14px; }
+        .sidebar-group .sub-items .sidebar-item.active { 
+            background: rgba(0,232,162,0.08); 
+            color: #00e8a2;
+        }
+        .sidebar-item.parent-item { cursor: pointer; }
+        .sidebar-item.parent-item:hover { background: rgba(255,255,255,0.06); }
+        .chevron {
+            margin-left: auto;
+            font-size: 9px;
+            color: #4d5872;
+            transition: transform 0.2s ease;
+        }
+        .sidebar-group.expanded .chevron { transform: rotate(180deg); }
+
+        .sidebar-spacer { flex: 1; min-height: 4px; }
+
+        /* ── Back to Hub ── */
+        .back-hub {
+            margin-top: 6px;
+            border-top: 1px solid rgba(255,255,255,0.04);
+            padding-top: 8px;
+            flex-shrink: 0;
+        }
+
+        /* ── Main Content ── */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        /* ── Header ── */
+        .chat-header {
+            padding: 12px 22px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            min-height: 50px;
+            gap: 10px;
+        }
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .header-left .hamburger-btn {
+            display: none;
+            background: transparent;
+            border: none;
+            color: #8896b0;
+            font-size: 17px;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .header-left .page-title { color: #eef2f9; font-weight: 600; font-size: 14px; }
+        .header-left .page-subtitle { color: #6a7a94; font-size: 11px; margin-left: 6px; font-weight: 400; }
+        .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        .model-select, .lang-select {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px; padding: 5px 10px; color: #cdbfff; font-size: 11px;
+            font-family: 'Inter', sans-serif; outline: none; cursor: pointer; max-width: 160px;
+        }
+        .model-select option, .lang-select option { background: #1a1f29; color: #eef2f9; }
+
+        /* ── Content Area ── */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 22px 20px 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .content-area::-webkit-scrollbar { width: 4px; }
+        .content-area::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
+
+        /* ── Generator Interface ── */
+        .generator-interface {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            height: 100%;
+        }
+        .generator-interface.visible { display: flex; }
+
+        .generator-input-area {
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+        .generator-input-area .input-with-attach {
+            flex: 1;
+            display: flex;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            transition: 0.2s;
+            min-width: 200px;
+        }
+        .generator-input-area .input-with-attach:focus-within {
+            border-color: #00e8a2;
+            box-shadow: 0 0 0 4px rgba(0,232,162,0.1);
+        }
+        .generator-input-area .input-with-attach input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 10px 14px;
+            color: #eef2f9;
+            font-size: 13.5px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            min-width: 100px;
+        }
+        .generator-input-area .input-with-attach input::placeholder { color: #4d5872; }
+
+        .attach-btn {
+            background: transparent !important;
+            border: none !important;
+            color: #8896b0 !important;
+            padding: 8px 12px !important;
+            font-size: 14px !important;
+            cursor: pointer !important;
+            transition: 0.2s !important;
+            border-radius: 0 12px 12px 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+        }
+        .attach-btn:hover { color: #00e8a2 !important; background: rgba(0,232,162,0.05) !important; }
+        .attach-btn .badge {
+            font-size: 8px;
+            background: rgba(0,232,162,0.15);
+            color: #00e8a2;
+            padding: 1px 5px;
+            border-radius: 4px;
+        }
+
+        .generator-input-area .gen-btn {
+            background: #00e8a2;
+            border: none;
+            border-radius: 12px;
+            padding: 0 20px;
+            color: #060d0b;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 8px 24px -8px rgba(0,232,162,0.3);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .generator-input-area .gen-btn:hover { filter: brightness(1.08); }
+        .generator-input-area .gen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── Attachment Preview ── */
+        .attachment-preview {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(0,232,162,0.08);
+            border-radius: 10px;
+            border: 1px solid rgba(0,232,162,0.15);
+            max-width: 100%;
+            flex-shrink: 0;
+        }
+        .attachment-preview.visible { display: flex; }
+        .attachment-preview .file-icon { font-size: 14px; color: #00e8a2; }
+        .attachment-preview .file-name {
+            flex: 1;
+            font-size: 12px;
+            color: #eef2f9;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .attachment-preview .file-size {
+            font-size: 10px;
+            color: #6a7a94;
+            margin-left: 4px;
+        }
+        .attachment-preview .remove-attach {
+            background: transparent;
+            border: none;
+            color: #6a7a94;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .attachment-preview .remove-attach:hover { color: #ff6b6b; }
+        .attachment-preview .file-type-badge {
+            font-size: 8px;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 1px 7px;
+            border-radius: 4px;
+            margin-right: 4px;
+        }
+        .attachment-preview .file-type-badge.text { background: rgba(0,232,162,0.15); color: #00e8a2; }
+        .attachment-preview .file-type-badge.image { background: rgba(244,114,182,0.15); color: #f472b6; }
+
+        .generator-output {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 2px 0;
+        }
+        .generator-output::-webkit-scrollbar { width: 4px; }
+        .generator-output::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
+
+        .empty-state {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            color: #5b6a84; gap: 8px; text-align: center; padding: 0 30px;
+        }
+        .empty-state i { font-size: 24px; color: #3a4356; }
+        .empty-state p { font-size: 12.5px; line-height: 1.6; }
+
+        .option-wrapper {
+            display: flex; flex-direction: column; gap: 3px;
+            animation: slideUp 0.25s ease;
+        }
+        @keyframes slideUp { 0% { opacity:0; transform:translateY(8px); } 100% { opacity:1; transform:translateY(0); } }
+
+        .option-label {
+            font-size: 10px; color: #6a7a94; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.4px;
+            padding-left: 4px; display: flex; align-items: center; gap: 5px;
+        }
+        .option-label .opt-num {
+            background: rgba(0,232,162,0.12); color: #00e8a2;
+            padding: 1px 6px; border-radius: 5px; font-size: 9px; font-weight: 700;
+        }
+
+        .option-box {
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 10px; padding: 12px 14px; position: relative; transition: 0.2s;
+        }
+        .option-box:hover { border-color: rgba(0,232,162,0.15); }
+
+        .option-box .copy-btn {
+            position: absolute; top: 6px; right: 8px;
+            background: rgba(255,255,255,0.06); border: none; color: #8896b0;
+            padding: 3px 9px; border-radius: 5px; font-size: 10px; cursor: pointer;
+            transition: 0.2s; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 3px;
+        }
+        .option-box .copy-btn:hover { background: rgba(0,232,162,0.15); color: #00e8a2; }
+        .option-box .copy-btn.copied { background: rgba(52, 211, 142, 0.15); color: #34d38e; }
+
+        .option-box .content {
+            color: #eef2f9; font-size: 13px; line-height: 1.6; word-break: break-word;
+            padding-right: 40px;
+        }
+        .option-box .content p { margin: 0.3em 0; }
+        .option-box .content pre { background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 5px; overflow-x: auto; margin: 0.3em 0; font-size: 12px; }
+        .option-box .content code { background: rgba(0,0,0,0.2); padding: 2px 5px; border-radius: 3px; font-family: 'Consolas', monospace; font-size: 0.9em; }
+        .option-box .content pre code { background: transparent; padding: 0; }
+        .option-box .content ul, .option-box .content ol { margin: 0.3em 0; padding-left: 1.3em; }
+        .option-box .content blockquote { border-left: 3px solid rgba(0,232,162,0.4); padding-left: 10px; margin: 0.3em 0; color: #00e8a2; }
+
+        .section-heading {
+            font-size: 14px; font-weight: 700; color: #00e8a2;
+            margin: 2px 0 4px 0; padding-left: 2px;
+        }
+
+        /* ── Resume Builder ── */
+        .resume-interface {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            height: 100%;
+        }
+        .resume-interface.visible { display: flex; }
+
+        .resume-layout {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 16px;
+            height: 100%;
+            min-height: 380px;
+        }
+        .resume-panel {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            max-height: 70vh;
+        }
+        .resume-panel::-webkit-scrollbar { width: 4px; }
+        .resume-panel::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
+
+        .resume-panel h3 {
+            color: #eef2f9;
+            font-size: 13px;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding-bottom: 8px;
+            flex-shrink: 0;
+        }
+
+        .resume-field {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .resume-field label {
+            font-size: 10px;
+            color: #8896b0;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .resume-field input, .resume-field textarea, .resume-field select {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 7px 10px;
+            color: #eef2f9;
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: 0.2s;
+            resize: vertical;
+        }
+        .resume-field input:focus, .resume-field textarea:focus, .resume-field select:focus {
+            border-color: #00e8a2;
+            box-shadow: 0 0 0 3px rgba(0,232,162,0.08);
+        }
+        .resume-field textarea { min-height: 50px; }
+
+        /* ── Resume Photo Upload (NEW) ── */
+        .resume-photo-upload {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px dashed rgba(255,255,255,0.1);
+            border-radius: 10px;
+            margin-bottom: 4px;
+        }
+        .resume-photo-preview {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.1);
+            flex-shrink: 0;
+        }
+        .resume-photo-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+        }
+        .resume-photo-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(0,232,162,0.1);
+            border: 1px solid rgba(0,232,162,0.2);
+            border-radius: 6px;
+            color: #00e8a2;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            width: fit-content;
+        }
+        .resume-photo-btn:hover {
+            background: rgba(0,232,162,0.2);
+            border-color: rgba(0,232,162,0.4);
+        }
+        .resume-photo-hint {
+            font-size: 9px;
+            color: #6a7a94;
+        }
+        #resumePhotoInput { display: none; }
+
+        .resume-preview-container {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 400px;
+        }
+        .resume-preview-container .preview-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 14px;
+            background: rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            flex-shrink: 0;
+        }
+        .resume-preview-container .preview-toolbar span {
+            font-size: 11px;
+            color: #8896b0;
+        }
+        .resume-preview-container .preview-toolbar .preview-actions {
+            display: flex;
+            gap: 6px;
+        }
+        .resume-preview-container .preview-toolbar .preview-actions button {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #8896b0;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 10.5px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: 0.2s;
+        }
+        .resume-preview-container .preview-toolbar .preview-actions button:hover {
+            background: rgba(0,232,162,0.1);
+            color: #00e8a2;
+            border-color: rgba(0,232,162,0.2);
+        }
+
+        .resume-preview-iframe {
+            flex: 1;
+            background: white;
+            border: none;
+            min-height: 300px;
+        }
+
+        .resume-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+        .resume-actions button {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary {
+            background: #00e8a2;
+            color: #060d0b;
+            box-shadow: 0 8px 24px -8px rgba(0,232,162,0.3);
+        }
+        .btn-primary:hover { filter: brightness(1.08); }
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            color: #8896b0;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); color: #eef2f9; }
+        .btn-success {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: #060d0b;
+        }
+        .btn-success:hover { filter: brightness(1.05); }
+        .btn-danger {
+            background: rgba(255,90,90,0.1);
+            color: #ff9b9b;
+            border: 1px solid rgba(255,90,90,0.15);
+        }
+        .btn-danger:hover { background: rgba(255,90,90,0.2); }
+
+        /* ── Email Writer ── */
+        .email-interface {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            height: 100%;
+        }
+        .email-interface.visible { display: flex; }
+
+        .email-input-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .email-input-section .email-field {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .email-input-section .email-field label {
+            font-size: 10.5px;
+            color: #8896b0;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .email-input-section .email-field input,
+        .email-input-section .email-field textarea {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 9px 14px;
+            color: #eef2f9;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: 0.2s;
+            resize: vertical;
+        }
+        .email-input-section .email-field input:focus,
+        .email-input-section .email-field textarea:focus {
+            border-color: #00e8a2;
+            box-shadow: 0 0 0 3px rgba(0,232,162,0.08);
+        }
+        .email-input-section .email-field textarea { min-height: 80px; }
+
+        .email-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+
+        .email-output-section {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        .email-output-section.visible { display: flex; }
+
+        .email-result-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 14px;
+        }
+        .email-result-card .result-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #00e8a2;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .email-result-card .result-content {
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #eef2f9;
+            white-space: pre-wrap;
+            position: relative;
+        }
+        .email-result-card .result-content .copy-email-btn {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            background: rgba(255,255,255,0.06);
+            border: none;
+            color: #8896b0;
+            padding: 3px 9px;
+            border-radius: 5px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .email-result-card .result-content .copy-email-btn:hover {
+            background: rgba(0,232,162,0.15);
+            color: #00e8a2;
+        }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1a1f29;
+            color: #eef2f9;
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            transform: translateY(80px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 999;
+            font-size: 13px;
+            max-width: 400px;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { border-color: rgba(0,232,162,0.3); }
+        .toast.error { border-color: rgba(255,90,90,0.3); color: #ff9b9b; }
+
+        /* ── Loading Spinner ── */
+        .loading-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(10,12,16,0.7);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 10;
+            border-radius: 14px;
+        }
+        .loading-overlay.active { display: flex; }
+        .loading-overlay .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(0,232,162,0.15);
+            border-top-color: #00e8a2;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay p { color: #8896b0; font-size: 13px; }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .dashboard { border-radius: 0; height: 100vh; max-height: none; }
+            body { padding: 0; }
+
+            .header-left .hamburger-btn { display: flex; }
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                top: 0; bottom: 0;
+                width: 280px;
+                z-index: 1000;
+                transition: left 0.3s ease;
+                box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+                background: rgba(12,16,22,0.98);
+                border-radius: 0;
+            }
+            .sidebar.mobile-open { left: 0; }
+
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.6);
+                z-index: 999;
+                backdrop-filter: blur(2px);
+            }
+            .sidebar-overlay.visible { display: block; }
+
+            .resume-layout { grid-template-columns: 1fr; }
+            .content-area { padding: 10px 12px 14px 12px; }
+            .chat-header { padding: 8px 12px; flex-wrap: wrap; }
+            .header-right .model-select, .header-right .lang-select { max-width: 100px; font-size: 10px; padding: 4px 6px; }
+            .header-left .page-subtitle { display: none; }
+            .generator-input-area { flex-direction: column; }
+            .generator-input-area .gen-btn { width: 100%; justify-content: center; padding: 10px; }
+            .generator-input-area .input-with-attach { width: 100%; }
+        }
+
+        @media (max-width: 480px) {
+            .option-box .content { font-size: 12px; }
+            .resume-panel { padding: 10px; max-height: 50vh; }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon"><i class="fas fa-pen-fancy"></i></div>
+            <div class="brand-text">
+                <h1>SanjayAIHub</h1>
+                <span>Content &amp; Writing Suite</span>
+            </div>
+        </div>
+
+        <!-- Social Media -->
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Social Media</div>
+
+            <!-- IG & FB -->
+            <div class="sidebar-group expanded" data-group="igfb">
+                <div class="sidebar-item parent-item">
+                    <i class="fab fa-instagram"></i>
+                    <span>IG &amp; FB</span>
+                    <span class="badge">8 tools</span>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </div>
+                <div class="sub-items">
+                    <div class="sidebar-item active" data-tab="caption"><i class="fas fa-pen-fancy"></i> <span>Caption</span></div>
+                    <div class="sidebar-item" data-tab="hashtags"><i class="fas fa-hashtag"></i> <span>Hashtags</span></div>
+                    <div class="sidebar-item" data-tab="story"><i class="fas fa-circle"></i> <span>Story</span></div>
+                    <div class="sidebar-item" data-tab="reel"><i class="fas fa-video"></i> <span>Reel VO</span></div>
+                    <div class="sidebar-item" data-tab="carousel"><i class="fas fa-images"></i> <span>Carousel</span></div>
+                    <div class="sidebar-item" data-tab="singleimage"><i class="fas fa-image"></i> <span>Single Image</span></div>
+                    <div class="sidebar-item" data-tab="collab"><i class="fas fa-handshake"></i> <span>Collab Message</span></div>
+                    <div class="sidebar-item" data-tab="bio"><i class="fas fa-id-badge"></i> <span>Bio</span></div>
+                </div>
+            </div>
+
+            <!-- LinkedIn -->
+            <div class="sidebar-group" data-group="linkedin">
+                <div class="sidebar-item parent-item">
+                    <i class="fab fa-linkedin-in"></i>
+                    <span>LinkedIn</span>
+                    <span class="badge">6 tools</span>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </div>
+                <div class="sub-items">
+                    <div class="sidebar-item" data-tab="linkedin-post"><i class="fas fa-pen-fancy"></i> <span>Post</span></div>
+                    <div class="sidebar-item" data-tab="linkedin-article"><i class="fas fa-newspaper"></i> <span>Article</span></div>
+                    <div class="sidebar-item" data-tab="linkedin-connection"><i class="fas fa-user-plus"></i> <span>Connection Message</span></div>
+                    <div class="sidebar-item" data-tab="linkedin-headline"><i class="fas fa-heading"></i> <span>Headline</span></div>
+                    <div class="sidebar-item" data-tab="linkedin-about"><i class="fas fa-address-card"></i> <span>About</span></div>
+                    <div class="sidebar-item" data-tab="linkedin-case"><i class="fas fa-briefcase"></i> <span>Case Studies</span></div>
+                </div>
+            </div>
+
+            <!-- YouTube -->
+            <div class="sidebar-group" data-group="youtube">
+                <div class="sidebar-item parent-item">
+                    <i class="fab fa-youtube"></i>
+                    <span>YouTube</span>
+                    <span class="badge">4 tools</span>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </div>
+                <div class="sub-items">
+                    <div class="sidebar-item" data-tab="youtube-title"><i class="fas fa-tag"></i> <span>Title</span></div>
+                    <div class="sidebar-item" data-tab="youtube-description"><i class="fas fa-align-left"></i> <span>Description</span></div>
+                    <div class="sidebar-item" data-tab="youtube-tags"><i class="fas fa-hashtag"></i> <span>Tags</span></div>
+                    <div class="sidebar-item" data-tab="youtube-script"><i class="fas fa-file-alt"></i> <span>Script</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <!-- Professional Tools -->
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Professional</div>
+            <div class="sidebar-item" data-tab="resume">
+                <i class="fas fa-file-pdf"></i> <span>Resume Builder</span>
+            </div>
+            <div class="sidebar-item" data-tab="email">
+                <i class="fas fa-envelope"></i> <span>Email Writer</span>
+            </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <!-- Back to Hub -->
+        <div class="back-hub">
+            <div class="sidebar-item" onclick="window.location.href='/'">
+                <i class="fas fa-arrow-left"></i> <span>Back to Hub</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="header-left">
+                <button class="hamburger-btn" id="hamburgerBtn"><i class="fas fa-bars"></i></button>
+                <span class="page-title" id="pageTitle">Caption Generator</span>
+                <span class="page-subtitle" id="pageSubtitle">Engaging social media captions</span>
+            </div>
+            <div class="header-right">
+                <select class="model-select" id="modelSelect">
+                    <option value="qwen3.7-max">qwen3.7-max</option>
+                    <option value="qwen3.7-plus">qwen3.7-plus</option>
+                    <option value="qwen3.5-plus">qwen3.5-plus</option>
+                    <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+                    <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+                    <option value="mistralai/mistral-small-4-119b-2603" selected>mistral-small-4-119b</option>
+                </select>
+                <select class="lang-select" id="langSelect">
+                    <option value="en">English</option>
+                    <option value="hi">हिन्दी</option>
+                    <option value="bn">বাংলা</option>
+                    <option value="te">తెలుగు</option>
+                    <option value="mr">मराठी</option>
+                    <option value="ta">தமிழ்</option>
+                    <option value="ur">اردو</option>
+                    <option value="gu">ગુજરાતી</option>
+                    <option value="kn">ಕನ್ನಡ</option>
+                    <option value="ml">മലയാളം</option>
+                    <option value="or">ଓଡ଼ିଆ</option>
+                    <option value="pa">ਪੰਜਾਬੀ</option>
+                    <option value="as">অসমীয়া</option>
+                    <option value="mai">मैथिली</option>
+                    <option value="sa">संस्कृतम्</option>
+                    <option value="ne">नेपाली</option>
+                    <option value="sd">سنڌي</option>
+                    <option value="ks">कॉशुर / کٲشُر</option>
+                    <option value="kok">कोंकणी</option>
+                    <option value="mni">মণিপুরী</option>
+                    <option value="bo">བོད་སྐད་</option>
+                    <option value="doi">डोगरी</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- CONTENT AREA -->
+        <div class="content-area" id="contentArea">
+
+            <!-- ── GENERATOR INTERFACE ── -->
+            <div class="generator-interface visible" id="generatorInterface">
+                <div class="generator-input-area">
+                    <div class="input-with-attach">
+                        <input type="text" id="generatorInput" placeholder="Enter a topic, product, or idea…" />
+                        <button class="attach-btn" id="attachBtn" title="Attach image or file">
+                            <i class="fas fa-paperclip"></i>
+                            <span class="badge">FILE</span>
+                        </button>
+                    </div>
+                    <button class="gen-btn" id="generateBtn"><i class="fas fa-wand-magic-sparkles"></i> Generate</button>
+                </div>
+
+                <!-- Attachment Preview -->
+                <div class="attachment-preview" id="attachmentPreview">
+                    <span class="file-type-badge text" id="fileTypeBadge">TEXT</span>
+                    <i class="fas fa-file-alt file-icon"></i>
+                    <span class="file-name" id="attachmentFileName"></span>
+                    <span class="file-size" id="attachmentFileSize"></span>
+                    <button class="remove-attach" id="removeAttachBtn" title="Remove attachment"><i class="fas fa-times"></i></button>
+                </div>
+
+                <div class="generator-output" id="generatorOutput">
+                    <div class="empty-state">
+                        <i class="fas fa-lightbulb"></i>
+                        <p>Enter a topic above and click Generate to create 5 content options</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── RESUME BUILDER ── -->
+            <div class="resume-interface" id="resumeInterface">
+                <div class="resume-layout">
+                    <!-- Form Panel -->
+                    <div class="resume-panel" id="resumeFormPanel">
+                        <h3><i class="fas fa-user" style="color:#00e8a2;margin-right:6px;"></i> Resume Details</h3>
+                        
+                        <!-- NEW: Profile Photo Upload Picker -->
+                        <div class="resume-photo-upload">
+                            <img id="resumePhotoPreview" class="resume-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234d5872'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Profile">
+                            <div class="resume-photo-controls">
+                                <label for="resumePhotoInput" class="resume-photo-btn">
+                                    <i class="fas fa-camera"></i> Upload Photo
+                                </label>
+                                <input type="file" id="resumePhotoInput" accept="image/png, image/jpeg, image/jpg, image/webp">
+                                <span class="resume-photo-hint">Square image recommended • Max 2MB</span>
+                            </div>
+                        </div>
+
+                        <div class="resume-field">
+                            <label>Full Name *</label>
+                            <input type="text" id="resumeName" placeholder="e.g. Sanjay Kumar" value="Sanjay Kumar" />
+                        </div>
+                        <div class="resume-field">
+                            <label>Job Title</label>
+                            <input type="text" id="resumeTitle" placeholder="e.g. Software Engineer" value="AI/ML Engineer" />
+                        </div>
+                        <div class="resume-field">
+                            <label>Email *</label>
+                            <input type="text" id="resumeEmail" placeholder="e.g. sanjay@example.com" value="sanjay@aihub.com" />
+                        </div>
+                        <div class="resume-field">
+                            <label>Phone</label>
+                            <input type="text" id="resumePhone" placeholder="e.g. +91 98765 43210" value="+91 98765 43210" />
+                        </div>
+                        <div class="resume-field">
+                            <label>Location</label>
+                            <input type="text" id="resumeLocation" placeholder="e.g. Bengaluru, India" value="Bengaluru, India" />
+                        </div>
+                        <div class="resume-field">
+                            <label>Date of Birth</label>
+                            <input type="text" id="resumeDob" placeholder="DD/MM/YYYY" value="15/08/1990" />
+                        </div>
+                        <div class="resume-field">
+                            <label>Summary / Objective</label>
+                            <textarea id="resumeSummary" rows="2">AI/ML Engineer with 5+ years of experience in building scalable machine learning solutions. Passionate about deep learning, NLP, and MLOps.</textarea>
+                        </div>
+                        <div class="resume-field">
+                            <label>Work Experience</label>
+                            <textarea id="resumeExperience" rows="3">Senior AI Engineer - TechCorp (2021-Present)
+                            - Built production-grade LLM pipelines serving 1M+ users
+                            - Designed and deployed RAG systems for enterprise search
+                            - Led a team of 5 engineers on MLOps initiatives</textarea>
+                        </div>
+                        <div class="resume-field">
+                            <label>Education</label>
+                            <textarea id="resumeEducation" rows="2">M.Sc. in Computer Science - IIT Bombay (2018-2020)
+                            B.Tech in CSE - NIT Trichy (2014-2018)</textarea>
+                        </div>
+                        <div class="resume-field">
+                            <label>Skills (comma-separated)</label>
+                            <input type="text" id="resumeSkills" placeholder="e.g. Python, PyTorch, LLMs, RAG" value="Python, PyTorch, TensorFlow, LLMs, RAG, AWS, Docker" />
+                        </div>
+                        <div class="resume-field">
+                            <label>Languages</label>
+                            <input type="text" id="resumeLanguages" placeholder="e.g. English, Hindi" value="English, Hindi, Kannada" />
+                        </div>
+                        <div class="resume-field">
+                            <label>Certifications</label>
+                            <input type="text" id="resumeCertifications" placeholder="e.g. AWS Certified ML, TensorFlow Developer" value="AWS Certified ML, TensorFlow Developer" />
+                        </div>
+                        <div class="resume-actions">
+                            <button class="btn-primary" id="resumeGenerateBtn"><i class="fas fa-wand-magic-sparkles"></i> Generate</button>
+                            <button class="btn-secondary" id="resumeClearBtn"><i class="fas fa-undo"></i> Clear</button>
+                        </div>
+                        <div style="display:flex; gap:8px; margin-top:4px;">
+                            <button class="btn-success" id="resumeDownloadBtn" style="flex:1; justify-content:center;"><i class="fas fa-download"></i> Download PDF</button>
+                        </div>
+                    </div>
+
+                    <!-- Preview Panel -->
+                    <div class="resume-preview-container" style="position:relative;">
+                        <div class="preview-toolbar">
+                            <span><i class="fas fa-eye" style="color:#00e8a2;margin-right:4px;"></i> Preview</span>
+                            <div class="preview-actions">
+                                <button id="resumeRefreshPreview"><i class="fas fa-sync"></i> Refresh</button>
+                            </div>
+                        </div>
+                        <div class="loading-overlay" id="resumeLoading">
+                            <div class="spinner"></div>
+                            <p>AI is crafting your resume...</p>
+                        </div>
+                        <iframe class="resume-preview-iframe" id="resumePreview" src="about:blank"></iframe>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── EMAIL WRITER ── -->
+            <div class="email-interface" id="emailInterface">
+                <div class="email-input-section">
+                    <div class="email-field">
+                        <label>Subject Description</label>
+                        <input type="text" id="emailSubjectInput" placeholder="e.g., Follow-up after job interview for Software Engineer" />
+                    </div>
+                    <div class="email-field">
+                        <label>Email Body Description</label>
+                        <textarea id="emailBodyInput" rows="3" placeholder="Describe what you want to say in the email body..."></textarea>
+                    </div>
+                    <div class="email-actions">
+                        <button class="btn-primary" id="emailGenerateBtn"><i class="fas fa-wand-magic-sparkles"></i> Generate Email</button>
+                        <button class="btn-secondary" id="emailClearBtn"><i class="fas fa-undo"></i> Clear</button>
+                    </div>
+                </div>
+                <div class="email-output-section" id="emailOutputSection">
+                    <div class="email-result-card">
+                        <span class="result-label">📌 Subject Line</span>
+                        <div class="result-content" id="emailSubjectOutput">
+                            <span style="color:#5b6a84;">Subject will appear here</span>
+                            <button class="copy-email-btn" onclick="copyEmailSubject()"><i class="fas fa-copy"></i> Copy</button>
+                        </div>
+                    </div>
+                    <div class="email-result-card">
+                        <span class="result-label">✉️ Email Body</span>
+                        <div class="result-content" id="emailBodyOutput">
+                            <span style="color:#5b6a84;">Email body will appear here</span>
+                            <button class="copy-email-btn" onclick="copyEmailBody()"><i class="fas fa-copy"></i> Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Hidden file input -->
+<input type="file" id="fileInput" accept=".txt,.md,.markdown,.json,.csv,.js,.ts,.jsx,.tsx,.py,.html,.css,.xml,.yaml,.yml,.sql,.sh,.bash,.log,image/*" style="display:none;" />
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+    // ── Configuration ──
+    const CONFIGS = {
+        caption: {
+            label: 'Caption Generator',
+            subtitle: 'Engaging social media captions',
+            systemPrompt: 'You are a social media expert. Respond with ONLY valid JSON, no markdown, no commentary. Shape: {"options": ["...", "...", "...", "...", "..."]} with exactly 5 entries.',
+            prompt: (topic, lang) => `Generate 5 engaging social media captions for: "${topic}" in ${lang}. Each caption under 200 characters, include emojis, a CTA, and vary tone (professional, funny, inspirational). Return ONLY JSON: {"options": ["caption1", "caption2", "caption3", "caption4", "caption5"]}`
+        },
+        hashtags: {
+            label: 'Hashtag Generator',
+            subtitle: 'Optimized hashtag clusters',
+            systemPrompt: 'You are a hashtag expert. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "..."]}.',
+            prompt: (topic, lang) => `Generate hashtags for: "${topic}" in ${lang}. Split into 3 tiers: High-volume, Mid-volume, Long-tail. Return ONLY JSON: {"options": ["High: ...", "Mid: ...", "Long: ..."]}`
+        },
+        story: {
+            label: 'Story Ideas',
+            subtitle: 'Interactive story concepts',
+            systemPrompt: 'You are a social media story creator. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
+            prompt: (topic, lang) => `Generate 5 story ideas for: "${topic}" in ${lang}. Each: text overlay + sticker suggestion + CTA. Keep under 100 chars. Return ONLY JSON: {"options": ["story1", "story2", "story3", "story4", "story5"]}`
+        },
+        reel: {
+            label: 'Reel Script',
+            subtitle: 'Voiceover and hooks for Reels',
+            systemPrompt: 'You are a video content creator. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
+            prompt: (topic, lang) => `Generate 5 Instagram Reel scripts for: "${topic}" in ${lang}. Each: hook (under 60 chars) + 15-30 sec voiceover with CTA. Return ONLY JSON: {"options": ["script1", "script2", "script3", "script4", "script5"]}`
+        },
+        carousel: {
+            label: 'Carousel Generator',
+            subtitle: 'Multi-slide post ideas',
+            systemPrompt: 'You are a content strategist. Respond with ONLY valid JSON, no markdown, no commentary. Shape: {"content": "..."} where content is a markdown-formatted string.',
+            prompt: (topic, lang) => `Create a detailed Instagram carousel post (5-7 slides) for: "${topic}" in ${lang}. Include hook, key points, CTA. Return ONLY JSON: {"content": "full markdown content here"}`
+        },
+        singleimage: {
+            label: 'Single Image Post',
+            subtitle: 'Caption + hashtags for photos',
+            systemPrompt: 'You are a photography and social media expert. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
+            prompt: (topic, lang) => `Generate 5 single-image post captions for: "${topic}" in ${lang}. Each: 150-200 characters, includes 1 question, 1 CTA, 5-8 hashtags. Return ONLY JSON: {"options": ["caption1", "caption2", "caption3", "caption4", "caption5"]}`
+        },
+        collab: {
+            label: 'Collab Message',
+            subtitle: 'DM templates for partnerships',
+            systemPrompt: 'You are a partnership outreach specialist. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
+            prompt: (topic, lang) => `Generate 5 DM templates for collaboration or partnership requests related to: "${topic}" in ${lang}. Each should be professional, friendly, and include a clear value proposition. Return ONLY JSON: {"options": ["message1", "message2", "message3", "message4", "message5"]}`
+        },
+        bio: {
+            label: 'Bio Generator',
+            subtitle: 'Profile bios for social media',
+            systemPrompt: 'You are a personal branding expert. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
+            prompt: (topic, lang) => `Generate 5 social media bios for: "${topic}" in ${lang}. Offer 3 styles: professional, playful, keyword-rich. Under 150 chars each. Return ONLY JSON: {"options": ["bio1", "bio2", "bio3", "bio4", "bio5"]}`
+        },
+        'linkedin-post': {
+            label: 'LinkedIn Post',
+            subtitle: 'Professional posts for LinkedIn',
+            systemPrompt: 'You are a LinkedIn content strategist. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
+            prompt: (topic, lang) => `Generate 5 LinkedIn posts for: "${topic}" in ${lang}. Each: hook + 2-3 insights + question. Under 300 words. Return ONLY JSON: {"options": ["post1", "post2", "post3", "post4", "post5"]}`
+        },
+        'linkedin-article': {
+            label: 'LinkedIn Article',
+            subtitle: 'Long-form thought leadership',
+            systemPrompt: 'You are a thought leadership writer. Respond with ONLY valid JSON, no markdown, no commentary. Shape: {"content": "..."} where content is a markdown string.',
+            prompt: (topic, lang) => `Write a complete LinkedIn article (600-800 words) for: "${topic}" in ${lang}. Structure: Hook, Intro, 3-4 subheadings, Conclusion with CTA. Return ONLY JSON: {"content": "full markdown content here"}`
+        },
+        'linkedin-connection': {
+            label: 'Connection Message',
+            subtitle: 'Personalized connection requests',
+            systemPrompt: 'You are a networking specialist. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
+            prompt: (topic, lang) => `Generate 5 LinkedIn connection request messages for: "${topic}" in ${lang}. Each: mention mutual interest, reason for connecting, next step. Under 200 chars. Return ONLY JSON: {"options": ["message1", "message2", "message3", "message4", "message5"]}`
+        },
+        'linkedin-headline': {
+            label: 'Headline Generator',
+            subtitle: 'Professional headlines for profiles',
+            systemPrompt: 'You are a LinkedIn profile optimization expert. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
+            prompt: (topic, lang) => `Generate 5 LinkedIn headlines for: "${topic}" in ${lang}. Each under 120 characters, include keywords for discoverability, highlight value proposition. Return ONLY JSON: {"options": ["headline1", "headline2", "headline3", "headline4", "headline5"]}`
+        },
+        'linkedin-about': {
+            label: 'About Section',
+            subtitle: 'Professional summary for profiles',
+            systemPrompt: 'You are a career coach and LinkedIn profile expert. Respond with ONLY valid JSON, no markdown. Shape: {"content": "..."} where content is a markdown string.',
+            prompt: (topic, lang) => `Write a professional LinkedIn About section (200-300 words) for: "${topic}" in ${lang}. Include: who you are, what you do, key achievements, call to action. Return ONLY JSON: {"content": "full markdown content here"}`
+        },
+        'linkedin-case': {
+            label: 'Case Studies',
+            subtitle: 'Success stories and case studies',
+            systemPrompt: 'You are a business case study writer. Respond with ONLY valid JSON, no markdown. Shape: {"content": "..."} where content is a markdown string.',
+            prompt: (topic, lang) => `Create a LinkedIn case study (400-500 words) for: "${topic}" in ${lang}. Structure: Challenge, Solution, Results. Include metrics, quotes, CTA. Return ONLY JSON: {"content": "full markdown content here"}`
+        },
+        'youtube-title': {
+            label: 'YouTube Title Generator',
+            subtitle: 'Click-worthy video titles',
+            systemPrompt: 'You are a YouTube SEO and CTR optimization expert. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
+            prompt: (topic, lang) => `Generate 5 YouTube video titles for: "${topic}" in ${lang}. Each title under 60 characters, include keywords, create curiosity, promise value. Return ONLY JSON: {"options": ["title1", "title2", "title3", "title4", "title5"]}`
+        },
+        'youtube-description': {
+            label: 'YouTube Description',
+            subtitle: 'Optimized video descriptions',
+            systemPrompt: 'You are a YouTube SEO specialist. Respond with ONLY valid JSON, no markdown. Shape: {"content": "..."} where content is a markdown string.',
+            prompt: (topic, lang) => `Write a YouTube video description (200-300 words) for: "${topic}" in ${lang}. Include: summary, timestamps, CTA, links, 10-15 hashtags. Return ONLY JSON: {"content": "full markdown content here"}`
+        },
+        'youtube-tags': {
+            label: 'YouTube Tags',
+            subtitle: 'SEO-friendly tag clusters',
+            systemPrompt: 'You are a YouTube SEO expert. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["..."]}.',
+            prompt: (topic, lang) => `Generate 25 YouTube tags for: "${topic}" in ${lang}. Include: 5 broad, 10 specific, 5 long-tail. Return ONLY JSON: {"options": ["tag list 1", "tag list 2", "tag list 3"]}`
+        },
+        'youtube-script': {
+            label: 'YouTube Script',
+            subtitle: 'Complete video scripts',
+            systemPrompt: 'You are a professional video scriptwriter for YouTube. Respond with ONLY valid JSON, no markdown. Shape: {"content": "..."} where content is a markdown string.',
+            prompt: (topic, lang) => `Write a complete YouTube video script (5-7 min, ~800-1000 words) for: "${topic}" in ${lang}. Structure: Hook, Intro, 3-4 key points, Outro with CTA. Include visual cues in brackets. Return ONLY JSON: {"content": "full markdown content here"}`
+        }
+    };
+
+    // ── DOM refs ──
+    const sidebarItems = document.querySelectorAll('.sidebar-item[data-tab]');
+    const generatorInterface = document.getElementById('generatorInterface');
+    const resumeInterface = document.getElementById('resumeInterface');
+    const emailInterface = document.getElementById('emailInterface');
+    const generatorInput = document.getElementById('generatorInput');
+    const generateBtn = document.getElementById('generateBtn');
+    const generatorOutput = document.getElementById('generatorOutput');
+    const pageTitle = document.getElementById('pageTitle');
+    const pageSubtitle = document.getElementById('pageSubtitle');
+    const modelSelect = document.getElementById('modelSelect');
+    const langSelect = document.getElementById('langSelect');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const toastEl = document.getElementById('toast');
+
+    // ── Attachment refs ──
+    const attachBtn = document.getElementById('attachBtn');
+    const fileInput = document.getElementById('fileInput');
+    const attachmentPreview = document.getElementById('attachmentPreview');
+    const attachmentFileName = document.getElementById('attachmentFileName');
+    const attachmentFileSize = document.getElementById('attachmentFileSize');
+    const fileTypeBadge = document.getElementById('fileTypeBadge');
+    const removeAttachBtn = document.getElementById('removeAttachBtn');
+
+    // ── Resume Photo refs (NEW) ──
+    const resumePhotoInput = document.getElementById('resumePhotoInput');
+    const resumePhotoPreview = document.getElementById('resumePhotoPreview');
+    let resumePhotoBase64 = null;
+
+    // ── State ──
+    let currentTab = 'caption';
+    let isBusy = false;
+    let currentAttachment = null;
+
+    // ── Language names ──
+    const langNames = {
+        'en': 'English', 'hi': 'Hindi', 'bn': 'Bengali', 'te': 'Telugu',
+        'mr': 'Marathi', 'ta': 'Tamil', 'ur': 'Urdu', 'gu': 'Gujarati',
+        'kn': 'Kannada', 'ml': 'Malayalam', 'or': 'Odia', 'pa': 'Punjabi',
+        'as': 'Assamese', 'mai': 'Maithili', 'sa': 'Sanskrit', 'ne': 'Nepali',
+        'sd': 'Sindhi', 'ks': 'Kashmiri', 'kok': 'Konkani', 'mni': 'Manipuri',
+        'bo': 'Bodo', 'doi': 'Dogri'
+    };
+
+    const MULTILINGUAL_MODELS = new Set([
+        'mistralai/mistral-small-4-119b-2603',
+        'mistralai/mistral-large-3-675b-instruct-2512',
+        'deepseek-ai/deepseek-v4-flash',
+        'deepseek-ai/deepseek-v4-pro',
+        'meta/llama-3.3-70b-instruct',
+        'meta/llama-3.1-70b-instruct',
+    ]);
+
+    // ── Toast ──
+    function showToast(message, type = 'info') {
+        toastEl.textContent = message;
+        toastEl.className = `toast ${type} show`;
+        clearTimeout(toastEl._timeout);
+        toastEl._timeout = setTimeout(() => toastEl.classList.remove('show'), 3000);
+    }
+
+    // ── Mobile sidebar ──
+    hamburgerBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('mobile-open');
+        sidebarOverlay.classList.toggle('visible');
+    });
+    sidebarOverlay.addEventListener('click', () => {
+        sidebar.classList.remove('mobile-open');
+        sidebarOverlay.classList.remove('visible');
+    });
+
+    // ── Sidebar group toggle ──
+    document.querySelectorAll('.sidebar-item.parent-item').forEach(parent => {
+        parent.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const group = this.closest('.sidebar-group');
+            if (group) group.classList.toggle('expanded');
+        });
+    });
+
+    // ── Navigation ──
+    function navigateTo(tab) {
+        currentTab = tab;
+        // Update sidebar active state
+        document.querySelectorAll('.sidebar-item[data-tab]').forEach(el => el.classList.remove('active'));
+        const target = document.querySelector(`.sidebar-item[data-tab="${tab}"]`);
+        if (target) target.classList.add('active');
+
+        // Close mobile sidebar
+        sidebar.classList.remove('mobile-open');
+        sidebarOverlay.classList.remove('visible');
+
+        // Show/hide interfaces
+        generatorInterface.classList.remove('visible');
+        resumeInterface.classList.remove('visible');
+        emailInterface.classList.remove('visible');
+
+        const config = CONFIGS[tab];
+        if (config) {
+            generatorInterface.classList.add('visible');
+            pageTitle.textContent = config.label;
+            pageSubtitle.textContent = config.subtitle;
+            generatorOutput.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-lightbulb"></i>
+                    <p>Enter a topic above and click Generate to create 5 content options</p>
+                </div>
+            `;
+            generatorInput.placeholder = 'Enter a topic, product, or idea…';
+            generatorInput.value = '';
+            clearAttachment();
+        } else if (tab === 'resume') {
+            resumeInterface.classList.add('visible');
+            pageTitle.textContent = 'Resume Builder';
+            pageSubtitle.textContent = 'Create professional resumes with AI';
+        } else if (tab === 'email') {
+            emailInterface.classList.add('visible');
+            pageTitle.textContent = 'Email Writer';
+            pageSubtitle.textContent = 'Generate professional emails';
+        }
+    }
+
+    // ── Sidebar clicks ──
+    document.querySelectorAll('.sidebar-item[data-tab]').forEach(el => {
+        el.addEventListener('click', () => navigateTo(el.dataset.tab));
+    });
+
+    // ── Attachment Functions ──
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function handleFileSelect(file) {
+        if (!file) return;
+
+        const isImage = file.type.startsWith('image/');
+        const isText = !isImage;
+
+        // For text files, validate extension
+        if (isText) {
+            const allowedText = ['txt', 'md', 'markdown', 'json', 'csv', 'js', 'ts', 'jsx', 'tsx', 'py', 'html', 'css', 'xml', 'yaml', 'yml', 'sql', 'sh', 'bash', 'log'];
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!allowedText.includes(ext)) {
+                showToast('Invalid file type. Allowed: ' + allowedText.join(', '), 'error');
+                return;
+            }
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            currentAttachment = {
+                file: file,
+                name: file.name,
+                type: isImage ? 'image' : 'text',
+                url: isImage ? URL.createObjectURL(file) : null,
+                content: e.target.result,
+                isImage: isImage,
+                size: file.size
+            };
+
+            attachmentFileName.textContent = file.name;
+            attachmentFileSize.textContent = formatFileSize(file.size);
+
+            if (isImage) {
+                fileTypeBadge.textContent = '🖼️ IMAGE';
+                fileTypeBadge.className = 'file-type-badge image';
+                document.querySelector('.attachment-preview .file-icon').className = 'fas fa-image file-icon';
+                document.querySelector('.attachment-preview .file-icon').style.color = '#f472b6';
+            } else {
+                fileTypeBadge.textContent = '📄 TEXT';
+                fileTypeBadge.className = 'file-type-badge text';
+                document.querySelector('.attachment-preview .file-icon').className = 'fas fa-file-alt file-icon';
+                document.querySelector('.attachment-preview .file-icon').style.color = '#00e8a2';
+            }
+
+            attachmentPreview.classList.add('visible');
+        };
+
+        if (isImage) {
+            reader.readAsDataURL(file);
+        } else {
+            reader.readAsText(file);
+        }
+    }
+
+    function clearAttachment() {
+        if (currentAttachment && currentAttachment.url) {
+            URL.revokeObjectURL(currentAttachment.url);
+        }
+        currentAttachment = null;
+        attachmentPreview.classList.remove('visible');
+        fileInput.value = '';
+    }
+
+    attachBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files[0]) handleFileSelect(e.target.files[0]);
+        fileInput.value = '';
+    });
+    removeAttachBtn.addEventListener('click', clearAttachment);
+
+    // ── Resume Photo Upload Logic (NEW) ──
+    resumePhotoInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+            showToast('Photo must be less than 2MB', 'error');
+            this.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            resumePhotoBase64 = event.target.result;
+            resumePhotoPreview.src = resumePhotoBase64;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // ── Generator Helpers ──
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                  .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    function safeParseJSON(raw) {
+        let cleaned = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '');
+        try { return JSON.parse(cleaned); } catch { return null; }
+    }
+
+    function createOptionBox(text, index) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'option-wrapper';
+        const label = document.createElement('div');
+        label.className = 'option-label';
+        label.innerHTML = `<span class="opt-num">${index}</span> Option ${index}`;
+        const box = document.createElement('div');
+        box.className = 'option-box';
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'content';
+        contentDiv.innerHTML = marked.parse(text);
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+        copyBtn.onclick = function() { copyText(this, contentDiv.textContent.trim()); };
+        box.appendChild(copyBtn);
+        box.appendChild(contentDiv);
+        wrapper.appendChild(label);
+        wrapper.appendChild(box);
+        return wrapper;
+    }
+
+    function createLongContentBox(text) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'option-wrapper';
+        const label = document.createElement('div');
+        label.className = 'option-label';
+        label.innerHTML = '<span class="opt-num">📄</span> Full Content';
+        const box = document.createElement('div');
+        box.className = 'option-box';
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'content';
+        contentDiv.innerHTML = marked.parse(text);
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+        copyBtn.onclick = function() { copyText(this, contentDiv.textContent.trim()); };
+        box.appendChild(copyBtn);
+        box.appendChild(contentDiv);
+        wrapper.appendChild(label);
+        wrapper.appendChild(box);
+        return wrapper;
+    }
+
+    window.copyText = function(btn, text) {
+        const cleanText = text.replace(/\s+/g, ' ').trim();
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(cleanText).then(() => {
+                btn.classList.add('copied');
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                }, 2000);
+            });
+        }
+    };
+
+    // ── Generate Content ──
+    async function generateContent() {
+        const topic = generatorInput.value.trim();
+        if (!topic && !currentAttachment) {
+            generatorInput.focus();
+            generatorInput.style.borderColor = '#ff6b6b';
+            setTimeout(() => generatorInput.style.borderColor = '', 2000);
+            showToast('Please enter a topic or attach a file', 'error');
+            return;
+        }
+
+        const config = CONFIGS[currentTab];
+        if (!config) return;
+
+        const lang = langSelect.value;
+        const langName = langNames[lang] || 'English';
+        const isLong = ['carousel', 'linkedin-article', 'youtube-script', 'linkedin-about', 'linkedin-case'].includes(currentTab);
+
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+        generatorOutput.innerHTML = '';
+
+        try {
+            let selectedModel = modelSelect.value;
+            if (lang !== 'en' && !MULTILINGUAL_MODELS.has(selectedModel)) {
+                selectedModel = 'mistralai/mistral-small-4-119b-2603';
+            }
+
+            let userPrompt = config.prompt(topic, langName);
+            
+            // If there's an attachment, include it in the context
+            if (currentAttachment) {
+                if (currentAttachment.isImage) {
+                    // For images, we'd send as a vision-enabled request
+                    // For now, just mention it in the prompt
+                    userPrompt = `[Image attached: ${currentAttachment.name}]\n\n${userPrompt}`;
+                } else {
+                    // For text files, include the content
+                    userPrompt = `[File: ${currentAttachment.name}]\n${currentAttachment.content}\n\n${userPrompt}`;
+                }
+            }
+
+            const res = await fetch('/api/me/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [
+                        { role: 'system', content: config.systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    model: selectedModel,
+                    stream: false,
+                    temperature: 0.7,
+                    max_tokens: isLong ? 4096 : 1024,
+                }),
+            });
+
+            if (!res.ok) throw new Error('Generation failed');
+
+            const data = await res.json();
+            const rawContent = data.choices?.[0]?.message?.content || data.content || '';
+            const parsed = safeParseJSON(rawContent);
+
+            generatorOutput.innerHTML = '';
+            const heading = document.createElement('div');
+            heading.className = 'section-heading';
+            heading.textContent = config.label;
+            generatorOutput.appendChild(heading);
+
+            if (isLong) {
+                const text = (parsed && typeof parsed.content === 'string' && parsed.content.trim())
+                    ? parsed.content : rawContent;
+                generatorOutput.appendChild(createLongContentBox(text));
+            } else {
+                let options = (parsed && Array.isArray(parsed.options))
+                    ? parsed.options.map(o => String(o).trim()).filter(o => o.length > 0)
+                    : null;
+                if (!options || options.length === 0) {
+                    options = [rawContent.trim()].filter(o => o.length > 0);
+                }
+                const displayOptions = options.slice(0, 5);
+                displayOptions.forEach((opt, i) => {
+                    generatorOutput.appendChild(createOptionBox(opt, i + 1));
+                });
+                if (options.length > 5) {
+                    const more = document.createElement('div');
+                    more.style.cssText = 'color:#5b6a84;font-size:11px;padding:4px 0;text-align:center;';
+                    more.textContent = `+ ${options.length - 5} more options generated`;
+                    generatorOutput.appendChild(more);
+                }
+            }
+            
+            // Clear attachment after successful generation
+            clearAttachment();
+            
+        } catch (err) {
+            generatorOutput.innerHTML = `
+                <div class="option-box" style="border-color:rgba(255,90,90,0.2);">
+                    <div style="color:#ff9b9b;display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span>${escapeHtml(err.message)}</span>
+                    </div>
+                </div>
+            `;
+        } finally {
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate';
+        }
+    }
+
+    generatorInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') generateContent(); });
+    generateBtn.addEventListener('click', generateContent);
+
+    // ── RESUME BUILDER ──
+    function loadResumeTemplate() {
+        const iframe = document.getElementById('resumePreview');
+        const loading = document.getElementById('resumeLoading');
+
+        loading.classList.add('active');
+
+        const name = document.getElementById('resumeName').value.trim() || 'Your Name';
+        const title = document.getElementById('resumeTitle').value.trim() || 'Job Title';
+        const email = document.getElementById('resumeEmail').value.trim() || 'email@example.com';
+        const phone = document.getElementById('resumePhone').value.trim() || 'Phone';
+        const location = document.getElementById('resumeLocation').value.trim() || 'Location';
+        const dob = document.getElementById('resumeDob').value.trim() || 'DD/MM/YYYY';
+        const summary = document.getElementById('resumeSummary').value.trim() || 'Professional summary goes here.';
+        const experience = document.getElementById('resumeExperience').value.trim() || 'Work experience goes here.';
+        const education = document.getElementById('resumeEducation').value.trim() || 'Education details go here.';
+        const skills = document.getElementById('resumeSkills').value.trim() || 'Skills';
+        const languages = document.getElementById('resumeLanguages').value.trim() || '';
+        const certifications = document.getElementById('resumeCertifications').value.trim() || '';
+
+        // Use uploaded photo or fallback placeholder
+        const photoSrc = resumePhotoBase64 || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+
+        const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Resume - ${escapeHtml(name)}</title>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f0f0; padding: 20px; line-height: 1.6; }
+                .resume-container { max-width: 800px; margin: 0 auto; background: white; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+                .header { background: #2E8B8B; color: white; padding: 30px; display: flex; align-items: center; gap: 30px; }
+                .profile-image { width: 120px; height: 120px; border-radius: 8px; object-fit: cover; border: 4px solid white; flex-shrink: 0; background: #ccc; display: flex; align-items: center; justify-content: center; font-size: 40px; color: #999; }
+                .header-content { flex: 1; }
+                .header-content h1 { font-size: 32px; margin-bottom: 15px; letter-spacing: 2px; }
+                .contact-info { font-size: 14px; }
+                .contact-info div { margin-bottom: 5px; }
+                .contact-info strong { display: inline-block; width: 80px; }
+                .section { padding: 25px 30px; border-bottom: 1px solid #e0e0e0; }
+                .section-title { background: #2E8B8B; color: white; padding: 8px 15px; font-size: 18px; font-weight: bold; margin-bottom: 20px; display: inline-block; border-radius: 3px; }
+                .content { color: #333; font-size: 14px; }
+                .job-item, .education-item { margin-bottom: 20px; }
+                .job-header, .education-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; color: #2E8B8B; }
+                .company { font-style: italic; color: #666; margin-bottom: 8px; }
+                ul { margin-left: 20px; }
+                li { margin-bottom: 5px; }
+                .skill-category { margin-bottom: 10px; }
+                .skill-category strong { color: #2E8B8B; }
+                .edit-hint { font-size: 12px; color: #999; margin-top: 10px; font-style: italic; text-align: center; }
+                @media print { body { background: white; padding: 0; } .resume-container { box-shadow: none; } .edit-hint { display: none; } }
+            </style>
+        </head>
+        <body>
+            <div class="resume-container">
+                <div class="header">
+                    <img class="profile-image" src="${photoSrc}" alt="Profile Photo" />
+                    <div class="header-content">
+                        <h1>${escapeHtml(name).toUpperCase()}</h1>
+                        <div class="contact-info">
+                            <div><strong>Address:</strong> ${escapeHtml(location)}</div>
+                            <div><strong>D.O.B.:</strong> ${escapeHtml(dob)}</div>
+                            <div><strong>Phone:</strong> ${escapeHtml(phone)}</div>
+                            <div><strong>Email:</strong> ${escapeHtml(email)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">SUMMARY</div>
+                    <div class="content">${escapeHtml(summary)}</div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">WORK EXPERIENCE</div>
+                    <div class="content">
+                        <div class="job-item">
+                            <div class="job-header">
+                                <span>${escapeHtml(title)}</span>
+                                <span>Present</span>
+                            </div>
+                            <div class="company">${escapeHtml(experience.split('-')[0]?.trim() || 'Company Name')}</div>
+                            <ul>
+                                ${experience.split('\n').filter(line => line.trim().startsWith('-')).map(line => `<li>${escapeHtml(line.trim().substring(1).trim())}</li>`).join('') || '<li>Professional experience details</li>'}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">EDUCATION</div>
+                    <div class="content">
+                        <div class="education-item">
+                            <div class="education-header">
+                                <span>${escapeHtml(education.split('-')[0]?.trim() || 'Degree')}</span>
+                                <span>${escapeHtml(education.split('(').pop()?.replace(')','')?.trim() || 'Year')}</span>
+                            </div>
+                            <div>${escapeHtml(education.split('-')[1]?.trim() || 'Institution Name')}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">SKILLS</div>
+                    <div class="content">
+                        <div class="skill-category">
+                            <strong>Key Skills:</strong> ${escapeHtml(skills)}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">ADDITIONAL INFORMATION</div>
+                    <div class="content">
+                        ${languages ? `<div class="skill-category"><strong>Languages:</strong> ${escapeHtml(languages)}</div>` : ''}
+                        ${certifications ? `<div class="skill-category"><strong>Certifications:</strong> ${escapeHtml(certifications)}</div>` : ''}
+                    </div>
+                </div>
+
+                <div class="section" style="text-align:center;border-bottom:none;">
+                    <div class="edit-hint">💡 Click on any text to edit • Use Ctrl+P to print/save as PDF</div>
+                </div>
+            </div>
+        </body>
+        </html>`;
+
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(html);
+        iframeDoc.close();
+
+        setTimeout(() => loading.classList.remove('active'), 500);
+    }
+
+    document.getElementById('resumeGenerateBtn').addEventListener('click', loadResumeTemplate);
+    document.getElementById('resumeRefreshPreview').addEventListener('click', loadResumeTemplate);
+
+    document.getElementById('resumeClearBtn').addEventListener('click', () => {
+        document.querySelectorAll('#resumeInterface input, #resumeInterface textarea').forEach(el => {
+            if (el.id !== 'resumeName' && el.id !== 'resumeTitle' && el.id !== 'resumeEmail' && 
+                el.id !== 'resumePhone' && el.id !== 'resumeLocation' && el.id !== 'resumeDob') el.value = '';
+        });
+        // Reset photo
+        resumePhotoBase64 = null;
+        resumePhotoPreview.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234d5872'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+        resumePhotoInput.value = '';
+        
+        const iframe = document.getElementById('resumePreview');
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.body.innerHTML = '<p style="color:#5b6a84;padding:40px;text-align:center;">Fill in the details and click "Generate" to see your resume.</p>';
+    });
+
+    document.getElementById('resumeDownloadBtn').addEventListener('click', () => {
+        const iframe = document.getElementById('resumePreview');
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+    });
+
+    // ── EMAIL WRITER ──
+    async function generateEmail() {
+        const subjectDesc = document.getElementById('emailSubjectInput').value.trim();
+        const bodyDesc = document.getElementById('emailBodyInput').value.trim();
+        if (!subjectDesc && !bodyDesc) {
+            showToast('Please enter a description for the subject or body', 'error');
+            return;
+        }
+
+        const lang = langSelect.value;
+        const langName = langNames[lang] || 'English';
+        const outputSection = document.getElementById('emailOutputSection');
+        const subjectOutput = document.getElementById('emailSubjectOutput');
+        const bodyOutput = document.getElementById('emailBodyOutput');
+
+        outputSection.classList.add('visible');
+        subjectOutput.innerHTML = '<span style="color:#5b6a84;">Generating...</span>';
+        bodyOutput.innerHTML = '<span style="color:#5b6a84;">Generating...</span>';
+
+        try {
+            let selectedModel = modelSelect.value;
+            if (lang !== 'en' && !MULTILINGUAL_MODELS.has(selectedModel)) {
+                selectedModel = 'mistralai/mistral-small-4-119b-2603';
+            }
+
+            const res = await fetch('/api/me/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [
+                        { role: 'system', content: `You are a professional email writer. Respond with ONLY valid JSON, no markdown, no commentary. Shape: {"subject": "...", "body": "..."}. Generate in ${langName}.` },
+                        { role: 'user', content: `Write a professional email. Subject description: "${subjectDesc || 'N/A'}". Body description: "${bodyDesc || 'N/A'}". Return ONLY JSON: {"subject": "subject line", "body": "full email body"}` }
+                    ],
+                    model: selectedModel,
+                    stream: false,
+                    temperature: 0.7,
+                    max_tokens: 1024,
+                }),
+            });
+
+            if (!res.ok) throw new Error('Failed to generate email');
+
+            const data = await res.json();
+            const rawContent = data.choices?.[0]?.message?.content || data.content || '';
+            let parsed = safeParseJSON(rawContent);
+
+            if (!parsed) {
+                parsed = { subject: subjectDesc || 'Professional Email', body: bodyDesc || 'Email body goes here.' };
+            }
+
+            subjectOutput.innerHTML = escapeHtml(parsed.subject || 'No subject generated') +
+                `<button class="copy-email-btn" onclick="copyEmailSubject()"><i class="fas fa-copy"></i> Copy</button>`;
+            bodyOutput.innerHTML = escapeHtml(parsed.body || 'No body generated') +
+                `<button class="copy-email-btn" onclick="copyEmailBody()"><i class="fas fa-copy"></i> Copy</button>`;
+
+        } catch (e) {
+            subjectOutput.innerHTML = 'Error generating subject';
+            bodyOutput.innerHTML = 'Error generating body. Please try again.';
+        }
+    }
+
+    window.copyEmailSubject = function() {
+        const el = document.getElementById('emailSubjectOutput');
+        const text = el.textContent.replace('Copy', '').trim();
+        if (text && text !== 'Generating...' && text !== 'Error generating subject') {
+            navigator.clipboard.writeText(text);
+            showToast('Subject copied!', 'success');
+        }
+    };
+
+    window.copyEmailBody = function() {
+        const el = document.getElementById('emailBodyOutput');
+        const text = el.textContent.replace('Copy', '').trim();
+        if (text && text !== 'Generating...' && text !== 'Error generating body. Please try again.') {
+            navigator.clipboard.writeText(text);
+            showToast('Email body copied!', 'success');
+        }
+    };
+
+    document.getElementById('emailGenerateBtn').addEventListener('click', generateEmail);
+    document.getElementById('emailClearBtn').addEventListener('click', () => {
+        document.getElementById('emailSubjectInput').value = '';
+        document.getElementById('emailBodyInput').value = '';
+        document.getElementById('emailOutputSection').classList.remove('visible');
+    });
+
+    // ── Init ──
+    document.querySelector('.sidebar-group[data-group="igfb"]')?.classList.add('expanded');
+    navigateTo('caption');
+
+})();
+</script>
+</body>
+</html>

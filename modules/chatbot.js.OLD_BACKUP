@@ -1,0 +1,157 @@
+const pool = require('../db');
+
+// NVIDIA base URL
+const NVIDIA_BASE_URL = 'https://integrate.api.nvidia.com/v1';
+
+// Allowed models for chatbot
+const ALLOWED_MODELS = [
+  'meta/llama-3.1-70b-instruct',
+  'meta/llama-3.1-8b-instruct',
+  'meta/llama-3.2-11b-vision-instruct',
+  'meta/llama-3.2-3b-instruct',
+  'meta/llama-3.2-90b-vision-instruct',
+  'mistralai/mistral-medium-3.5-128b',
+  'nvidia/llama-3.1-nemotron-nano-vl-8b-v1',
+  'nvidia/llama-3.3-nemotron-super-49b-v1',
+  'nvidia/nemotron-3-nano-30b-a3b',
+  'nvidia/nemotron-3-super-120b-a12b',
+  'nvidia/nemotron-nano-12b-v2-vl',
+];
+
+const DEFAULT_MODEL = 'meta/llama-3.1-70b-instruct';
+
+async function chatbotHandler(requestBody, apiKeys, userId) {
+  const {
+    messages,
+    model = DEFAULT_MODEL,
+    stream = false,
+    temperature = 0.7,
+    max_tokens = 2048,
+    threadId = null,
+    title = null
+  } = requestBody;
+
+  // Validate messages
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    throw new Error('Messages array is required');
+  }
+
+  // Validate model
+  if (!ALLOWED_MODELS.includes(model)) {
+    throw new Error(`Model "${model}" is not supported. Available: ${ALLOWED_MODELS.join(', ')}`);
+  }
+
+  // Get user's NVIDIA API key
+  const nvidiaKey = apiKeys.nvidia?.api_key;
+  if (!nvidiaKey) {
+    throw new Error('NVIDIA API key not configured. Please add your NVIDIA API key in Profile > API Keys.');
+  }
+
+  // Prepare messages for NVIDIA
+  const formattedMessages = messages.map(m => ({
+    role: m.role,
+    content: m.content
+  }));
+
+  // Handle thread persistence
+  let resolvedThreadId = threadId;
+  if (userId) {
+    try {
+      if (!threadId) {
+        // Create new thread
+        const threadResult = await pool.query(
+          `INSERT INTO chat_threads (user_id, title, model)
+           VALUES ($1, $2, $3)
+           RETURNING id`,
+          [userId, title || 'New Conversation', model]
+        );
+        resolvedThreadId = threadResult.rows[0].id;
+      }
+
+      // Save user messages
+      const userMessages = messages.filter(m => m.role === 'user');
+      for (const msg of userMessages) {
+        await pool.query(
+          `INSERT INTO chat_messages (thread_id, role, content, model_used)
+           VALUES ($1, $2, $3, $4)`,
+          [resolvedThreadId, msg.role, msg.content, model]
+        );
+      }
+
+      // Update thread title if first message and no title provided
+      if (!title && resolvedThreadId) {
+        const firstMsg = userMessages[0]?.content;
+        if (firstMsg) {
+          const shortTitle = firstMsg.slice(0, 50).trim() + (firstMsg.length > 50 ? '...' : '');
+          await pool.query(
+            `UPDATE chat_threads SET title = $1 WHERE id = $2 AND title = 'New Conversation'`,
+            [shortTitle, resolvedThreadId]
+          );
+        }
+      }
+    } catch (err) {
+      console.error('Chatbot thread persistence error:', err);
+      // Continue without persistence
+    }
+  }
+
+  // Call NVIDIA API
+  const upstreamPayload = {
+    model,
+    messages: formattedMessages,
+    temperature,
+    max_tokens,
+    top_p: 1,
+    stream: false // We'll handle streaming separately if needed
+  };
+
+  let upstream;
+  try {
+    upstream = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${nvidiaKey}`,
+      },
+      body: JSON.stringify(upstreamPayload),
+    });
+  } catch (err) {
+    throw new Error(`Failed to reach NVIDIA API: ${err.message}`);
+  }
+
+  if (!upstream.ok) {
+    const errorText = await upstream.text();
+    let errorDetail = errorText;
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorDetail = errorJson.error?.message || errorText;
+    } catch (_) {}
+    throw new Error(`NVIDIA API error (${upstream.status}): ${errorDetail}`);
+  }
+
+  const data = await upstream.json();
+  const reply = data.choices?.[0]?.message?.content || '';
+
+  // Save assistant response
+  if (userId && resolvedThreadId && reply) {
+    try {
+      await pool.query(
+        `INSERT INTO chat_messages (thread_id, role, content, model_used, token_count)
+         VALUES ($1, 'assistant', $2, $3, $4)`,
+        [resolvedThreadId, reply, model, data.usage?.total_tokens || 0]
+      );
+    } catch (err) {
+      console.error('Failed to save assistant message:', err);
+    }
+  }
+
+  // Return response
+  return {
+    threadId: resolvedThreadId,
+    message: reply,
+    usage: data.usage,
+    model: model
+  };
+}
+
+module.exports = chatbotHandler;

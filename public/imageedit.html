@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SanjayAIHub · Image Edit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E1512;
+    --panel:#141E19;
+    --panel-2:#182620;
+    --line:#243530;
+    --amber:#E8A33D;
+    --amber-dim:#7A5A2A;
+    --sage:#7FA98D;
+    --text:#EDEAE2;
+    --muted:#8B9A91;
+    --danger:#D96A5A;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(ellipse at top left, rgba(232,163,61,0.06), transparent 45%),
+                radial-gradient(ellipse at bottom right, rgba(127,169,141,0.05), transparent 45%),
+                var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  header{
+    border-bottom:1px solid var(--line);
+    padding:22px 32px 0 32px;
+  }
+  .brand-row{
+    display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:12px;
+    margin-bottom:18px;
+  }
+  .brand h1{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:42px;
+    letter-spacing:2px;
+    margin:0;
+    line-height:1;
+    color:var(--text);
+  }
+  .brand h1 span{color:var(--amber);}
+  .brand p{
+    margin:6px 0 0 0;
+    color:var(--muted);
+    font-size:13px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .key-status{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    padding:6px 10px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    color:var(--muted);
+  }
+  .key-status.ok{color:var(--sage); border-color:var(--sage);}
+  .key-status.bad{color:var(--danger); border-color:var(--danger);}
+  .filmstrip{
+    position:relative;
+    height:34px;
+    display:flex;
+    align-items:center;
+    background:repeating-linear-gradient(90deg, var(--panel) 0 18px, var(--panel-2) 18px 20px);
+    border:1px solid var(--line);
+    border-bottom:none;
+    border-radius:4px 4px 0 0;
+    overflow:hidden;
+  }
+  .filmstrip .perf{
+    position:absolute; top:4px; bottom:4px; left:0; right:0;
+    background-image:repeating-linear-gradient(90deg, transparent 0 12px, var(--bg) 12px 16px, transparent 16px 20px);
+    opacity:0.5;
+  }
+  .filmstrip .progress{
+    position:absolute; top:0; bottom:0; left:0; width:0%;
+    background:linear-gradient(90deg, rgba(232,163,61,0.35), rgba(232,163,61,0.15));
+    transition:width 0.4s ease;
+  }
+  .filmstrip .tc{
+    position:relative; z-index:2;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--amber);
+    padding-left:12px;
+    letter-spacing:1px;
+  }
+  .filmstrip .tally{
+    position:relative; z-index:2;
+    margin-left:auto; margin-right:12px;
+    width:9px; height:9px; border-radius:50%;
+    background:var(--line);
+  }
+  .filmstrip .tally.live{ background:var(--amber); box-shadow:0 0 8px var(--amber); animation:pulse 1.1s infinite; }
+  .filmstrip .tally.done{ background:var(--sage); box-shadow:0 0 8px var(--sage); animation:none; }
+  .filmstrip .tally.err{ background:var(--danger); box-shadow:0 0 8px var(--danger); animation:none; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+  main{
+    display:grid;
+    grid-template-columns: 420px 1fr;
+    gap:24px;
+    padding:24px 32px 40px 32px;
+    max-width:1400px;
+    margin:0 auto;
+  }
+  @media (max-width: 920px){ main{grid-template-columns:1fr;} }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:20px;
+  }
+  label{
+    display:block; font-family:'IBM Plex Mono',monospace; font-size:11px;
+    color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;
+    margin:14px 0 6px 0;
+  }
+  label.required::after{ content:" *"; color:var(--amber); }
+  input[type=text], input[type=url], input[type=number], textarea, select{
+    width:100%; background:var(--bg); border:1px solid var(--line); border-radius:3px;
+    color:var(--text); padding:9px 10px; font-family:'Inter',sans-serif; font-size:13px;
+    outline:none;
+  }
+  input:focus, textarea:focus, select:focus{ border-color:var(--amber); }
+  textarea{ min-height:70px; resize:vertical; font-family:'Inter',sans-serif; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .hint{ font-size:11px; color:var(--muted); margin-top:4px; }
+  .file-preview{ display:block; margin-top:10px; max-width:100%; max-height:160px; border:1px solid var(--line); border-radius:3px; background:#000; }
+  .source-toggle{ display:flex; gap:6px; margin-top:6px; }
+  .src-btn{
+    flex:1; padding:7px 8px; background:var(--panel-2); border:1px solid var(--line);
+    border-radius:3px; color:var(--muted); font-family:'IBM Plex Mono',monospace;
+    font-size:11px; text-transform:uppercase; letter-spacing:0.5px; cursor:pointer;
+  }
+  .src-btn.active{ background:var(--amber-dim); color:var(--amber); border-color:var(--amber-dim); }
+  .source-pane{ margin-top:10px; }
+  input[type=file]{
+    width:100%; background:var(--bg); border:1px dashed var(--line); border-radius:3px;
+    color:var(--muted); padding:9px 10px; font-family:'IBM Plex Mono',monospace; font-size:12px;
+  }
+  button.generate{
+    width:100%; margin-top:20px;
+    background:var(--amber); color:#1A1206; border:none; border-radius:4px;
+    font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:1.5px;
+    padding:13px; cursor:pointer;
+    transition:filter 0.15s;
+  }
+  button.generate:hover{ filter:brightness(1.08); }
+  button.generate:disabled{ background:var(--line); color:var(--muted); cursor:not-allowed; }
+  .error-box{
+    margin-top:14px; padding:10px 12px; border:1px solid var(--danger); border-radius:3px;
+    color:var(--danger); font-family:'IBM Plex Mono',monospace; font-size:12px; display:none;
+  }
+  .viewfinder{
+    min-height:520px;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    position:relative;
+    padding:20px;
+  }
+  .corner{ position:absolute; width:18px; height:18px; border-color:var(--amber); opacity:0.6; }
+  .corner.tl{ top:10px; left:10px; border-top:2px solid; border-left:2px solid; }
+  .corner.tr{ top:10px; right:10px; border-top:2px solid; border-right:2px solid; }
+  .corner.bl{ bottom:10px; left:10px; border-bottom:2px solid; border-left:2px solid; }
+  .corner.br{ bottom:10px; right:10px; border-bottom:2px solid; border-right:2px solid; }
+  .placeholder{ text-align:center; color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:13px; }
+  .placeholder .big{ font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--line); letter-spacing:2px; display:block; margin-bottom:8px;}
+  img, video{ max-width:100%; max-height:460px; border-radius:4px; border:1px solid var(--line); background:#000; }
+  .status-line{
+    margin-top:16px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted);
+    display:flex; align-items:center; gap:8px;
+  }
+  .status-line .dot{ width:7px; height:7px; border-radius:50%; background:var(--line); }
+  .status-line .dot.live{ background:var(--amber); animation:pulse 1.1s infinite; }
+  .status-line .dot.done{ background:var(--sage); }
+  .status-line .dot.err{ background:var(--danger); }
+  .actions{ display:flex; gap:10px; margin-top:14px; }
+  .actions a{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase;
+    color:var(--sage); text-decoration:none; border:1px solid var(--sage); border-radius:3px;
+    padding:7px 12px; letter-spacing:0.5px;
+  }
+  .actions a:hover{ background:rgba(127,169,141,0.12); }
+  .back-link{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);
+    text-decoration:none; display:inline-block; margin-top:4px;
+  }
+  .back-link:hover{ color:var(--amber); }
+  footer{
+    text-align:center; padding:20px; color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:11px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand-row">
+    <div class="brand">
+      <h1>SanjayAI<span>Hub</span></h1>
+      <p>Image Edit · Edit & enhance images</p>
+    </div>
+    <div class="key-status" id="keyStatus">checking key…</div>
+  </div>
+  <div class="filmstrip">
+    <div class="perf"></div>
+    <div class="progress" id="progressFill"></div>
+    <span class="tc" id="timecode">00:00:00:00 — IDLE</span>
+    <span class="tally" id="tally"></span>
+  </div>
+</header>
+<main>
+  <section class="panel">
+    <form id="genForm">
+      <label class="required">Edit Instruction</label>
+      <textarea id="prompt" placeholder="Add a dramatic sunset, change the sky to night, remove the person in the background" maxlength="4000" required></textarea>
+
+      <label class="required">Source Image</label>
+      <div class="source-toggle">
+        <button type="button" class="src-btn active" data-src="upload">Upload file</button>
+        <button type="button" class="src-btn" data-src="url">Paste URL</button>
+      </div>
+      <div class="source-pane" id="upload_pane">
+        <input type="file" id="image_file" accept="image/jpeg,image/png,image/webp" />
+        <div class="hint">JPG / PNG / WEBP, under 25MB</div>
+        <img id="image_preview" class="file-preview" style="display:none;" />
+      </div>
+      <div class="source-pane" id="url_pane" style="display:none;">
+        <input type="url" id="image_url" placeholder="https://example.com/image.jpg" />
+        <div class="hint">Public https URL, JPG/PNG/WEBP</div>
+      </div>
+
+      <div class="row2">
+        <div>
+          <label>Model</label>
+          <select id="model">
+            <option value="qwen-image-edit-max">Qwen Edit Max</option>
+            <option value="qwen-image-edit-plus">Qwen Edit Plus</option>
+            <option value="qwen-image-edit">Qwen Edit</option>
+          </select>
+        </div>
+        <div>
+          <label>Strength</label>
+          <input type="number" id="strength" min="0" max="1" step="0.05" placeholder="1.0" />
+          <div class="hint">Lower = closer to original</div>
+        </div>
+      </div>
+
+      <button type="submit" class="generate" id="genBtn">✏️ Edit Image</button>
+      <div class="error-box" id="errorBox"></div>
+    </form>
+    <a href="/" class="back-link">← Back to Hub</a>
+  </section>
+  <section class="panel viewfinder">
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+    <div id="outputArea">
+      <div class="placeholder"><span class="big">NO SIGNAL</span>upload image, add instruction, and hit edit</div>
+    </div>
+    <div class="status-line" id="statusLine" style="display:none;">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">idle</span>
+    </div>
+    <div class="actions" id="resultActions" style="display:none;">
+      <a id="downloadLink" href="#" download target="_blank" rel="noopener">Download</a>
+      <a id="openLink" href="#" target="_blank" rel="noopener">Open</a>
+    </div>
+  </section>
+</main>
+<footer>SanjayAIHub · Image Edit · powered by Alibaba Cloud Model Studio</footer>
+<script>
+  const els = {
+    form: document.getElementById("genForm"),
+    prompt: document.getElementById("prompt"),
+    image_file: document.getElementById("image_file"),
+    image_url: document.getElementById("image_url"),
+    image_preview: document.getElementById("image_preview"),
+    model: document.getElementById("model"),
+    strength: document.getElementById("strength"),
+    genBtn: document.getElementById("genBtn"),
+    errorBox: document.getElementById("errorBox"),
+    outputArea: document.getElementById("outputArea"),
+    statusLine: document.getElementById("statusLine"),
+    statusDot: document.getElementById("statusDot"),
+    statusText: document.getElementById("statusText"),
+    resultActions: document.getElementById("resultActions"),
+    downloadLink: document.getElementById("downloadLink"),
+    openLink: document.getElementById("openLink"),
+    timecode: document.getElementById("timecode"),
+    progressFill: document.getElementById("progressFill"),
+    tally: document.getElementById("tally"),
+    keyStatus: document.getElementById("keyStatus"),
+    upload_pane: document.getElementById("upload_pane"),
+    url_pane: document.getElementById("url_pane"),
+  };
+
+  fetch("/api/health").then(r=>r.json()).then(d=>{
+    els.keyStatus.textContent = d.keyConfigured ? "✅ API key: configured" : "⚠️ API key missing";
+    els.keyStatus.className = "key-status " + (d.keyConfigured ? "ok" : "bad");
+  }).catch(()=>{ els.keyStatus.textContent="server unreachable"; els.keyStatus.className="key-status bad"; });
+
+  document.querySelectorAll(".src-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".src-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const isUpload = btn.dataset.src === "upload";
+      els.upload_pane.style.display = isUpload ? "block" : "none";
+      els.url_pane.style.display = isUpload ? "none" : "block";
+    });
+  });
+
+  els.image_file.addEventListener("change", () => {
+    const file = els.image_file.files[0];
+    if (file) { els.image_preview.src = URL.createObjectURL(file); els.image_preview.style.display = "block"; }
+  });
+
+  function isUploadActive(){ return document.querySelector(".src-btn.active").dataset.src === "upload"; }
+
+  function setTally(kind){ els.tally.className = "tally" + (kind ? " " + kind : ""); }
+  function setProgress(pct){ els.progressFill.style.width = pct + "%"; }
+  function fmtElapsed(ms){ const s=Math.floor(ms/1000); return `${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor((s%3600)/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`; }
+  function showError(msg){ els.errorBox.textContent = msg; els.errorBox.style.display = "block"; }
+  function clearError(){ els.errorBox.style.display = "none"; }
+
+  async function uploadFile(file){
+    const form = new FormData(); form.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.message || data.error || "Upload failed");
+    return data.url;
+  }
+
+  els.form.addEventListener("submit", async (e) => {
+    e.preventDefault(); clearError();
+    const prompt = els.prompt.value.trim();
+    if (!prompt) return showError("Edit instruction is required.");
+    let imageUrl = isUploadActive() ? null : els.image_url.value.trim();
+    if (isUploadActive()) {
+      const file = els.image_file.files[0];
+      if (!file) return showError("Please upload an image.");
+      try { imageUrl = await uploadFile(file); }
+      catch (err) { return showError("Upload failed: " + err.message); }
+    }
+    if (!imageUrl) return showError("Image URL is required.");
+
+    els.genBtn.disabled = true; els.genBtn.textContent = "⏳ Editing…";
+    els.outputArea.innerHTML = `<div class="placeholder"><span class="big">⏳</span>editing image…</div>`;
+    els.statusLine.style.display = "flex"; els.statusText.textContent = "editing…";
+    els.statusDot.className = "dot live"; setTally("live"); setProgress(50);
+    const start = Date.now(); els.timecode.textContent = "00:00:00 — RENDERING";
+    const timer = setInterval(() => { els.timecode.textContent = fmtElapsed(Date.now() - start) + " — RENDERING"; }, 1000);
+    try {
+      const res = await fetch("/api/image/edit", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, image_url: imageUrl, model: els.model.value, strength: els.strength.value ? Number(els.strength.value) : undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.message || data.error || "Edit failed.");
+      setProgress(100); setTally("done"); els.statusDot.className = "dot done";
+      els.statusText.textContent = "complete"; clearInterval(timer);
+      els.timecode.textContent = fmtElapsed(Date.now() - start) + " — COMPLETE";
+      els.outputArea.innerHTML = `<img src="${data.output}" alt="Edited image" />`;
+      els.downloadLink.href = data.output; els.openLink.href = data.output;
+      els.resultActions.style.display = "flex";
+    } catch (err) { setTally("err"); els.statusDot.className = "dot err";
+      els.statusText.textContent = "failed"; showError(err.message);
+      els.outputArea.innerHTML = `<div class="placeholder"><span class="big">❌</span>${err.message}</div>`;
+    } finally { clearInterval(timer); els.genBtn.disabled = false; els.genBtn.textContent = "✏️ Edit Image"; }
+  });
+</script>
+</body>
+</html>

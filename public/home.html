@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SanjayAIHub · unified AI modules</title>
+  <!-- Font Awesome 6 (free) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #080a0e;
+      color: #eef0f7;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      padding: 1.8rem 1.5rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hub-wrapper {
+      max-width: 1300px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ── Header ── */
+    .hub-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid #1f2433;
+      padding-bottom: 1.2rem;
+      gap: 12px;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      background: linear-gradient(135deg, #00e8a2, #00b37a);
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      box-shadow: 0 0 20px rgba(0, 232, 162, 0.2);
+    }
+
+    .logo-text {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #eef0f7 60%, #8b92a8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-text span {
+      color: #00e8a2;
+      -webkit-text-fill-color: #00e8a2;
+    }
+
+    /* ── Header Auth Buttons ── */
+    .auth-buttons {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .auth-btn-login,
+    .auth-btn-register {
+      padding: 8px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .auth-btn-login {
+      background: rgba(255,255,255,0.06);
+      color: #eef2f9;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .auth-btn-login:hover {
+      background: rgba(255,255,255,0.12);
+    }
+
+    .auth-btn-register {
+      background: #00e8a2;
+      color: #060d0b;
+      box-shadow: 0 4px 16px -4px rgba(0,232,162,0.3);
+    }
+
+    .auth-btn-register:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    /* ── User Info ── */
+    .user-info {
+      display: flex;
+      align-items: center;
+    }
+
+    .user-info-inner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.04);
+      padding: 6px 16px 6px 20px;
+      border-radius: 30px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .user-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: #eef2f9;
+    }
+
+    .user-name i {
+      color: #00e8a2;
+      margin-right: 6px;
+    }
+
+    .user-tier {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 12px;
+      border-radius: 12px;
+      background: rgba(0,232,162,0.08);
+      color: #00e8a2;
+      border: 1px solid rgba(0,232,162,0.1);
+    }
+
+    .user-tier .tier-emoji {
+      margin-right: 4px;
+    }
+
+    .user-profile-btn,
+    .user-logout-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: #8896b0;
+      padding: 4px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .user-profile-btn:hover {
+      background: rgba(255,255,255,0.1);
+      color: #eef2f9;
+    }
+
+    .user-logout-btn:hover {
+      background: rgba(255,90,90,0.15);
+      color: #ff6b6b;
+      border-color: rgba(255,90,90,0.15);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      background: #0e1016;
+      border: 1px solid #1f2433;
+      border-radius: 16px;
+      padding: 2.5rem 2.5rem;
+      margin-bottom: 2.8rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      background-image: radial-gradient(ellipse at 80% 30%, rgba(0,232,162,.05), transparent 60%);
+    }
+
+    .hero-text h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .hero-text h1 i {
+      color: #00e8a2;
+    }
+
+    .hero-text p {
+      color: #8b92a8;
+      font-size: 15px;
+      max-width: 620px;
+      line-height: 1.6;
+    }
+
+    .hero-badge {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .hero-badge .pill {
+      background: #13161e;
+      border: 1px solid #1f2433;
+      border-radius: 30px;
+      padding: 8px 22px;
+      font-size: 14px;
+      color: #c8cedb;
+    }
+
+    .hero-badge .pill i {
+      color: #00e8a2;
+      margin-right: 8px;
+    }
+
+    /* ── Grid ── */
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-title i {
+      color: #00e8a2;
+      font-size: 18px;
+    }
+
+    .section-sub {
+      color: #8b92a8;
+      font-size: 14px;
+      margin-bottom: 1.8rem;
+      border-left: 2px solid #1f2433;
+      padding-left: 16px;
+    }
+
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 18px;
+      margin-bottom: 2.5rem;
+    }
+
+    .module-card {
+      background: #0e1016;
+      border: 1px solid #1f2433;
+      border-radius: 14px;
+      padding: 1.5rem 1.2rem 1.2rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .module-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 0% 0%, var(--glow, rgba(0,232,162,.04)), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.25s;
+      pointer-events: none;
+    }
+
+    .module-card:hover:not(.locked) {
+      border-color: var(--border-hover, #2b3345);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+    }
+
+    .module-card:hover:not(.locked)::after {
+      opacity: 1;
+    }
+
+    .module-card.locked {
+      opacity: 0.5;
+      cursor: not-allowed;
+      filter: grayscale(0.8);
+    }
+
+    .module-card.locked:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    .module-card.locked .lock-badge {
+      display: flex;
+    }
+
+    .lock-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      color: #ff6b6b;
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 14px;
+      border: 1px solid rgba(255,90,90,0.2);
+      z-index: 2;
+      display: none;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .lock-badge span {
+      font-size: 10px;
+      font-weight: 600;
+      color: #ff9b9b;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .card-icon {
+      font-size: 26px;
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--icon-bg, #13161e);
+      border: 1px solid var(--border2, #1f2433);
+      flex-shrink: 0;
+    }
+
+    .card-badge {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--badge-bg, #13161e);
+      color: var(--badge-color, #8b92a8);
+      padding: 4px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border2, #1f2433);
+      white-space: nowrap;
+    }
+
+    .module-card h3 {
+      font-size: 17px;
+      font-weight: 600;
+      margin: 4px 0 6px;
+      letter-spacing: -0.01em;
+    }
+
+    .module-card p {
+      font-size: 13px;
+      color: #8b92a8;
+      line-height: 1.5;
+      flex: 1;
+      margin-bottom: 12px;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid #1a1f2b;
+      padding-top: 12px;
+      margin-top: 4px;
+      font-size: 12px;
+      color: #4f566b;
+    }
+
+    .card-footer .arrow {
+      color: var(--arrow-color, #4f566b);
+      transition: transform 0.2s;
+      font-size: 14px;
+    }
+
+    .module-card:not(.locked):hover .arrow {
+      transform: translateX(4px);
+      color: #00e8a2;
+    }
+
+    .card-footer .tag {
+      background: #13161e;
+      padding: 2px 10px;
+      border-radius: 12px;
+      border: 1px solid #1f2433;
+      font-size: 10px;
+      color: #8b92a8;
+    }
+
+    /* ── Card Styles ── */
+    .card-chat { --glow: rgba(0,232,162,.08); --border-hover: #00e8a2; --icon-bg: rgba(0,232,162,.08); --badge-color: #00e8a2; --badge-bg: rgba(0,232,162,.08); --arrow-color: #00e8a2; }
+    .card-social { --glow: rgba(77,142,255,.08); --border-hover: #4d8eff; --icon-bg: rgba(77,142,255,.08); --badge-color: #4d8eff; --badge-bg: rgba(77,142,255,.08); --arrow-color: #4d8eff; }
+    .card-wish { --glow: rgba(251,191,36,.08); --border-hover: #fbbf24; --icon-bg: rgba(251,191,36,.08); --badge-color: #fbbf24; --badge-bg: rgba(251,191,36,.08); --arrow-color: #fbbf24; }
+    .card-prompt { --glow: rgba(167,139,250,.08); --border-hover: #a78bfa; --icon-bg: rgba(167,139,250,.08); --badge-color: #a78bfa; --badge-bg: rgba(167,139,250,.08); --arrow-color: #a78bfa; }
+    .card-t2i { --glow: rgba(244,114,182,.08); --border-hover: #f472b6; --icon-bg: rgba(244,114,182,.08); --badge-color: #f472b6; --badge-bg: rgba(244,114,182,.08); --arrow-color: #f472b6; }
+    .card-i2i { --glow: rgba(244,114,182,.08); --border-hover: #f472b6; --icon-bg: rgba(244,114,182,.08); --badge-color: #f472b6; --badge-bg: rgba(244,114,182,.08); --arrow-color: #f472b6; }
+    .card-t2v { --glow: rgba(167,139,250,.08); --border-hover: #a78bfa; --icon-bg: rgba(167,139,250,.08); --badge-color: #a78bfa; --badge-bg: rgba(167,139,250,.08); --arrow-color: #a78bfa; }
+    .card-i2v { --glow: rgba(167,139,250,.08); --border-hover: #a78bfa; --icon-bg: rgba(167,139,250,.08); --badge-color: #a78bfa; --badge-bg: rgba(167,139,250,.08); --arrow-color: #a78bfa; }
+    .card-v2v { --glow: rgba(167,139,250,.08); --border-hover: #a78bfa; --icon-bg: rgba(167,139,250,.08); --badge-color: #a78bfa; --badge-bg: rgba(167,139,250,.08); --arrow-color: #a78bfa; }
+    .card-tts { --glow: rgba(34,211,238,.08); --border-hover: #22d3ee; --icon-bg: rgba(34,211,238,.08); --badge-color: #22d3ee; --badge-bg: rgba(34,211,238,.08); --arrow-color: #22d3ee; }
+    .card-song { --glow: rgba(34,211,238,.08); --border-hover: #22d3ee; --icon-bg: rgba(34,211,238,.08); --badge-color: #22d3ee; --badge-bg: rgba(34,211,238,.08); --arrow-color: #22d3ee; }
+    .card-coding { --glow: rgba(251,146,60,.08); --border-hover: #fb923c; --icon-bg: rgba(251,146,60,.08); --badge-color: #fb923c; --badge-bg: rgba(251,146,60,.08); --arrow-color: #fb923c; }
+    .card-voice { --glow: rgba(244,114,182,.08); --border-hover: #f472b6; --icon-bg: rgba(244,114,182,.08); --badge-color: #f472b6; --badge-bg: rgba(244,114,182,.08); --arrow-color: #f472b6; }
+    .card-design { --glow: rgba(251,191,36,.08); --border-hover: #fbbf24; --icon-bg: rgba(251,191,36,.08); --badge-color: #fbbf24; --badge-bg: rgba(251,191,36,.08); --arrow-color: #fbbf24; }
+    .card-chatbot { --glow: rgba(77,142,255,.08); --border-hover: #4d8eff; --icon-bg: rgba(77,142,255,.08); --badge-color: #4d8eff; --badge-bg: rgba(77,142,255,.08); --arrow-color: #4d8eff; }
+    .card-mcp { --glow: rgba(167,139,250,.08); --border-hover: #a78bfa; --icon-bg: rgba(167,139,250,.08); --badge-color: #a78bfa; --badge-bg: rgba(167,139,250,.08); --arrow-color: #a78bfa; }
+
+    /* ── Auth Modal ── */
+    .auth-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+
+    .auth-modal-overlay.active {
+      display: flex;
+    }
+
+    .auth-modal {
+      background: #0e1016;
+      border: 1px solid #1f2433;
+      border-radius: 20px;
+      padding: 36px 40px;
+      max-width: 420px;
+      width: 100%;
+      position: relative;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+      animation: modalSlideIn 0.3s ease;
+    }
+
+    @keyframes modalSlideIn {
+      0% { opacity: 0; transform: scale(0.95) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .auth-modal-close {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: #4f566b;
+      font-size: 24px;
+      cursor: pointer;
+      transition: 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .auth-modal-close:hover {
+      color: #eef2f9;
+    }
+
+    .auth-modal h2 {
+      font-size: 20px;
+      color: #f0f4fe;
+      margin-bottom: 8px;
+    }
+
+    .auth-modal h2 i {
+      color: #00e8a2;
+      margin-right: 10px;
+    }
+
+    .auth-modal p {
+      color: #8896b0;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .auth-modal p strong {
+      color: #eef2f9;
+    }
+
+    .auth-modal-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .auth-modal-buttons .btn-primary,
+    .auth-modal-buttons .btn-secondary {
+      padding: 10px 24px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: 0.2s;
+      border: none;
+      font-family: 'Inter', sans-serif;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .auth-modal-buttons .btn-primary {
+      background: #00e8a2;
+      color: #060d0b;
+      box-shadow: 0 4px 16px -4px rgba(0,232,162,0.3);
+    }
+
+    .auth-modal-buttons .btn-primary:hover {
+      filter: brightness(1.08);
+    }
+
+    .auth-modal-buttons .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: #8896b0;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .auth-modal-buttons .btn-secondary:hover {
+      background: rgba(255,255,255,0.1);
+      color: #eef2f9;
+    }
+
+    .auth-modal-hint {
+      font-size: 12px !important;
+      color: #4f566b !important;
+      margin-top: 16px !important;
+      margin-bottom: 0 !important;
+      border-top: 1px solid #1a1f2b;
+      padding-top: 12px;
+    }
+
+    .free-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: rgba(0,232,162,0.12);
+      color: #00e8a2;
+      padding: 2px 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,232,162,0.15);
+      margin-left: 6px;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      border-top: 1px solid #1a1f2b;
+      padding-top: 1.5rem;
+      margin-top: 1rem;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: #4f566b;
+    }
+
+    .footer a {
+      color: #8b92a8;
+      text-decoration: none;
+      margin: 0 6px;
+    }
+
+    .footer a:hover {
+      color: #00e8a2;
+    }
+
+    .footer .dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: #00e8a2;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .hero { flex-direction: column; align-items: flex-start; gap: 16px; }
+      .hero-text h1 { font-size: 22px; }
+      .modules-grid { grid-template-columns: 1fr 1fr; }
+      .auth-modal { padding: 24px 20px; margin: 16px; }
+      .auth-modal-buttons { flex-direction: column; }
+    }
+
+    @media (max-width: 480px) {
+      .modules-grid { grid-template-columns: 1fr; }
+      .hub-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .user-info-inner { padding: 4px 12px 4px 16px; gap: 8px; flex-wrap: wrap; }
+      .user-name { font-size: 12px; }
+      .user-tier { font-size: 10px; padding: 2px 8px; }
+      .auth-btn-login, .auth-btn-register { padding: 6px 14px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+<div class="hub-wrapper">
+
+  <!-- ─── HEADER ─── -->
+  <header class="hub-header">
+    <div class="logo-area">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">Sanjay<span>AI</span>Hub</div>
+    </div>
+    <!-- Auth buttons / user info will be injected here by JavaScript -->
+    <div id="headerAuth"></div>
+  </header>
+
+  <!-- ─── HERO ─── -->
+  <div class="hero">
+    <div class="hero-text">
+      <h1><i class="fas fa-cube"></i>  One server. Every AI capability. No switching tabs.</h1>
+      <p>
+        SanjayAIHub brings together 16+ AI modules — from chatbots and image generation to voice cloning and coding agents — 
+        into a single, unified interface. Built for creators, developers, and teams who want to experiment, build, and deploy AI 
+        without juggling 10 different tools.
+      </p>
+      <div class="hero-badge">
+        <span class="pill"><i class="fas fa-bolt"></i> Deploy in minutes</span>
+        <span class="pill"><i class="fas fa-puzzle-piece"></i> All in one place</span>
+        <span class="pill"><i class="fas fa-lock"></i> Your data, your control</span>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px; min-width: 140px;">
+      <span style="font-size: 13px; color: #4f566b;"><i class="fas fa-check-circle" style="color: #00e8a2;"></i> 16 modules ready</span>
+      <span style="font-size: 13px; color: #4f566b;"><i class="fas fa-check-circle" style="color: #00e8a2;"></i> No setup required</span>
+      <span style="font-size: 13px; color: #4f566b;"><i class="fas fa-check-circle" style="color: #00e8a2;"></i> Self‑hosted</span>
+    </div>
+  </div>
+
+  <!-- ─── SECTION TITLE ─── -->
+  <div class="section-title">
+    <i class="fas fa-th-large"></i>  Choose your module. Start creating.
+  </div>
+  <div class="section-sub">
+    Each card below represents a standalone AI capability. 
+    <span id="accessMessage">Free modules: Chatbot &amp; Prompt Library — others require login.</span>
+  </div>
+
+  <!-- ─── MODULES GRID ─── -->
+  <div class="modules-grid">
+
+    <!-- 1. Simple Chatbots (FREE) -->
+    <div class="module-card card-chat" data-module="chatbot">
+      <div class="card-top">
+        <div class="card-icon">💬</div>
+        <span class="card-badge">chat <span class="free-badge">free</span></span>
+      </div>
+      <h3>Simple Chatbots</h3>
+      <p>Deploy lightweight, no‑code conversational agents for FAQs, support, or fun.</p>
+      <div class="card-footer">
+        <span class="tag">ready</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 2. Social Content, Resume & Email Writing -->
+    <div class="module-card card-social" data-module="social-content">
+      <div class="card-top">
+        <div class="card-icon">✍️</div>
+        <span class="card-badge">writing</span>
+      </div>
+      <h3>Social Content, Resume &amp; Email</h3>
+      <p>Generate LinkedIn posts, professional resumes, and polished emails in seconds.</p>
+      <div class="card-footer">
+        <span class="tag">multi‑language</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 3. Wish with Multilanguage -->
+    <div class="module-card card-wish" data-module="message-writer">
+      <div class="card-top">
+        <div class="card-icon">🌍</div>
+        <span class="card-badge">i18n</span>
+      </div>
+      <h3>Wish with Multilanguage</h3>
+      <p>Create personalized wishes and greetings in 10+ languages for any occasion.</p>
+      <div class="card-footer">
+        <span class="tag">10+ langs</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 4. Prompt Library (FREE) -->
+    <div class="module-card card-prompt" data-module="prompt-library">
+      <div class="card-top">
+        <div class="card-icon">📚</div>
+        <span class="card-badge">library <span class="free-badge">free</span></span>
+      </div>
+      <h3>Prompt Library</h3>
+      <p>A curated, read‑only collection of battle‑tested prompts — each with a unique ID for easy internal linking.</p>
+      <div class="card-footer">
+        <span class="tag">read‑only</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 5. Text to Image -->
+    <div class="module-card card-t2i" data-module="text-to-image">
+      <div class="card-top">
+        <div class="card-icon">🖼️</div>
+        <span class="card-badge">gen</span>
+      </div>
+      <h3>Text to Image</h3>
+      <p>Turn your imagination into high‑quality visuals using state‑of‑the‑art diffusion models.</p>
+      <div class="card-footer">
+        <span class="tag">T2I</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 6. Image to Image -->
+    <div class="module-card card-i2i" data-module="image-edit">
+      <div class="card-top">
+        <div class="card-icon">🎨</div>
+        <span class="card-badge">edit</span>
+      </div>
+      <h3>Image to Image</h3>
+      <p>Edit, restyle, or enhance existing photos — change mood, style, or remove objects.</p>
+      <div class="card-footer">
+        <span class="tag">I2I</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 7. Text to Video -->
+    <div class="module-card card-t2v" data-module="text-to-video">
+      <div class="card-top">
+        <div class="card-icon">🎬</div>
+        <span class="card-badge">video</span>
+      </div>
+      <h3>Text to Video</h3>
+      <p>Generate short cinematic clips from simple text prompts — no editing skills required.</p>
+      <div class="card-footer">
+        <span class="tag">T2V</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 8. Image to Video -->
+    <div class="module-card card-i2v" data-module="image-to-video">
+      <div class="card-top">
+        <div class="card-icon">📹</div>
+        <span class="card-badge">video</span>
+      </div>
+      <h3>Image to Video</h3>
+      <p>Bring a single image to life with motion, storytelling, and AI‑generated animation.</p>
+      <div class="card-footer">
+        <span class="tag">I2V</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 9. Video to Video -->
+    <div class="module-card card-v2v" data-module="video-to-video">
+      <div class="card-top">
+        <div class="card-icon">🎞️</div>
+        <span class="card-badge">video</span>
+      </div>
+      <h3>Video to Video</h3>
+      <p>Restyle, upscale, or transform existing videos with AI‑driven effects and enhancements.</p>
+      <div class="card-footer">
+        <span class="tag">V2V</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 10. Text to Audio (TTS) -->
+    <div class="module-card card-tts" data-module="text-to-speech">
+      <div class="card-top">
+        <div class="card-icon">🔊</div>
+        <span class="card-badge">audio</span>
+      </div>
+      <h3>Text to Audio (TTS)</h3>
+      <p>Convert any text into natural, human‑like speech for narration, podcasts, or accessibility.</p>
+      <div class="card-footer">
+        <span class="tag">TTS</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 11. Text to Song -->
+    <div class="module-card card-song" data-module="text-to-music">
+      <div class="card-top">
+        <div class="card-icon">🎵</div>
+        <span class="card-badge">music</span>
+      </div>
+      <h3>Text to Song</h3>
+      <p>Compose original songs with lyrics, melody, and instrumentation — from a single prompt.</p>
+      <div class="card-footer">
+        <span class="tag">lyrics+melody</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 12. Coding Agent -->
+    <div class="module-card card-coding" data-module="coding-agent">
+      <div class="card-top">
+        <div class="card-icon">💻</div>
+        <span class="card-badge">agent</span>
+      </div>
+      <h3>Coding Agent</h3>
+      <p>Get AI‑powered help writing, debugging, and explaining code in any programming language.</p>
+      <div class="card-footer">
+        <span class="tag">copilot</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 13. Voice Cloning (Alibaba) -->
+    <div class="module-card card-voice" data-module="voice-clone">
+      <div class="card-top">
+        <div class="card-icon">🗣️</div>
+        <span class="card-badge">clone</span>
+      </div>
+      <h3>Voice Cloning</h3>
+      <p>Clone voices with high fidelity — powered by Alibaba's enterprise‑grade speech models.</p>
+      <div class="card-footer">
+        <span class="tag">Alibaba</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 14. Design Studio -->
+    <div class="module-card card-design" data-module="design-studio">
+      <div class="card-top">
+        <div class="card-icon">🎯</div>
+        <span class="card-badge">studio</span>
+      </div>
+      <h3>Design Studio</h3>
+      <p>A full creative toolkit: layout, color palettes, typography, and asset generation.</p>
+      <div class="card-footer">
+        <span class="tag">pro</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 15. Chatbot Maker (Insta, FB, WhatsApp, Website) -->
+    <div class="module-card card-chatbot" data-module="chatbot-maker">
+      <div class="card-top">
+        <div class="card-icon">🤖</div>
+        <span class="card-badge">multi‑platform</span>
+      </div>
+      <h3>Chatbot Maker</h3>
+      <p>Build and deploy AI chatbots for Instagram, Facebook, WhatsApp, and your website — all from one dashboard.</p>
+      <div class="card-footer">
+        <span class="tag">Insta · FB · WA</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 16. MCP and Extension Integrator -->
+    <div class="module-card card-mcp" data-module="mcp-integrator">
+      <div class="card-top">
+        <div class="card-icon">🔌</div>
+        <span class="card-badge">integrate</span>
+      </div>
+      <h3>MCP &amp; Extension Integrator</h3>
+      <p>Connect external tools, plugins, and MCP extensions to extend the platform's power.</p>
+      <div class="card-footer">
+        <span class="tag">extend</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── FOOTER ─── -->
+  <footer class="footer">
+    <div>
+      <span class="dot"></span> SanjayAIHub — built for builders. All modules are self‑contained, API‑ready, and designed to work together or independently. No lock‑in. No subscription fees. Just AI, unified.
+    </div>
+    <div>
+      <a href="/" id="footerHome">Home</a>
+      <span style="color:#1f2433;">|</span>
+      <a href="#" id="footerDocs">Docs</a>
+      <span style="color:#1f2433;">|</span>
+      <a href="#" id="footerModules">Modules</a>
+    </div>
+  </footer>
+
+</div>
+
+<!-- ─── AUTH MODALS ─── -->
+
+<!-- Login Required Modal -->
+<div class="auth-modal-overlay" id="loginModal">
+  <div class="auth-modal">
+    <button class="auth-modal-close" id="loginModalClose">&times;</button>
+    <h2><i class="fas fa-lock"></i> Login Required</h2>
+    <p id="loginModalMessage">To access <strong>this module</strong>, please log in or create an account.</p>
+    <div class="auth-modal-buttons">
+      <a href="/login.html" class="btn-primary" id="loginModalLoginBtn">
+        <i class="fas fa-sign-in-alt"></i> Login
+      </a>
+      <a href="/login.html?tab=register" class="btn-secondary" id="loginModalRegisterBtn">
+        <i class="fas fa-user-plus"></i> Register
+      </a>
+    </div>
+    <p class="auth-modal-hint">Free modules: Chatbot &amp; Prompt Library — no login required.</p>
+  </div>
+</div>
+
+<!-- Upgrade Required Modal -->
+<div class="auth-modal-overlay" id="upgradeModal">
+  <div class="auth-modal">
+    <button class="auth-modal-close" id="upgradeModalClose">&times;</button>
+    <h2><i class="fas fa-crown"></i> Upgrade Required</h2>
+    <p id="upgradeModalMessage">To access <strong>this module</strong>, you need to upgrade your subscription.</p>
+    <div class="auth-modal-buttons">
+      <a href="/profile.html#tab-plan" class="btn-primary" id="upgradeModalPlanBtn">
+        <i class="fas fa-crown"></i> View Plans
+      </a>
+      <button class="btn-secondary" id="upgradeModalCancelBtn">
+        <i class="fas fa-times"></i> Cancel
+      </button>
+    </div>
+    <p class="auth-modal-hint" id="upgradeModalTier">Your current tier: <strong>Trial</strong></p>
+  </div>
+</div>
+
+<!-- ─── SCRIPTS ─── -->
+<script src="/js/auth.js"></script>
+<script src="/js/modules.js"></script>
+
+<script>
+  // ──────────────────────────────────────────────
+  // MODAL HELPERS
+  // ──────────────────────────────────────────────
+
+  function openModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.add('active');
+  }
+
+  function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.remove('active');
+  }
+
+  // ──────────────────────────────────────────────
+  // INITIALIZE HOME PAGE
+  // ──────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', async function() {
+    // 1. Verify session
+    await AUTH.verifySession();
+    const user = AUTH.getUser();
+    
+    // 2. Update header
+    updateHeader(user);
+    
+    // 3. Update module cards based on access
+    updateModules();
+    
+    // 4. Set up event listeners
+    setupEventListeners();
+  });
+
+  // ──────────────────────────────────────────────
+  // HEADER UPDATE
+  // ──────────────────────────────────────────────
+
+  function updateHeader(user) {
+  const container = document.getElementById('headerAuth');
+  
+  if (user) {
+    // Logged in - show user info
+    const tierEmoji = {
+      trial: '🔓',
+      basic: '🌟',
+      pro: '💎',
+      enterprise: '👑'
+    };
+    
+    const tierLabel = user.subscription_tier?.charAt(0).toUpperCase() + user.subscription_tier?.slice(1) || 'Trial';
+    
+    container.innerHTML = `
+      <div class="user-info">
+        <div class="user-info-inner">
+          <span class="user-name"><i class="fas fa-user"></i> ${user.full_name || user.username}</span>
+          <span class="user-tier"><span class="tier-emoji">${tierEmoji[user.subscription_tier] || '🔓'}</span> ${tierLabel}</span>
+          <a href="/profile.html" class="user-profile-btn" id="profileBtn"><i class="fas fa-cog"></i></a>
+          <button class="user-logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+      </div>
+    `;
+    
+    // Add logout event listener
+    document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
+    
+  } else {
+    // Not logged in - show login/register
+    container.innerHTML = `
+      <div class="auth-buttons">
+        <a href="/login.html" class="auth-btn-login"><i class="fas fa-sign-in-alt"></i> Login</a>
+        <a href="/login.html?tab=register" class="auth-btn-register"><i class="fas fa-user-plus"></i> Register</a>
+      </div>
+    `;
+  }
+}
+
+  // ──────────────────────────────────────────────
+  // LOGOUT HANDLER
+  // ──────────────────────────────────────────────
+
+  function handleLogout() {
+    if (confirm('Are you sure you want to logout?')) {
+      AUTH.logout();
+    }
+  }
+
+  // ──────────────────────────────────────────────
+  // MODULE CARD UPDATE
+  // ──────────────────────────────────────────────
+
+  function updateModules() {
+    const cards = document.querySelectorAll('.module-card');
+    const modules = MODULES.getAllModules();
+    
+    cards.forEach(card => {
+      const moduleKey = card.dataset.module;
+      
+      if (moduleKey && modules[moduleKey]) {
+        const module = modules[moduleKey];
+        
+        if (!module.hasAccess) {
+          // Lock the card
+          card.classList.add('locked');
+          
+          // Add lock badge if not exists
+          let lockBadge = card.querySelector('.lock-badge');
+          if (!lockBadge) {
+            lockBadge = document.createElement('div');
+            lockBadge.className = 'lock-badge';
+            lockBadge.innerHTML = '<i class="fas fa-lock"></i><span>locked</span>';
+            card.appendChild(lockBadge);
+          }
+          
+        } else {
+          // Unlock the card
+          card.classList.remove('locked');
+          const lockBadge = card.querySelector('.lock-badge');
+          if (lockBadge) lockBadge.remove();
+        }
+      }
+    });
+  }
+
+  // ──────────────────────────────────────────────
+  // SETUP EVENT LISTENERS
+  // ──────────────────────────────────────────────
+
+  function setupEventListeners() {
+    // ── Module Card Clicks ──
+    document.querySelectorAll('.module-card').forEach(card => {
+      card.addEventListener('click', function(e) {
+        // Ignore if clicking on interactive elements
+        if (e.target.closest('a') || e.target.closest('button')) return;
+        
+        const moduleKey = this.dataset.module;
+        if (!moduleKey) return;
+        
+        const module = MODULES.definitions[moduleKey];
+        if (!module) return;
+        
+        // Check if card is locked
+        if (this.classList.contains('locked')) {
+          e.preventDefault();
+          
+          // Check if user is logged in
+          if (!AUTH.isLoggedIn()) {
+            // Show login modal
+            const modalMessage = document.getElementById('loginModalMessage');
+            if (modalMessage) {
+              modalMessage.innerHTML = `To access <strong>${module.name}</strong>, please log in or create an account.`;
+            }
+            openModal('loginModal');
+          } else {
+            // Show upgrade modal
+            const user = AUTH.getUser();
+            const tier = user?.subscription_tier || 'Trial';
+            const requiredTier = module.tier.charAt(0).toUpperCase() + module.tier.slice(1);
+            
+            const modalMessage = document.getElementById('upgradeModalMessage');
+            if (modalMessage) {
+              modalMessage.innerHTML = `To access <strong>${module.name}</strong>, you need the <strong>${requiredTier}</strong> tier or higher.`;
+            }
+            
+            const tierDisplay = document.getElementById('upgradeModalTier');
+            if (tierDisplay) {
+              tierDisplay.innerHTML = `Your current tier: <strong>${tier.charAt(0).toUpperCase() + tier.slice(1)}</strong>`;
+            }
+            
+            openModal('upgradeModal');
+          }
+          return;
+        }
+        
+        // Module is accessible - navigate
+        MODULES.navigateToModule(moduleKey);
+      });
+    });
+
+    // ── Modal Close Buttons ──
+    document.getElementById('loginModalClose')?.addEventListener('click', function() {
+      closeModal('loginModal');
+    });
+
+    document.getElementById('upgradeModalClose')?.addEventListener('click', function() {
+      closeModal('upgradeModal');
+    });
+
+    document.getElementById('upgradeModalCancelBtn')?.addEventListener('click', function() {
+      closeModal('upgradeModal');
+    });
+
+    // ── Close modals on overlay click ──
+    document.querySelectorAll('.auth-modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', function(e) {
+        if (e.target === this) {
+          this.classList.remove('active');
+        }
+      });
+    });
+
+    // ── Footer links ──
+    document.getElementById('footerDocs')?.addEventListener('click', function(e) {
+      e.preventDefault();
+      alert('Documentation placeholder');
+    });
+
+    document.getElementById('footerModules')?.addEventListener('click', function(e) {
+      e.preventDefault();
+      alert('Module list');
+    });
+  }
+
+  // ──────────────────────────────────────────────
+  // HANDLE LOGIN PAGE TAB PARAM
+  // ──────────────────────────────────────────────
+
+  if (window.location.pathname.includes('login.html')) {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'register') {
+      setTimeout(() => {
+        const registerTab = document.querySelector('.auth-tab[data-form="register"]');
+        if (registerTab) registerTab.click();
+      }, 100);
+    }
+  }
+</script>
+
+</body>
+</html>

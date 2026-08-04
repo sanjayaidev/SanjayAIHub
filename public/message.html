@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SanjayAIHub · Regional Language Message Writer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0c10;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .dashboard {
+            max-width: 1200px;
+            width: 100%;
+            height: 92vh;
+            max-height: 900px;
+            background: rgba(18, 22, 28, 0.85);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-radius: 40px;
+            box-shadow: 0 30px 60px -12px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.04);
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 240px;
+            min-width: 240px;
+            background: rgba(12, 16, 22, 0.7);
+            border-right: 1px solid rgba(255,255,255,0.04);
+            padding: 20px 12px 16px 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 0 6px;
+            flex-shrink: 0;
+        }
+
+        .brand-icon {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, #00e8a2, #00b37a);
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; color: #060d0b;
+            box-shadow: 0 8px 24px -6px rgba(0,232,162,0.3);
+            flex-shrink: 0;
+        }
+
+        .brand-text h1 { font-size: 18px; font-weight: 700; color: #f0f4fe; letter-spacing: -0.3px; }
+        .brand-text span { font-size: 11px; color: #8896b0; display: block; margin-top: 1px; }
+
+        .sidebar-section { flex-shrink: 0; margin-bottom: 4px; }
+        .sidebar-section-label {
+            font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px;
+            color: #4d5872; padding: 4px 8px 4px 8px; font-weight: 700;
+        }
+
+        .sidebar-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 7px 12px; border-radius: 8px;
+            color: #8896b0; font-size: 12.5px; cursor: pointer;
+            transition: 0.15s; font-weight: 500;
+            user-select: none; border: 1px solid transparent;
+        }
+        .sidebar-item:hover { background: rgba(255,255,255,0.04); color: #eef2f9; }
+        .sidebar-item.active { 
+            background: rgba(0,232,162,0.1); 
+            color: #00e8a2; 
+            border-color: rgba(0,232,162,0.12);
+        }
+        .sidebar-item i { width: 16px; font-size: 14px; text-align: center; flex-shrink: 0; }
+        .sidebar-item .badge {
+            margin-left: auto;
+            font-size: 8px;
+            background: rgba(255,255,255,0.06);
+            padding: 1px 7px;
+            border-radius: 8px;
+            color: #5b6a84;
+            font-weight: 600;
+        }
+
+        .sidebar-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.04);
+            margin: 6px 8px 8px 8px;
+            flex-shrink: 0;
+        }
+
+        .back-hub {
+            margin-top: auto;
+            border-top: 1px solid rgba(255,255,255,0.04);
+            padding-top: 10px;
+            flex-shrink: 0;
+        }
+
+        /* ── Main Content ── */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        /* ── Header ── */
+        .chat-header {
+            padding: 12px 22px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            min-height: 50px;
+            gap: 10px;
+        }
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .header-left .page-title { color: #eef2f9; font-weight: 600; font-size: 15px; }
+        .header-left .page-subtitle { color: #6a7a94; font-size: 12px; margin-left: 6px; font-weight: 400; }
+        .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        .model-select, .lang-select {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px; padding: 5px 10px; color: #cdbfff; font-size: 11px;
+            font-family: 'Inter', sans-serif; outline: none; cursor: pointer; max-width: 160px;
+        }
+        .model-select option, .lang-select option { background: #1a1f29; color: #eef2f9; }
+
+        /* ── Content Area ── */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 22px 20px 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .content-area::-webkit-scrollbar { width: 4px; }
+        .content-area::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
+
+        /* ── Filter Bar ── */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 16px 18px;
+            flex-shrink: 0;
+            align-items: flex-end;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 140px;
+        }
+        .filter-group label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6a7a94;
+            font-weight: 600;
+        }
+        .filter-group select, .filter-group input {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 8px 12px;
+            color: #eef2f9;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: 0.2s;
+            width: 100%;
+            cursor: pointer;
+        }
+        .filter-group select:focus, .filter-group input:focus {
+            border-color: #00e8a2;
+            box-shadow: 0 0 0 4px rgba(0,232,162,0.08);
+        }
+        .filter-group select option { background: #1a1f29; color: #eef2f9; }
+
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .filter-actions button {
+            padding: 8px 20px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            height: 40px;
+        }
+        .btn-primary {
+            background: #00e8a2;
+            color: #060d0b;
+            box-shadow: 0 8px 24px -8px rgba(0,232,162,0.3);
+        }
+        .btn-primary:hover { filter: brightness(1.08); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            color: #8896b0;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); color: #eef2f9; }
+
+        /* ── Occasion Grid ── */
+        .occasions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .occasion-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 14px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .occasion-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px -4px rgba(0,0,0,0.4);
+            border-color: #00e8a2;
+            background: rgba(0,232,162,0.06);
+        }
+        .occasion-card .icon { font-size: 28px; margin-bottom: 6px; display: block; }
+        .occasion-card .name { font-weight: 500; font-size: 12px; color: #eef2f9; }
+        .occasion-card .category-tag {
+            font-size: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            background: rgba(255,255,255,0.06);
+            padding: 1px 8px;
+            border-radius: 8px;
+            color: #6a7a94;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        /* ── Output Area ── */
+        .output-area {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 4px 0;
+            min-height: 200px;
+        }
+        .output-area::-webkit-scrollbar { width: 4px; }
+        .output-area::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
+
+        .empty-state {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            color: #5b6a84; gap: 8px; text-align: center;
+        }
+        .empty-state i { font-size: 28px; color: #3a4356; }
+        .empty-state p { font-size: 13px; line-height: 1.6; }
+
+        .option-wrapper {
+            display: flex; flex-direction: column; gap: 3px;
+            animation: slideUp 0.25s ease;
+        }
+        @keyframes slideUp { 0% { opacity:0; transform:translateY(8px); } 100% { opacity:1; transform:translateY(0); } }
+
+        .option-label {
+            font-size: 10px; color: #6a7a94; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.4px;
+            padding-left: 4px; display: flex; align-items: center; gap: 5px;
+        }
+        .option-label .opt-num {
+            background: rgba(0,232,162,0.12); color: #00e8a2;
+            padding: 1px 6px; border-radius: 5px; font-size: 9px; font-weight: 700;
+        }
+
+        .option-box {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 14px 16px;
+            position: relative;
+            transition: 0.2s;
+        }
+        .option-box:hover { border-color: rgba(0,232,162,0.15); }
+
+        .option-box .copy-btn {
+            position: absolute; top: 8px; right: 10px;
+            background: rgba(255,255,255,0.06);
+            border: none;
+            color: #8896b0;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .option-box .copy-btn:hover { background: rgba(0,232,162,0.15); color: #00e8a2; }
+        .option-box .copy-btn.copied { background: rgba(52, 211, 142, 0.15); color: #34d38e; }
+
+        .option-box .content {
+            color: #eef2f9;
+            font-size: 14px;
+            line-height: 1.7;
+            word-break: break-word;
+            padding-right: 50px;
+            white-space: pre-wrap;
+        }
+
+        /* ── Loading Spinner ── */
+        .loading-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(10,12,16,0.7);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 10;
+            border-radius: 14px;
+        }
+        .loading-overlay.active { display: flex; }
+        .loading-overlay .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(0,232,162,0.15);
+            border-top-color: #00e8a2;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay p { color: #8896b0; font-size: 13px; }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1a1f29;
+            color: #eef2f9;
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            transform: translateY(80px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 999;
+            font-size: 13px;
+            max-width: 400px;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { border-color: rgba(0,232,162,0.3); }
+        .toast.error { border-color: rgba(255,90,90,0.3); color: #ff9b9b; }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .dashboard { border-radius: 0; height: 100vh; max-height: none; }
+            body { padding: 0; }
+            .sidebar {
+                position: fixed;
+                left: -260px;
+                top: 0; bottom: 0;
+                width: 260px;
+                z-index: 1000;
+                transition: left 0.3s ease;
+                box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+                background: rgba(12,16,22,0.98);
+                border-radius: 0;
+            }
+            .sidebar.mobile-open { left: 0; }
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.6);
+                z-index: 999;
+                backdrop-filter: blur(2px);
+            }
+            .sidebar-overlay.visible { display: block; }
+            .hamburger-btn { display: flex !important; background: transparent; border: none; color: #8896b0; font-size: 20px; cursor: pointer; padding: 4px; }
+            .content-area { padding: 10px 12px 14px 12px; }
+            .chat-header { padding: 8px 12px; flex-wrap: wrap; }
+            .filter-bar { flex-direction: column; align-items: stretch; }
+            .filter-actions { justify-content: stretch; }
+            .filter-actions button { flex: 1; justify-content: center; }
+            .occasions-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 480px) {
+            .occasions-grid { grid-template-columns: repeat(2, 1fr); }
+            .option-box .content { font-size: 13px; }
+        }
+        @media (min-width: 769px) {
+            .hamburger-btn { display: none !important; }
+            .sidebar-overlay { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon"><i class="fas fa-gift"></i></div>
+            <div class="brand-text">
+                <h1>SanjayAIHub</h1>
+                <span>Message Writer</span>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Quick Actions</div>
+            <div class="sidebar-item active" data-tab="wishes">
+                <i class="fas fa-gift"></i> <span>Wishes & Messages</span>
+            </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Categories</div>
+            <div class="sidebar-item" data-category="festive">
+                <i class="fas fa-calendar-alt"></i> <span>Festive</span>
+                <span class="badge">14</span>
+            </div>
+            <div class="sidebar-item" data-category="personal">
+                <i class="fas fa-heart"></i> <span>Personal</span>
+                <span class="badge">8</span>
+            </div>
+            <div class="sidebar-item" data-category="professional">
+                <i class="fas fa-briefcase"></i> <span>Professional</span>
+                <span class="badge">6</span>
+            </div>
+            <div class="sidebar-item" data-category="all">
+                <i class="fas fa-th-large"></i> <span>All Occasions</span>
+                <span class="badge">28</span>
+            </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="back-hub">
+            <div class="sidebar-item" onclick="window.location.href='/'">
+                <i class="fas fa-arrow-left"></i> <span>Back to Hub</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="header-left">
+                <button class="hamburger-btn" id="hamburgerBtn"><i class="fas fa-bars"></i></button>
+                <span class="page-title" id="pageTitle">Regional Language Message Writer</span>
+                <span class="page-subtitle" id="pageSubtitle">Culturally relevant wishes in 22+ languages</span>
+            </div>
+            <div class="header-right">
+                <select class="model-select" id="modelSelect">
+                    <option value="qwen3.7-max">qwen3.7-max</option>
+                    <option value="qwen3.7-plus">qwen3.7-plus</option>
+                    <option value="qwen3.5-plus">qwen3.5-plus</option>
+                    <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+                    <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+                    <option value="mistralai/mistral-small-4-119b-2603" selected>mistral-small-4-119b</option>
+                </select>
+                <select class="lang-select" id="langSelect">
+                    <option value="en">English</option>
+                    <option value="hi">हिन्दी (Hindi)</option>
+                    <option value="bn">বাংলা (Bengali)</option>
+                    <option value="te">తెలుగు (Telugu)</option>
+                    <option value="mr">मराठी (Marathi)</option>
+                    <option value="ta">தமிழ் (Tamil)</option>
+                    <option value="ur">اردو (Urdu)</option>
+                    <option value="gu">ગુજરાતી (Gujarati)</option>
+                    <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                    <option value="ml">മലയാളം (Malayalam)</option>
+                    <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                    <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                    <option value="as">অসমীয়া (Assamese)</option>
+                    <option value="mai">मैथिली (Maithili)</option>
+                    <option value="sa">संस्कृतम् (Sanskrit)</option>
+                    <option value="ne">नेपाली (Nepali)</option>
+                    <option value="sd">سنڌي (Sindhi)</option>
+                    <option value="ks">कॉशुर / کٲشُر (Kashmiri)</option>
+                    <option value="kok">कोंकणी (Konkani)</option>
+                    <option value="mni">মণিপুরী (Manipuri)</option>
+                    <option value="bo">བོད་སྐད་ (Bodo)</option>
+                    <option value="doi">डोगरी (Dogri)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- CONTENT AREA -->
+        <div class="content-area" id="contentArea">
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label><i class="fas fa-theater-masks"></i> Emotion / Tone</label>
+                    <select id="emotionSelect">
+                        <option value="warm">❤️ Warm & Heartfelt</option>
+                        <option value="energetic">⚡ Energetic & Excited</option>
+                        <option value="polite">🙏 Polite & Respectful</option>
+                        <option value="simple">✨ Simple & Sweet</option>
+                        <option value="emotional">🥺 Emotional & Deep</option>
+                        <option value="professional">💼 Professional</option>
+                        <option value="funny">😂 Funny & Humorous</option>
+                        <option value="inspirational">🌟 Inspirational</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-users"></i> Relation</label>
+                    <select id="relationSelect">
+                        <option value="any">👤 Any</option>
+                        <option value="family">👨‍👩‍👧‍👦 Family Member</option>
+                        <option value="relative">👥 Relative</option>
+                        <option value="friend">🤝 Friend</option>
+                        <option value="elder">🙇 Elder</option>
+                        <option value="younger">🧒 Younger</option>
+                        <option value="colleague">💼 Colleague</option>
+                        <option value="child">👶 Child</option>
+                        <option value="partner">💕 Partner / Spouse</option>
+                    </select>
+                </div>
+
+                <div class="filter-group" style="flex:0.5;min-width:100px;">
+                    <label>Occasion</label>
+                    <select id="occasionQuickSelect">
+                        <option value="">Choose...</option>
+                        <optgroup label="🪔 Festive">
+                            <option value="Diwali">Diwali</option>
+                            <option value="Holi">Holi</option>
+                            <option value="Eid">Eid</option>
+                            <option value="Christmas">Christmas</option>
+                            <option value="Raksha Bandhan">Raksha Bandhan</option>
+                            <option value="Navratri">Navratri</option>
+                            <option value="Ganesh Chaturthi">Ganesh Chaturthi</option>
+                            <option value="Janmashtami">Janmashtami</option>
+                            <option value="Makar Sankranti">Makar Sankranti / Pongal</option>
+                            <option value="Onam">Onam</option>
+                            <option value="Baisakhi">Baisakhi</option>
+                            <option value="Guru Nanak Jayanti">Guru Nanak Jayanti</option>
+                            <option value="Durga Puja">Durga Puja</option>
+                            <option value="Karwa Chauth">Karwa Chauth</option>
+                        </optgroup>
+                        <optgroup label="🎂 Personal">
+                            <option value="Birthday">Birthday</option>
+                            <option value="Wedding">Wedding</option>
+                            <option value="Anniversary">Anniversary</option>
+                            <option value="Graduation">Graduation</option>
+                            <option value="New Baby">New Baby</option>
+                            <option value="Housewarming">Housewarming</option>
+                            <option value="Retirement">Retirement</option>
+                            <option value="Condolence">Condolence</option>
+                        </optgroup>
+                        <optgroup label="💼 Professional">
+                            <option value="Promotion">Promotion</option>
+                            <option value="New Job">New Job</option>
+                            <option value="Work Anniversary">Work Anniversary</option>
+                            <option value="Team Success">Team Success</option>
+                            <option value="Farewell">Farewell</option>
+                            <option value="Thank You">Thank You</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="filter-actions">
+                    <button class="btn-primary" id="generateBtn"><i class="fas fa-wand-magic-sparkles"></i> Generate</button>
+                    <button class="btn-secondary" id="clearBtn"><i class="fas fa-undo"></i> Clear</button>
+                </div>
+            </div>
+
+            <!-- Occasion Grid -->
+            <div class="occasions-grid" id="occasionsGrid">
+                <!-- Cards will be rendered here -->
+            </div>
+
+            <!-- Output Area -->
+            <div class="output-area" id="outputArea">
+                <div class="empty-state" id="emptyState">
+                    <i class="fas fa-gift"></i>
+                    <p>Select an occasion or use the filters above, then click Generate to create 5 message options</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+    // ── Occasion Data ──
+    const OCCASIONS = [
+        // Festive & Cultural
+        { name: "Diwali", icon: "🪔", category: "festive" },
+        { name: "Holi", icon: "🎨", category: "festive" },
+        { name: "Eid", icon: "🌙", category: "festive" },
+        { name: "Christmas", icon: "🎄", category: "festive" },
+        { name: "Raksha Bandhan", icon: "🧵", category: "festive" },
+        { name: "Navratri", icon: "💃", category: "festive" },
+        { name: "Ganesh Chaturthi", icon: "🐘", category: "festive" },
+        { name: "Janmashtami", icon: "🪈", category: "festive" },
+        { name: "Makar Sankranti", icon: "🌾", category: "festive" },
+        { name: "Onam", icon: "🛶", category: "festive" },
+        { name: "Baisakhi", icon: "🌻", category: "festive" },
+        { name: "Guru Nanak Jayanti", icon: "🙏", category: "festive" },
+        { name: "Durga Puja", icon: "🌺", category: "festive" },
+        { name: "Karwa Chauth", icon: "🌕", category: "festive" },
+        
+        // Personal & Milestones
+        { name: "Birthday", icon: "🎂", category: "personal" },
+        { name: "Wedding", icon: "💍", category: "personal" },
+        { name: "Anniversary", icon: "🥂", category: "personal" },
+        { name: "Graduation", icon: "🎓", category: "personal" },
+        { name: "New Baby", icon: "👶", category: "personal" },
+        { name: "Housewarming", icon: "🏡", category: "personal" },
+        { name: "Retirement", icon: "🏖️", category: "personal" },
+        { name: "Condolence", icon: "🕊️", category: "personal" },
+        
+        // Professional
+        { name: "Promotion", icon: "📈", category: "professional" },
+        { name: "New Job", icon: "💼", category: "professional" },
+        { name: "Work Anniversary", icon: "🎯", category: "professional" },
+        { name: "Team Success", icon: "🏆", category: "professional" },
+        { name: "Farewell", icon: "👋", category: "professional" },
+        { name: "Thank You", icon: "🙏", category: "professional" }
+    ];
+
+    // ── Emotion descriptions ──
+    const EMOTION_DESCRIPTIONS = {
+        'warm': 'Warm & Heartfelt — full of love, care, and affection',
+        'energetic': 'Energetic & Excited — high energy, enthusiastic, celebratory',
+        'polite': 'Polite & Respectful — formal, courteous, traditional',
+        'simple': 'Simple & Sweet — short, heartfelt, easy to understand',
+        'emotional': 'Emotional & Deep — profound, touching, meaningful',
+        'professional': 'Professional — formal, polished, workplace-appropriate',
+        'funny': 'Funny & Humorous — lighthearted, playful, witty',
+        'inspirational': 'Inspirational — motivational, uplifting, encouraging'
+    };
+
+    const RELATION_DESCRIPTIONS = {
+        'any': 'any recipient',
+        'family': 'a family member',
+        'relative': 'a relative',
+        'friend': 'a friend',
+        'elder': 'an elder (respectful)',
+        'younger': 'someone younger',
+        'colleague': 'a colleague',
+        'child': 'a child',
+        'partner': 'a partner or spouse'
+    };
+
+    // ── Language names ──
+    const LANGUAGE_NAMES = {
+        'en': 'English', 'hi': 'Hindi', 'bn': 'Bengali', 'te': 'Telugu',
+        'mr': 'Marathi', 'ta': 'Tamil', 'ur': 'Urdu', 'gu': 'Gujarati',
+        'kn': 'Kannada', 'ml': 'Malayalam', 'or': 'Odia', 'pa': 'Punjabi',
+        'as': 'Assamese', 'mai': 'Maithili', 'sa': 'Sanskrit', 'ne': 'Nepali',
+        'sd': 'Sindhi', 'ks': 'Kashmiri', 'kok': 'Konkani', 'mni': 'Manipuri',
+        'bo': 'Bodo', 'doi': 'Dogri'
+    };
+
+    const MULTILINGUAL_MODELS = new Set([
+        'mistralai/mistral-small-4-119b-2603',
+        'mistralai/mistral-large-3-675b-instruct-2512',
+        'deepseek-ai/deepseek-v4-flash',
+        'deepseek-ai/deepseek-v4-pro',
+        'meta/llama-3.3-70b-instruct',
+        'meta/llama-3.1-70b-instruct',
+    ]);
+
+    // ── DOM refs ──
+    const modelSelect = document.getElementById('modelSelect');
+    const langSelect = document.getElementById('langSelect');
+    const emotionSelect = document.getElementById('emotionSelect');
+    const relationSelect = document.getElementById('relationSelect');
+    const occasionQuickSelect = document.getElementById('occasionQuickSelect');
+    const generateBtn = document.getElementById('generateBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const occasionsGrid = document.getElementById('occasionsGrid');
+    const outputArea = document.getElementById('outputArea');
+    const emptyState = document.getElementById('emptyState');
+    const toastEl = document.getElementById('toast');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+    // ── State ──
+    let selectedCategory = 'all';
+    let selectedOccasion = '';
+    let isGenerating = false;
+
+    // ── Toast ──
+    function showToast(message, type = 'info') {
+        toastEl.textContent = message;
+        toastEl.className = `toast ${type} show`;
+        clearTimeout(toastEl._timeout);
+        toastEl._timeout = setTimeout(() => toastEl.classList.remove('show'), 3000);
+    }
+
+    // ── Mobile sidebar ──
+    hamburgerBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('mobile-open');
+        sidebarOverlay.classList.toggle('visible');
+    });
+    sidebarOverlay.addEventListener('click', () => {
+        sidebar.classList.remove('mobile-open');
+        sidebarOverlay.classList.remove('visible');
+    });
+
+    // ── Render Occasion Grid ──
+    function renderOccasions(category = 'all') {
+        const filtered = category === 'all' 
+            ? OCCASIONS 
+            : OCCASIONS.filter(o => o.category === category);
+
+        occasionsGrid.innerHTML = '';
+        filtered.forEach(occasion => {
+            const card = document.createElement('div');
+            card.className = 'occasion-card';
+            card.dataset.occasion = occasion.name;
+            card.innerHTML = `
+                <span class="icon">${occasion.icon}</span>
+                <div class="name">${occasion.name}</div>
+                <span class="category-tag">${occasion.category}</span>
+            `;
+            card.addEventListener('click', () => {
+                selectedOccasion = occasion.name;
+                occasionQuickSelect.value = occasion.name;
+                document.querySelectorAll('.occasion-card').forEach(c => c.style.borderColor = '');
+                card.style.borderColor = '#00e8a2';
+                card.style.background = 'rgba(0,232,162,0.08)';
+                showToast(`Selected: ${occasion.name}`, 'success');
+            });
+            occasionsGrid.appendChild(card);
+        });
+    }
+
+    // ── Sidebar category filter ──
+    document.querySelectorAll('.sidebar-item[data-category]').forEach(item => {
+        item.addEventListener('click', () => {
+            document.querySelectorAll('.sidebar-item[data-category]').forEach(el => el.classList.remove('active'));
+            item.classList.add('active');
+            selectedCategory = item.dataset.category;
+            renderOccasions(selectedCategory);
+            // Close mobile sidebar
+            sidebar.classList.remove('mobile-open');
+            sidebarOverlay.classList.remove('visible');
+        });
+    });
+
+    // ── Helper functions ──
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                  .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    function safeParseJSON(raw) {
+        let cleaned = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '');
+        try { return JSON.parse(cleaned); } catch { return null; }
+    }
+
+    function copyText(btn, text) {
+        const cleanText = text.replace(/\s+/g, ' ').trim();
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(cleanText).then(() => {
+                btn.classList.add('copied');
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                }, 2000);
+            });
+        }
+    }
+
+    function createOptionBox(text, index) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'option-wrapper';
+        const label = document.createElement('div');
+        label.className = 'option-label';
+        label.innerHTML = `<span class="opt-num">${index}</span> Message ${index}`;
+        const box = document.createElement('div');
+        box.className = 'option-box';
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'content';
+        contentDiv.textContent = text;
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+        copyBtn.onclick = function() { copyText(this, contentDiv.textContent.trim()); };
+        box.appendChild(copyBtn);
+        box.appendChild(contentDiv);
+        wrapper.appendChild(label);
+        wrapper.appendChild(box);
+        return wrapper;
+    }
+
+    // ── Generate Messages ──
+    async function generateMessages() {
+        // Get selected occasion from quick select or clicked card
+        let occasion = occasionQuickSelect.value || selectedOccasion;
+        
+        if (!occasion) {
+            showToast('Please select an occasion from the grid or dropdown', 'error');
+            return;
+        }
+
+        const emotion = emotionSelect.value;
+        const relation = relationSelect.value;
+        const lang = langSelect.value;
+        const langName = LANGUAGE_NAMES[lang] || 'English';
+
+        const emotionDesc = EMOTION_DESCRIPTIONS[emotion] || 'warm and heartfelt';
+        const relationDesc = RELATION_DESCRIPTIONS[relation] || 'any recipient';
+
+        isGenerating = true;
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+        outputArea.innerHTML = '';
+
+        try {
+            let selectedModel = modelSelect.value;
+            if (lang !== 'en' && !MULTILINGUAL_MODELS.has(selectedModel)) {
+                selectedModel = 'mistralai/mistral-small-4-119b-2603';
+            }
+
+            const systemPrompt = `You are a warm, culturally-aware message writer. Respond with ONLY valid JSON, no markdown, no commentary. Shape: {"options": ["...", "...", "...", "...", "..."]} with exactly 5 message options.`;
+
+            const userPrompt = `Generate 5 messages for "${occasion}" in ${langName} language.
+Emotion/Tone: ${emotionDesc}
+Recipient: ${relationDesc}
+Each message should be 1-3 sentences (20-80 words), appropriate for the occasion and relationship.
+Include relevant emojis. Keep it warm, authentic, and culturally appropriate.
+Return ONLY JSON: {"options": ["message1", "message2", "message3", "message4", "message5"]}`;
+
+            const res = await fetch('/api/me/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    model: selectedModel,
+                    stream: false,
+                    temperature: 0.8,
+                    max_tokens: 1024,
+                }),
+            });
+
+            if (!res.ok) throw new Error('Generation failed');
+
+            const data = await res.json();
+            const rawContent = data.choices?.[0]?.message?.content || data.content || '';
+            const parsed = safeParseJSON(rawContent);
+
+            const heading = document.createElement('div');
+            heading.className = 'option-label';
+            heading.style.cssText = 'font-size:14px;font-weight:700;color:#00e8a2;padding:4px 0 8px 0;';
+            heading.innerHTML = `✨ ${occasion} — ${emotionDesc} · ${relationDesc} · ${langName}`;
+            outputArea.appendChild(heading);
+
+            let options = (parsed && Array.isArray(parsed.options))
+                ? parsed.options.map(o => String(o).trim()).filter(o => o.length > 0)
+                : null;
+
+            if (!options || options.length === 0) {
+                options = [rawContent.trim()].filter(o => o.length > 0);
+            }
+
+            const displayOptions = options.slice(0, 5);
+            displayOptions.forEach((opt, i) => {
+                outputArea.appendChild(createOptionBox(opt, i + 1));
+            });
+
+            if (options.length > 5) {
+                const more = document.createElement('div');
+                more.style.cssText = 'color:#5b6a84;font-size:11px;padding:4px 0;text-align:center;';
+                more.textContent = `+ ${options.length - 5} more options generated`;
+                outputArea.appendChild(more);
+            }
+
+            showToast(`Generated ${displayOptions.length} messages for ${occasion}`, 'success');
+
+        } catch (err) {
+            outputArea.innerHTML = `
+                <div class="option-box" style="border-color:rgba(255,90,90,0.2);">
+                    <div style="color:#ff9b9b;display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span>${escapeHtml(err.message)}</span>
+                    </div>
+                </div>
+            `;
+            showToast('Error generating messages', 'error');
+        } finally {
+            isGenerating = false;
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate';
+        }
+    }
+
+    // ── Clear Output ──
+    function clearOutput() {
+        outputArea.innerHTML = `
+            <div class="empty-state" id="emptyState">
+                <i class="fas fa-gift"></i>
+                <p>Select an occasion or use the filters above, then click Generate to create 5 message options</p>
+            </div>
+        `;
+        selectedOccasion = '';
+        occasionQuickSelect.value = '';
+        document.querySelectorAll('.occasion-card').forEach(c => {
+            c.style.borderColor = '';
+            c.style.background = '';
+        });
+        showToast('Cleared', 'info');
+    }
+
+    // ── Quick select change ──
+    occasionQuickSelect.addEventListener('change', () => {
+        if (occasionQuickSelect.value) {
+            selectedOccasion = occasionQuickSelect.value;
+            document.querySelectorAll('.occasion-card').forEach(c => {
+                c.style.borderColor = '';
+                c.style.background = '';
+                if (c.dataset.occasion === selectedOccasion) {
+                    c.style.borderColor = '#00e8a2';
+                    c.style.background = 'rgba(0,232,162,0.08)';
+                }
+            });
+        }
+    });
+
+    // ── Event wiring ──
+    generateBtn.addEventListener('click', generateMessages);
+    clearBtn.addEventListener('click', clearOutput);
+
+    // Enter key on quick select triggers generate
+    occasionQuickSelect.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') generateMessages();
+    });
+
+    // ── Init ──
+    renderOccasions('all');
+
+})();
+</script>
+</body>
+</html>
