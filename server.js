@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const moduleRoutes = require('./routes/modules');
 const apiKeyRoutes = require('./routes/apikeys');
 const chatRoutes = require('./routes/chat'); // ← ADD THIS
+const reelsRoutes = require('./routes/reels');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -72,6 +73,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/keys', apiKeyRoutes);
 app.use('/api/chat', chatRoutes); // ← ADD THIS (replaces /api/modules/chat routes)
+app.use('/api/reels', reelsRoutes);
 
 // ── Health Check ──
 app.get('/api/health', (req, res) => {

@@ -240,6 +240,7 @@
             background: rgba(255,255,255,0.05);
             display: flex;
             align-items: center;
+            position: relative;
             justify-content: center;
             font-size: 28px;
             color: #3a4356;
@@ -660,229 +661,25 @@
 <!-- ── TOAST ── -->
 <div class="toast" id="toast"></div>
 
+<script src="/js/auth.js"></script>   <!-- ← Must load first -->
+<script src="/js/modules.js"></script>
 <script>
 (function() {
-    // ── Mock Prompt Data ──
-    const MOCK_PROMPTS = [
-        // Text to Image
-        {
-            id: 1,
-            headline: "Cyberpunk City at Night",
-            description: "A futuristic cityscape with neon lights and flying cars",
-            category: "t2i",
-            sub_category: "Urban",
-            full_prompt: "Cyberpunk city at night, neon lights, flying cars, rain, holographic billboards, futuristic architecture, 8k, photorealistic, cinematic lighting, purple and blue color scheme",
-            tags: ["cyberpunk", "city", "neon", "futuristic"],
-            media_type: "image",
-            demo_url: "https://picsum.photos/seed/cyberpunk/800/600",
-            max_images_allowed: 4,
-            views: 1234,
-            popular: true
-        },
-        {
-            id: 2,
-            headline: "Fantasy Dragon in Mountains",
-            description: "A majestic dragon soaring over misty mountain peaks",
-            category: "t2i",
-            sub_category: "Fantasy",
-            full_prompt: "Epic fantasy dragon, soaring over misty mountain peaks, storm clouds, lightning, dramatic lighting, highly detailed, digital art, concept art",
-            tags: ["dragon", "fantasy", "mountains", "epic"],
-            media_type: "image",
-            demo_url: "https://picsum.photos/seed/dragon/800/600",
-            max_images_allowed: 4,
-            views: 2345,
-            popular: true
-        },
-        {
-            id: 3,
-            headline: "Minimalist Japanese Garden",
-            description: "A serene Japanese garden with cherry blossoms and koi pond",
-            category: "t2i",
-            sub_category: "Nature",
-            full_prompt: "Japanese garden, cherry blossoms, koi pond, stone lantern, bamboo, zen, peaceful, warm sunlight, depth of field, 4k, photorealistic",
-            tags: ["japanese", "garden", "cherry blossom", "zen"],
-            media_type: "image",
-            demo_url: "https://picsum.photos/seed/garden/800/600",
-            max_images_allowed: 4,
-            views: 876,
-            popular: false
-        },
-        // Text to Video
-        {
-            id: 4,
-            headline: "Ocean Waves at Sunset",
-            description: "Calm ocean waves crashing on a sandy beach at golden hour",
-            category: "t2v",
-            sub_category: "Nature",
-            full_prompt: "Ocean waves crashing on beach, sunset, golden hour, warm colors, smooth motion, cinematic, 4k, slow motion, peaceful",
-            tags: ["ocean", "waves", "sunset", "beach"],
-            media_type: "video",
-            demo_url: "https://www.instagram.com/reel/Cx4V_5uP8XU/embed",
-            max_images_allowed: 1,
-            views: 3456,
-            popular: true
-        },
-        {
-            id: 5,
-            headline: "Urban Traffic Timelapse",
-            description: "A timelapse of city traffic at night with light trails",
-            category: "t2v",
-            sub_category: "Urban",
-            full_prompt: "Night city traffic timelapse, light trails, busy intersection, skyscrapers, neon lights, motion blur, cinematic, 4k",
-            tags: ["traffic", "city", "night", "timelapse"],
-            media_type: "video",
-            demo_url: "https://www.instagram.com/reel/Cx4WZ_5P8XU/embed",
-            max_images_allowed: 1,
-            views: 567,
-            popular: false
-        },
-        // Image Edit
-        {
-            id: 6,
-            headline: "Turn Sketch to Realistic",
-            description: "Convert a simple sketch into a photorealistic image",
-            category: "edit",
-            sub_category: "Style Transfer",
-            full_prompt: "Convert this sketch into a photorealistic image, detailed, cinematic lighting, high resolution, 8k, with shadows and reflections",
-            tags: ["sketch", "realistic", "convert", "style"],
-            media_type: "image",
-            demo_url: "https://picsum.photos/seed/sketch/800/600",
-            max_images_allowed: 1,
-            views: 789,
-            popular: false
-        },
-        {
-            id: 7,
-            headline: "Change Season: Summer to Winter",
-            description: "Transform a summer landscape into a winter wonderland",
-            category: "edit",
-            sub_category: "Season Change",
-            full_prompt: "Transform this scene from summer to winter, add snow, frozen lake, bare trees, winter atmosphere, cold colors, 4k",
-            tags: ["season", "winter", "snow", "transform"],
-            media_type: "image",
-            demo_url: "https://picsum.photos/seed/winter/800/600",
-            max_images_allowed: 1,
-            views: 432,
-            popular: false
-        },
-        // Image to Video
-        {
-            id: 8,
-            headline: "Animate a Portrait",
-            description: "Bring a still portrait to life with subtle animation",
-            category: "i2v",
-            sub_category: "Portrait",
-            full_prompt: "Animate this portrait: subtle head turn, eye blink, hair movement, natural expressions, smooth animation, 4k, cinematic",
-            tags: ["portrait", "animate", "face", "expression"],
-            media_type: "video",
-            demo_url: "https://www.instagram.com/reel/Cx4XZ_5P8XU/embed",
-            max_images_allowed: 1,
-            views: 654,
-            popular: false
-        },
-        {
-            id: 9,
-            headline: "City Skyline Transformation",
-            description: "Transform a static city skyline into a dynamic animated scene",
-            category: "i2v",
-            sub_category: "Cityscape",
-            full_prompt: "Animate city skyline: moving clouds, car light trails, blinking building lights, smooth transitions, cinematic, 4k",
-            tags: ["city", "skyline", "animation", "dynamic"],
-            media_type: "video",
-            demo_url: "https://www.instagram.com/reel/Cx4Ya_5P8XU/embed",
-            max_images_allowed: 1,
-            views: 321,
-            popular: false
-        },
-        // Video to Video
-        {
-            id: 10,
-            headline: "Stylize Dance Video",
-            description: "Transform a dance video into animated style",
-            category: "v2v",
-            sub_category: "Style Transfer",
-            full_prompt: "Convert this dance video to anime style, cel-shaded animation, smooth motion, vibrant colors, dynamic camera, 4k",
-            tags: ["dance", "anime", "style", "transfer"],
-            media_type: "video",
-            demo_url: "https://www.instagram.com/reel/Cx4Zr_5P8XU/embed",
-            max_images_allowed: 1,
-            views: 987,
-            popular: true
-        },
-        {
-            id: 11,
-            headline: "Color Grade & Enhance",
-            description: "Apply professional color grading to any video",
-            category: "v2v",
-            sub_category: "Color Grading",
-            full_prompt: "Apply cinematic color grade to this video: warm tones, increased contrast, film grain, cinematic look, 4k, professional",
-            tags: ["color", "grade", "cinematic", "enhance"],
-            media_type: "video",
-            demo_url: "https://www.instagram.com/reel/Cx4ap_5P8XU/embed",
-            max_images_allowed: 1,
-            views: 543,
-            popular: false
-        },
-        // More Text to Image
-        {
-            id: 12,
-            headline: "Cute Cat in Space",
-            description: "An adorable cat astronaut floating in space",
-            category: "t2i",
-            sub_category: "Cute",
-            full_prompt: "Cute cat astronaut, floating in space, colorful nebula, stars, helmet with visor, playful, digital art, 4k, vibrant colors",
-            tags: ["cat", "space", "cute", "astronaut"],
-            media_type: "image",
-            demo_url: "https://picsum.photos/seed/cat/800/600",
-            max_images_allowed: 4,
-            views: 2100,
-            popular: true
-        },
-        {
-            id: 13,
-            headline: "Underwater Coral Paradise",
-            description: "Vibrant coral reef teeming with colorful fish",
-            category: "t2i",
-            sub_category: "Nature",
-            full_prompt: "Underwater scene, coral reef, colorful fish, sea turtles, sunlight rays through water, ocean, 4k, photorealistic, vibrant colors",
-            tags: ["underwater", "coral", "fish", "ocean"],
-            media_type: "image",
-            demo_url: "https://picsum.photos/seed/coral/800/600",
-            max_images_allowed: 4,
-            views: 1567,
-            popular: false
-        },
-        // More Text to Video
-        {
-            id: 14,
-            headline: "Aurora Borealis Timelapse",
-            description: "Northern lights dancing across the arctic sky",
-            category: "t2v",
-            sub_category: "Nature",
-            full_prompt: "Aurora borealis timelapse, night sky, stars, green and purple lights, arctic landscape, cinematic, smooth motion, 4k",
-            tags: ["aurora", "northern lights", "arctic", "timelapse"],
-            media_type: "video",
-            demo_url: "https://www.instagram.com/reel/Cx4bq_5P8XU/embed",
-            max_images_allowed: 1,
-            views: 876,
-            popular: true
-        },
-        // More Image Edit
-        {
-            id: 15,
-            headline: "Add Dramatic Lighting",
-            description: "Add dramatic studio lighting to any portrait",
-            category: "edit",
-            sub_category: "Lighting",
-            full_prompt: "Add dramatic lighting to this portrait: side lighting, shadows, rim light, professional studio setup, cinematic look, 4k",
-            tags: ["lighting", "dramatic", "portrait", "studio"],
-            media_type: "image",
-            demo_url: "https://picsum.photos/seed/lighting/800/600",
-            max_images_allowed: 1,
-            views: 654,
-            popular: false
-        }
-    ];
+    // ── module_key (DB) <-> short category code (UI) ──
+    const MODULE_KEY_TO_CATEGORY = {
+        'text-to-image': 't2i',
+        'text-to-video': 't2v',
+        'image-edit': 'edit',
+        'image-to-video': 'i2v',
+        'video-to-video': 'v2v'
+    };
+    const CATEGORY_TO_MODULE_KEY = {
+        't2i': 'text-to-image',
+        't2v': 'text-to-video',
+        'edit': 'image-edit',
+        'i2v': 'image-to-video',
+        'v2v': 'video-to-video'
+    };
 
     // ── Category Labels ──
     const CATEGORY_LABELS = {
@@ -902,13 +699,14 @@
     };
 
     // ── State ──
-    let prompts = [...MOCK_PROMPTS];
-    let filteredPrompts = [...prompts];
+    let prompts = [];
+    let filteredPrompts = [];
     let selectedPromptId = null;
     let currentCategory = 'all';
     let currentSubCategory = '';
     let currentSearch = '';
     let currentSort = 'newest';
+    let favoriteIds = new Set();
 
     // ── DOM refs ──
     const promptList = document.getElementById('promptList');
@@ -921,6 +719,59 @@
     const hamburgerBtn = document.getElementById('hamburgerBtn');
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+    // ── API: load prompts from the real prompt library ──
+    async function loadPrompts() {
+        promptList.innerHTML = `<div class="loading-spinner"><div class="spinner"></div> Loading prompts...</div>`;
+        try {
+            const res = await fetch('/api/modules/prompt-library/prompts');
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load prompts');
+
+            prompts = data.prompts.map(p => ({
+                id: p.id,
+                headline: p.headline,
+                description: p.description,
+                category: MODULE_KEY_TO_CATEGORY[p.module_key] || p.module_key,
+                module_key: p.module_key,
+                sub_category: p.sub_category,
+                full_prompt: p.full_prompt,
+                tags: p.tags || [],
+                media_type: p.media_type,
+                demo_url: p.demo_url,
+                instagram_shortcode: p.instagram_shortcode,
+                max_images_allowed: p.max_images_allowed,
+                views: p.views,
+                popular: p.is_featured,
+                created_at: p.created_at
+            }));
+
+            if (window.AUTH && AUTH.isLoggedIn()) {
+                await loadFavorites();
+            }
+
+            updateSubCategories();
+            applyFilters();
+        } catch (err) {
+            promptList.innerHTML = `<div class="prompt-list-empty">Couldn't load prompts. ${escapeHtml(err.message)}</div>`;
+            showToast(err.message || 'Failed to load prompts', 'error');
+        }
+    }
+
+    // ── API: load the current user's favorited prompt IDs ──
+    async function loadFavorites() {
+        try {
+            const res = await fetch('/api/modules/prompt-library/favorites', {
+                headers: AUTH.getAuthHeader()
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                favoriteIds = new Set(data.favorites);
+            }
+        } catch (_) {
+            // Non-fatal — favorites just won't be pre-marked.
+        }
+    }
 
     // ── Toast ──
     function showToast(message, type = 'info') {
@@ -1003,7 +854,7 @@
                 break;
             case 'newest':
             default:
-                filteredPrompts.sort((a, b) => b.id - a.id);
+                filteredPrompts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                 break;
         }
 
@@ -1050,15 +901,18 @@
             const catClass = `category-${p.category}`;
             const icon = CATEGORY_ICONS[p.category] || 'fa-file';
             const isVideo = p.media_type === 'video';
-            const thumbIcon = isVideo ? '▶️' : '🖼️';
-            
+            const isFav = favoriteIds.has(p.id);
+
             return `
-                <div class="prompt-list-item ${isActive ? 'active' : ''}" onclick="selectPrompt(${p.id})" data-id="${p.id}">
+                <div class="prompt-list-item ${isActive ? 'active' : ''}" onclick="selectPrompt('${p.id}')" data-id="${p.id}">
                     <div class="prompt-thumb">
-                        ${isVideo ? 
-                            `<video src="${escapeHtml(p.demo_url)}" muted loop playsinline preload="metadata"></video>` :
-                            `<img src="${escapeHtml(p.demo_url)}" alt="${escapeHtml(p.headline)}" loading="lazy" onerror="this.style.display='none';this.parentElement.textContent='${thumbIcon}'" />`
+                        ${isVideo ?
+                            `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#405de6,#833ab4,#e1306c);">
+                                <i class="fas fa-play" style="color:#fff;font-size:16px;opacity:0.9;"></i>
+                             </div>` :
+                            `<img src="${escapeHtml(p.demo_url)}" alt="${escapeHtml(p.headline)}" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\\'fas ${icon}\\'></i>'" />`
                         }
+                        ${isFav ? '<i class="fas fa-heart" style="position:absolute;top:4px;right:4px;color:#e1306c;font-size:11px;text-shadow:0 1px 2px rgba(0,0,0,0.5);"></i>' : ''}
                     </div>
                     <div class="prompt-info">
                         <div class="headline">${escapeHtml(p.headline)}</div>
@@ -1073,11 +927,6 @@
             `;
         }).join('');
 
-        // Auto-play videos on hover
-        document.querySelectorAll('.prompt-list-item .prompt-thumb video').forEach(video => {
-            video.addEventListener('mouseenter', () => { video.play(); });
-            video.addEventListener('mouseleave', () => { video.pause(); video.currentTime = 0; });
-        });
     }
 
     // ── Select Prompt ──
@@ -1102,6 +951,24 @@
         const catClass = `category-${prompt.category}`;
         const isVideo = prompt.media_type === 'video';
         const icon = CATEGORY_ICONS[prompt.category] || 'fa-file';
+        const isFav = favoriteIds.has(prompt.id);
+
+        let mediaHtml;
+        if (isVideo && prompt.instagram_shortcode) {
+            // Real Instagram reel, rendered in-place via our own proxy —
+            // no redirect off-site.
+            mediaHtml = `
+                <div style="width:100%;max-width:340px;margin:0 auto;aspect-ratio:9/16;border-radius:12px;overflow:hidden;background:#000;">
+                    <iframe src="/api/reels/proxy?shortcode=${encodeURIComponent(prompt.instagram_shortcode)}"
+                            style="width:100%;height:100%;border:none;"
+                            allowfullscreen loading="lazy" scrolling="no"></iframe>
+                </div>
+            `;
+        } else if (isVideo) {
+            mediaHtml = `<div class="media-placeholder"><i class="fas ${icon}"></i><span>No preview available</span></div>`;
+        } else {
+            mediaHtml = `<img src="${escapeHtml(prompt.demo_url)}" alt="${escapeHtml(prompt.headline)}" style="width:100%;max-height:400px;object-fit:contain;border-radius:12px;" onerror="this.parentElement.innerHTML='<div class=\\'media-placeholder\\'><i class=\\'fas ${icon}\\'></i><span>No image available</span></div>'" />`;
+        }
 
         promptPreview.innerHTML = `
             <div class="preview-header">
@@ -1115,10 +982,7 @@
             </div>
 
             <div class="preview-media">
-                ${isVideo ? 
-                    `<video src="${escapeHtml(prompt.demo_url)}" controls autoplay muted loop playsinline style="width:100%;max-height:400px;object-fit:contain;border-radius:12px;"></video>` :
-                    `<img src="${escapeHtml(prompt.demo_url)}" alt="${escapeHtml(prompt.headline)}" style="width:100%;max-height:400px;object-fit:contain;border-radius:12px;" onerror="this.parentElement.innerHTML='<div class=\\'media-placeholder\\'><i class=\\'fas ${icon}\\'></i><span>No image available</span></div>'" />`
-                }
+                ${mediaHtml}
             </div>
 
             <div class="preview-prompt-box">
@@ -1127,11 +991,14 @@
             </div>
 
             <div class="preview-actions">
-                <button class="btn-primary" onclick="copyPrompt(${prompt.id})">
+                <button class="btn-primary" onclick="copyPrompt('${prompt.id}')">
                     <i class="fas fa-copy"></i> Copy Prompt
                 </button>
-                <button class="btn-secondary" onclick="usePrompt(${prompt.id})">
+                <button class="btn-secondary" onclick="usePrompt('${prompt.id}')">
                     <i class="fas fa-wand-magic-sparkles"></i> Use in Generator
+                </button>
+                <button class="btn-secondary" id="favBtn" onclick="toggleFavorite('${prompt.id}')">
+                    <i class="fa${isFav ? 's' : 'r'} fa-heart" style="${isFav ? 'color:#e1306c;' : ''}"></i> ${isFav ? 'Favorited' : 'Favorite'}
                 </button>
                 ${prompt.tags && prompt.tags.length > 0 ? `
                     <span style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-left:auto;">
@@ -1141,11 +1008,8 @@
             </div>
         `;
 
-        // Auto-play video in preview
-        const video = promptPreview.querySelector('video');
-        if (video) {
-            video.play().catch(() => {});
-        }
+        // Fire-and-forget view tracking — not critical if it fails.
+        fetch(`/api/modules/prompt-library/${prompt.id}/view`, { method: 'POST' }).catch(() => {});
     }
 
     function showEmptyPreview() {
@@ -1179,9 +1043,51 @@
     window.usePrompt = function(id) {
         const prompt = prompts.find(p => p.id === id);
         if (!prompt) return;
+
+        const page = window.MODULES && MODULES.pages ? MODULES.pages[prompt.module_key] : null;
+        if (!page) {
+            showToast('That generator isn\'t wired up yet — copy the prompt for now.', 'info');
+            return;
+        }
+
+        // Hand the prompt off via localStorage; the target page's own
+        // wiring (built module-by-module) reads this key to prefill itself.
+        localStorage.setItem('prefill_prompt', JSON.stringify({
+            prompt: prompt.full_prompt,
+            module_key: prompt.module_key,
+            from_prompt_id: prompt.id
+        }));
+
         showToast(`Opening "${prompt.headline}" in Generator...`, 'info');
-        // In a real implementation, this would navigate to the generator with the prompt pre-filled
-        // window.location.href = `/generator?prompt=${encodeURIComponent(prompt.full_prompt)}`;
+        window.location.href = page;
+    };
+
+    // ── Favorites ──
+    window.toggleFavorite = async function(id) {
+        if (!window.AUTH || !AUTH.isLoggedIn()) {
+            showToast('Log in to save favorites.', 'info');
+            return;
+        }
+        try {
+            const res = await fetch(`/api/modules/prompt-library/favorites/${id}`, {
+                method: 'POST',
+                headers: AUTH.getAuthHeader()
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to update favorite');
+
+            if (data.favorited) {
+                favoriteIds.add(id);
+                showToast('Added to favorites', 'success');
+            } else {
+                favoriteIds.delete(id);
+                showToast('Removed from favorites', 'info');
+            }
+            renderPromptList();
+            if (selectedPromptId === id) renderPreview(id);
+        } catch (err) {
+            showToast(err.message || 'Failed to update favorite', 'error');
+        }
     };
 
     // ── Filter event listeners ──
@@ -1219,12 +1125,7 @@
 
     // ── Init ──
     function init() {
-        updateSubCategories();
-        applyFilters();
-        // Select first prompt by default
-        if (filteredPrompts.length > 0) {
-            selectPrompt(filteredPrompts[0].id);
-        }
+        loadPrompts(); // applyFilters() (called inside) selects the first prompt automatically
     }
 
     init();

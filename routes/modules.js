@@ -5,6 +5,7 @@ const { authenticateToken } = require('../middleware/auth');
 
 // Import module handlers
 const { chatbotHandler, getModelCatalog } = require('../modules/chatbot');
+const promptLibrary = require('../modules/prompt-library');
 
 // ──────────────────────────────────────────────
 // GET /api/modules - List all modules with access
@@ -251,9 +252,9 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
       case 'chatbot':
         result = await chatbotHandler(req.body, apiKeys, userId, userTier);
         break;
-      case 'prompt-library':
-        result = await require('../modules/prompt-library')(req.body, userId);
-        break;
+      // Note: 'prompt-library' is a browse/favorite experience, not a
+      // generation action, so it doesn't go through this generic execute
+      // endpoint — see the dedicated /prompt-library/* routes below.
       case 'text-to-image':
         result = await require('../modules/text-to-image')(req.body, apiKeys, userId);
         break;
@@ -385,6 +386,66 @@ router.put('/chat/threads/:threadId', authenticateToken, async (req, res) => {
     res.json({ success: true, message: 'Thread updated' });
   } catch (error) {
     console.error('Rename thread error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// GET /api/modules/prompt-library/prompts - Browse curated prompts
+// Public: prompt-library is a free module, browsing doesn't require login.
+// Query: ?category=text-to-image&subCategory=Urban&search=dragon&sort=popular
+// ──────────────────────────────────────────────
+router.get('/prompt-library/prompts', async (req, res) => {
+  try {
+    const { category, subCategory, search, sort } = req.query;
+    const prompts = await promptLibrary.listPrompts({
+      moduleKey: category,
+      subCategory,
+      search,
+      sort,
+    });
+    res.json({ success: true, prompts });
+  } catch (error) {
+    console.error('List prompts error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// GET /api/modules/prompt-library/favorites - Current user's favorited prompt IDs
+// ──────────────────────────────────────────────
+router.get('/prompt-library/favorites', authenticateToken, async (req, res) => {
+  try {
+    const favorites = await promptLibrary.getFavoriteIds(req.user.id);
+    res.json({ success: true, favorites });
+  } catch (error) {
+    console.error('Get favorites error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// POST /api/modules/prompt-library/favorites/:promptId - Toggle favorite
+// ──────────────────────────────────────────────
+router.post('/prompt-library/favorites/:promptId', authenticateToken, async (req, res) => {
+  try {
+    const result = await promptLibrary.toggleFavorite(req.user.id, req.params.promptId);
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('Toggle favorite error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// POST /api/modules/prompt-library/:promptId/view - Increment view counter
+// ──────────────────────────────────────────────
+router.post('/prompt-library/:promptId/view', async (req, res) => {
+  try {
+    await promptLibrary.incrementView(req.params.promptId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Increment view error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
