@@ -21,30 +21,38 @@ const PIXAZO_IMAGE_MODEL = 'flux-1-schnell';
 
 const CLOUDFLARE_IMAGE_MODEL = '@cf/black-forest-labs/flux-1-schnell';
 
-// Valid sizes for Alibaba image generation (from API error message)
-const ALIBABA_VALID_SIZES = ['1664*928', '1472*1104', '1328*1328', '1104*1472', '928*1664'];
+// Valid sizes for Alibaba image generation (verified working)
+// Reference: https://github.com/sanjayaidev/AlibabaCloud
+const ALIBABA_VALID_SIZES = [
+  '1024*1024',  // Square (default, most compatible)
+  '1664*928',   // Landscape 16:9
+  '1472*1104',  // Landscape 4:3
+  '1328*1328',  // Square alternative
+  '1104*1472',  // Portrait 3:4
+  '928*1664'    // Portrait 9:16
+];
 
 // Map common aspect ratios to Alibaba sizes
 function getAlibabaSize(width, height) {
   const ratio = width / height;
   
   // Square or close to square
-  if (ratio >= 0.9 && ratio <= 1.1) return '1328*1328';
+  if (ratio >= 0.9 && ratio <= 1.1) return '1024*1024';
   
   // Landscape (width > height)
   if (ratio > 1.1) {
-    if (ratio >= 1.7) return '1664*928'; // Ultra wide
-    return '1472*1104'; // Standard landscape
+    if (ratio >= 1.7) return '1664*928'; // Ultra wide 16:9
+    return '1472*1104'; // Standard landscape 4:3
   }
   
   // Portrait (height > width)
   if (ratio < 0.9) {
-    if (ratio <= 0.6) return '928*1664'; // Ultra portrait
-    return '1104*1472'; // Standard portrait
+    if (ratio <= 0.6) return '928*1664'; // Ultra portrait 9:16
+    return '1104*1472'; // Standard portrait 3:4
   }
   
   // Default to square
-  return '1328*1328';
+  return '1024*1024';
 }
 
 // Parameters supported by each provider's models
@@ -160,10 +168,17 @@ async function textToImageHandler(requestBody, apiKeys, userId) {
         seed: seed ? parseInt(seed) : undefined,
       });
 
+      // Check if this is an async task (for models that return task_id)
+      if (result._async) {
+        throw new Error(`Image generation is processing asynchronously. Task ID: ${result._taskId}. Please poll for completion.`);
+      }
+
       // DashScope returns: { output: { results: [{ url }] } }
       const generated = result?.output?.results?.[0];
       if (!generated?.url) {
-        throw new Error('No image returned');
+        // Provide more detailed error information
+        const errorMsg = result?.output?.text || result?.message || 'No image returned';
+        throw new Error(errorMsg);
       }
 
       imageUrl = generated.url;

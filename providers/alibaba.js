@@ -95,7 +95,19 @@ class AlibabaProvider {
       throw new Error(`Alibaba image generation error (${response.status}): ${detail}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    
+    // Handle both sync and async responses
+    // Sync: { output: { results: [{ url }] } }
+    // Async: { output: { task_id, task_status: 'PENDING'|'RUNNING'|'SUCCEEDED' } }
+    const taskStatus = data?.output?.task_status;
+    if (taskStatus === 'PENDING' || taskStatus === 'RUNNING') {
+      // For async models, return task info for polling
+      data._async = true;
+      data._taskId = data.output.task_id;
+    }
+    
+    return data;
   }
 
   // Image editing via the qwen-image-edit model family. Takes a source image
