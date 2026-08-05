@@ -274,7 +274,12 @@
   </section>
 </main>
 <footer>SanjayAIHub · Image Edit · powered by Alibaba Cloud Model Studio</footer>
+<script src="/js/auth.js"></script>
 <script>
+  if (!window.AUTH || !AUTH.isLoggedIn()) {
+    window.location.href = '/login.html';
+  }
+
   const els = {
     form: document.getElementById("genForm"),
     prompt: document.getElementById("prompt"),
@@ -300,9 +305,11 @@
     url_pane: document.getElementById("url_pane"),
   };
 
-  fetch("/api/health").then(r=>r.json()).then(d=>{
-    els.keyStatus.textContent = d.keyConfigured ? "✅ API key: configured" : "⚠️ API key missing";
-    els.keyStatus.className = "key-status " + (d.keyConfigured ? "ok" : "bad");
+  fetch("/api/keys", { headers: AUTH.getAuthHeader() }).then(r=>r.json()).then(d=>{
+    const alibaba = d.keys?.find(k => k.provider === 'alibaba');
+    const configured = !!alibaba?.configured;
+    els.keyStatus.textContent = configured ? "✅ Alibaba key: configured" : "⚠️ Alibaba key missing — add it in Profile";
+    els.keyStatus.className = "key-status " + (configured ? "ok" : "bad");
   }).catch(()=>{ els.keyStatus.textContent="server unreachable"; els.keyStatus.className="key-status bad"; });
 
   document.querySelectorAll(".src-btn").forEach(btn => {
@@ -330,9 +337,9 @@
 
   async function uploadFile(file){
     const form = new FormData(); form.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", body: form });
+    const res = await fetch("/api/upload", { method: "POST", headers: AUTH.getAuthHeader(), body: form });
     const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.message || data.error || "Upload failed");
+    if (!res.ok || !data.success) throw new Error(data.message || "Upload failed");
     return data.url;
   }
 
@@ -356,17 +363,19 @@
     const start = Date.now(); els.timecode.textContent = "00:00:00 — RENDERING";
     const timer = setInterval(() => { els.timecode.textContent = fmtElapsed(Date.now() - start) + " — RENDERING"; }, 1000);
     try {
-      const res = await fetch("/api/image/edit", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, image_url: imageUrl, model: els.model.value, strength: els.strength.value ? Number(els.strength.value) : undefined }),
+      const res = await fetch("/api/modules/image-edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...AUTH.getAuthHeader() },
+        body: JSON.stringify({ prompt, image_url: imageUrl, model: els.model.value, provider: 'alibaba' }),
       });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.message || data.error || "Edit failed.");
+      if (!res.ok || !data.success) throw new Error(data.message || "Edit failed.");
+      const output = data.data.imageUrl || data.data.imageDataUrl;
       setProgress(100); setTally("done"); els.statusDot.className = "dot done";
       els.statusText.textContent = "complete"; clearInterval(timer);
       els.timecode.textContent = fmtElapsed(Date.now() - start) + " — COMPLETE";
-      els.outputArea.innerHTML = `<img src="${data.output}" alt="Edited image" />`;
-      els.downloadLink.href = data.output; els.openLink.href = data.output;
+      els.outputArea.innerHTML = `<img src="${output}" alt="Edited image" />`;
+      els.downloadLink.href = output; els.openLink.href = output;
       els.resultActions.style.display = "flex";
     } catch (err) { setTally("err"); els.statusDot.className = "dot err";
       els.statusText.textContent = "failed"; showError(err.message);
