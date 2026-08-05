@@ -248,8 +248,9 @@
         <div>
           <label>Model</label>
           <select id="model">
-            <option value="@cf/deepgram/aura-1">Deepgram Aura 1</option>
-            <option value="@cf/deepgram/aura-2-en">Deepgram Aura 2</option>
+            <option value="@cf/myshell-ai/melotts">Cloudflare MeloTTS</option>
+            <option value="eleven_flash_v2_5">ElevenLabs Flash v2.5</option>
+            <option value="eleven_multilingual_v2">ElevenLabs Multilingual v2</option>
           </select>
         </div>
       </div>
@@ -275,7 +276,12 @@
   </section>
 </main>
 <footer>SanjayAIHub · Text to Speech · powered by Cloudflare Workers AI</footer>
+<script src="/js/auth.js"></script>
 <script>
+  if (!window.AUTH || !AUTH.isLoggedIn()) {
+    window.location.href = '/login.html';
+  }
+
   const els = {
     form: document.getElementById("genForm"),
     prompt: document.getElementById("prompt"),
@@ -298,9 +304,10 @@
     keyStatus: document.getElementById("keyStatus"),
   };
 
-  fetch("/api/health").then(r=>r.json()).then(d=>{
-    els.keyStatus.textContent = d.keyConfigured ? "✅ API key: configured" : "⚠️ API key missing";
-    els.keyStatus.className = "key-status " + (d.keyConfigured ? "ok" : "bad");
+  fetch("/api/keys", { headers: AUTH.getAuthHeader() }).then(r=>r.json()).then(d=>{
+    const configured = d.keys?.some(k => (k.provider === 'cloudflare' || k.provider === 'elevenlabs') && k.configured);
+    els.keyStatus.textContent = configured ? "✅ TTS key: configured" : "⚠️ No TTS key — add Cloudflare or ElevenLabs in Profile";
+    els.keyStatus.className = "key-status " + (configured ? "ok" : "bad");
   }).catch(()=>{ els.keyStatus.textContent="server unreachable"; els.keyStatus.className="key-status bad"; });
 
   function setTally(kind){ els.tally.className = "tally" + (kind ? " " + kind : ""); }
@@ -322,18 +329,19 @@
     const timer = setInterval(() => { els.timecode.textContent = fmtElapsed(Date.now() - start) + " — RENDERING"; }, 1000);
 
     try {
-      const res = await fetch("/api/audio/tts", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const res = await fetch("/api/modules/text-to-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...AUTH.getAuthHeader() },
         body: JSON.stringify({
-          text, voice: els.voice.value,
-          speed: parseFloat(els.speed.value),
+          text,
           language: els.language.value,
           model: els.model.value,
         }),
       });
-      if (!res.ok) { const err = await res.json().catch(()=>({})); throw new Error(err.error || "TTS failed."); }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || "TTS failed.");
+      const contentType = data.data.contentType || 'audio/mpeg';
+      const url = `data:${contentType};base64,${data.data.audioBase64}`;
       setProgress(100); setTally("done"); els.statusDot.className = "dot done";
       els.statusText.textContent = "complete"; clearInterval(timer);
       els.timecode.textContent = fmtElapsed(Date.now() - start) + " — COMPLETE";
