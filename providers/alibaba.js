@@ -1,6 +1,7 @@
 // Alibaba Cloud Model Studio (DashScope) provider wrapper
 // Uses the OpenAI-compatible endpoint, scoped to the user's workspace.
 // Docs pattern: https://{workspace_id}.{region}.maas.aliyuncs.com/compatible-mode/v1/chat/completions
+// Image/Video endpoints: https://{workspace_id}.{region}.maas.aliyuncs.com/api/v1/...
 
 const DEFAULT_REGION = 'ap-southeast-1'; // Singapore
 
@@ -10,7 +11,8 @@ class AlibabaProvider {
     if (!workspaceId) throw new Error('Alibaba workspace_id is required');
     this.apiKey = apiKey;
     this.workspaceId = workspaceId;
-    this.baseUrl = `https://${workspaceId}.${region}.maas.aliyuncs.com/compatible-mode/v1`;
+    this.baseUrl = `https://${workspaceId}.${region}.maas.aliyuncs.com`;
+    this.chatBaseUrl = `${this.baseUrl}/compatible-mode/v1`;
   }
 
   // messages: [{ role, content }] where content can be a string
@@ -28,7 +30,7 @@ class AlibabaProvider {
 
     const payload = { model, messages, temperature, max_tokens, top_p, stream };
 
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+    const response = await fetch(`${this.chatBaseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -74,7 +76,7 @@ class AlibabaProvider {
       payload.parameters.seed = seed;
     }
 
-    const response = await fetch(`${this.baseUrl.replace('/compatible-mode/v1', '')}/api/v1/services/aigc/multimodal-generation/generation`, {
+    const response = await fetch(`${this.baseUrl}/api/v1/services/aigc/multimodal-generation/generation`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -108,7 +110,7 @@ class AlibabaProvider {
     if (size) payload.size = size;
     if (seed !== undefined && seed !== null) payload.seed = seed;
 
-    const response = await fetch(`${this.baseUrl}/images/edits`, {
+    const response = await fetch(`${this.baseUrl}/api/v1/services/aigc/image-edit`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -147,7 +149,7 @@ class AlibabaProvider {
     if (duration) parameters.duration = duration;
     if (seed !== undefined && seed !== null) parameters.seed = seed;
 
-    const response = await fetch(`${this.baseUrl}/services/aigc/video-generation/video-synthesis`, {
+    const response = await fetch(`${this.baseUrl}/api/v1/services/aigc/video-generation/video-synthesis`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -175,7 +177,7 @@ class AlibabaProvider {
   async checkVideoTask(taskId) {
     if (!taskId) throw new Error('taskId is required');
 
-    const response = await fetch(`${this.baseUrl}/tasks/${encodeURIComponent(taskId)}`, {
+    const response = await fetch(`${this.baseUrl}/api/v1/tasks/${encodeURIComponent(taskId)}`, {
       headers: { Authorization: `Bearer ${this.apiKey}` },
     });
 

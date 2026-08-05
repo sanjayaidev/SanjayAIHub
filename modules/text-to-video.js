@@ -88,11 +88,21 @@ async function textToVideoHandler(requestBody, apiKeys, userId) {
     model = requestedModel || 'wan2.6-t2v';
     
     try {
-      // Note: This is a placeholder - actual Alibaba video gen uses different endpoint
-      // For now, return a message indicating the limitation
-      videoUrl = null;
-      requestId = null;
-      status = 'pending';
+      // Build size from width/height or use default
+      const size = (width && height) ? `${parseInt(width)}x${parseInt(height)}` : '720x720';
+      
+      // Submit async video generation task
+      const result = await alibaba.videoGeneration(prompt, {
+        model,
+        size,
+        duration: parseInt(duration) || 5,
+        seed: seed ? parseInt(seed) : undefined,
+      });
+
+      // DashScope returns: { output: { task_id, task_status } }
+      requestId = result?.output?.task_id;
+      status = result?.output?.task_status || 'PENDING';
+      videoUrl = null; // Will be available after polling via checkVideoTask
     } catch (err) {
       throw new Error(`Alibaba Video error: ${err.message}`);
     }
@@ -132,26 +142,56 @@ async function textToVideoHandler(requestBody, apiKeys, userId) {
   };
 }
 
-async function checkVideoStatus(requestId, apiKeys) {
+async function checkVideoStatus(requestId, apiKeys, provider = 'pixazo') {
   if (!requestId) {
     throw new Error('Request ID is required');
   }
   
-  if (!apiKeys.pixazo?.api_key) {
-    throw new Error('Pixazo API key not configured');
-  }
-  
-  const pixazo = new PixazoProvider(apiKeys.pixazo.api_key);
-  
-  try {
-    const result = await pixazo.checkStatus(requestId);
-    return {
-      status: result.status,
-      videoUrl: result.output?.media_url?.[0] || null,
-      progress: result.progress || 0
-    };
-  } catch (err) {
-    throw new Error(`Pixazo status check error: ${err.message}`);
+  if (provider === 'alibaba') {
+    if (!apiKeys.alibaba?.api_key || !apiKeys.alibaba?.workspace_id) {
+      throw new Error('Alibaba Cloud API key + Workspace ID not configured');
+    }
+    
+    const alibaba = new AlibabaProvider(
+      apiKeys.alibaba.api_key,
+      apiKeys.alibaba.workspace_id
+    );
+    
+    try {
+      const result = await alibaba.checkVideoTask(requestId);
+      const taskStatus = result?.output?.task_status;
+      let status = 'pending';
+      
+      if (taskStatus === 'SUCCEEDED') status = 'completed';
+      else if (taskStatus === 'FAILED') status = 'failed';
+      else if (taskStatus === 'RUNNING') status = 'processing';
+      else status = 'pending';
+      
+      return {
+        status,
+        videoUrl: result?.output?.video_url || null,
+        progress: status === 'completed' ? 100 : (status === 'processing' ? 50 : 0)
+      };
+    } catch (err) {
+      throw new Error(`Alibaba status check error: ${err.message}`);
+    }
+  } else {
+    if (!apiKeys.pixazo?.api_key) {
+      throw new Error('Pixazo API key not configured');
+    }
+    
+    const pixazo = new PixazoProvider(apiKeys.pixazo.api_key);
+    
+    try {
+      const result = await pixazo.checkStatus(requestId);
+      return {
+        status: result.status,
+        videoUrl: result.output?.media_url?.[0] || null,
+        progress: result.progress || 0
+      };
+    } catch (err) {
+      throw new Error(`Pixazo status check error: ${err.message}`);
+    }
   }
 }
 

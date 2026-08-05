@@ -64,6 +64,9 @@ if (process.env.RENDER_EXTERNAL_URL) {
   console.log('ℹ️ RENDER_EXTERNAL_URL not set - auto-pinger disabled');
 }
 
+// ── Trust Proxy (required for rate-limiting behind Render/nginx) ──
+app.set('trust proxy', true);
+
 // ── Security Middleware with relaxed CSP for development ──
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
