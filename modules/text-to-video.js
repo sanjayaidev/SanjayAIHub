@@ -1,31 +1,32 @@
 // modules/text-to-video.js
 // Text-to-Video module supporting multiple providers (Alibaba, Pixazo)
-// with model-specific parameters
+// with model-specific parameters based on https://github.com/sanjayaidev/AlibabaCloud
 
 const pool = require('../db');
 const AlibabaProvider = require('../providers/alibaba');
 const PixazoProvider = require('../providers/pixazo');
+const alibabaModels = require('../providers/alibaba-models');
 
-// Provider configurations
-const ALIBABA_VIDEO_MODELS = [
-  'wan2.6-t2v',
-  'wan2.7-t2v',
-  'wan2.1-t2v-plus',
-  'wan2.1-t2v-turbo',
-];
+// Provider configurations - from alibaba-models.js vision category (video models)
+const ALIBABA_VIDEO_MODELS = alibabaModels.getModelsByCategory('vision').filter(m => 
+  m.includes('-t2v') || m.includes('-i2v') || m.includes('-r2v') || m === 'wan2.6-image'
+);
 
 const PIXAZO_VIDEO_MODEL = 'ltx-2.3';
 
 // Parameters supported by each provider's models
+// Based on https://github.com/sanjayaidev/AlibabaCloud index.js /v1/videos/generations
 const MODEL_PARAMETERS = {
   'alibaba': {
-    width: { type: 'select', options: [480, 720, 1080], default: 720, label: 'Width' },
-    height: { type: 'select', options: [480, 720, 1080], default: 720, label: 'Height' },
-    num_frames: { type: 'range', min: 24, max: 120, default: 48, step: 24, label: 'Frames' },
-    frame_rate: { type: 'select', options: [24, 30, 60], default: 24, label: 'Frame Rate' },
-    duration: { type: 'select', options: [5, 10, 15, 30], default: 5, label: 'Duration (seconds)' },
+    size: {
+      type: 'select',
+      options: ['480x480', '720x720', '1080x1080', '1280x720', '720x1280', '1920x1080', '1080x1920'],
+      default: '720x720',
+      label: 'Resolution'
+    },
+    duration: { type: 'select', options: [5, 10], default: 5, label: 'Duration (seconds)' },
     seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
-    enhance_prompt: { type: 'boolean', default: true, label: 'Enhance Prompt' },
+    negative_prompt: { type: 'text', default: '', label: 'Negative prompt (optional)' },
   },
   'pixazo': {
     aspect: { type: 'select', options: ['16:9', '9:16', '1:1', '4:3'], default: '16:9', label: 'Aspect Ratio' },

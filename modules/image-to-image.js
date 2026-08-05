@@ -5,23 +5,25 @@
 // and callers are pointed at the Alibaba provider instead.
 
 const AlibabaProvider = require('../providers/alibaba');
+const alibabaModels = require('../providers/alibaba-models');
 
-const ALIBABA_EDIT_MODELS = [
-  'qwen-image-edit-plus',
-  'qwen-image-edit-plus-2025-10-30',
-  'qwen-image-edit',
-  'qwen-image-edit-max-2026-01-16',
-  'qwen-image-edit-max',
-  'qwen-image-edit-plus-2025-12-15',
-];
+// Get edit models from alibaba-models.js
+const ALIBABA_EDIT_MODELS = alibabaModels.getModelsByCategory('vision').filter(m => 
+  m.startsWith('qwen-image-edit')
+);
 
 const DEFAULT_ALIBABA_EDIT_MODEL = 'qwen-image-edit-plus';
 
 // Parameters supported by each provider's models
+// Based on https://github.com/sanjayaidev/AlibabaCloud - image edit uses prompt + image
 const MODEL_PARAMETERS = {
   'alibaba': {
-    width: { type: 'select', options: [512, 768, 1024, 1280, 1536], default: 1024, label: 'Width' },
-    height: { type: 'select', options: [512, 768, 1024, 1280, 1536], default: 1024, label: 'Height' },
+    size: {
+      type: 'select',
+      options: ['1024x1024', '1280x720', '720x1280', '1536x1024', '1024x1536'],
+      default: '1024x1024',
+      label: 'Size'
+    },
     seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
   },
   'pixazo': {
