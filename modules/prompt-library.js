@@ -1,11 +1,11 @@
 const pool = require('../db');
 
 // Extract an Instagram shortcode from any post/reel/tv URL (with or
-// without a trailing /embed). Returns null for non-Instagram demo_urls
-// (e.g. picsum.photos images).
+// without a trailing /embed, and with or without a username segment).
+// Returns null for non-Instagram demo_urls (e.g. picsum.photos images).
 function extractInstagramShortcode(url) {
   if (!url) return null;
-  const match = url.match(/instagram\.com\/(?:reel|p|tv)\/([^/?]+)/);
+  const match = url.match(/instagram\.com\/(?:[^/?]+\/)?(?:reel|p|tv)\/([^/?]+)/);
   return match ? match[1] : null;
 }
 
