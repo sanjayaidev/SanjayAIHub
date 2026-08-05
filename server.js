@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const { createServer } = require('http');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -11,6 +12,19 @@ const apiKeyRoutes = require('./routes/apikeys');
 const chatRoutes = require('./routes/chat');
 const reelsRoutes = require('./routes/reels');
 const uploadRoutes = require('./routes/upload');
+
+// Import coding-agent as ESM module (dynamic import)
+let createCodingAgentApp = null;
+const initCodingAgent = async () => {
+  try {
+    const agentModule = await import('./modules/coding-agent/server/app.js');
+    createCodingAgentApp = agentModule.createCodingAgentApp;
+    console.log('✅ Coding Agent module loaded successfully');
+  } catch (error) {
+    console.error('⚠️ Failed to load Coding Agent module:', error.message);
+    console.error('   Coding Agent features will be unavailable');
+  }
+};
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -120,24 +134,14 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ── Runtime config for the frontend ──
-// Coding Agent (modules/coding-agent) is a standalone ESM service with its
-// own sessions + Socket.IO, so it runs as a separate process rather than
-// being merged into this CommonJS app. The frontend launches it by URL —
-// see public/js/modules.js navigateToModule('coding-agent').
-app.get('/api/config', (req, res) => {
-  res.json({
-    success: true,
-    codingAgentUrl: process.env.CODING_AGENT_URL || 'http://localhost:4001'
-  });
-});
+// ── Start Server & Initialize Coding Agent ──
+const httpServer = createServer(app);
 
-// ── Catch-all for SPA ──
+// Add catch-all for SPA and error handler BEFORE starting server
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'home.html'));
 });
 
-// ── Error Handler ──
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({
@@ -146,11 +150,26 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ── Start Server ──
-app.listen(PORT, () => {
-  console.log(`🚀 SanjayAIHub Server running on http://localhost:${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔐 JWT expiry: 7 days (remember me) or 1 day`);
+// Initialize coding agent and mount it under /agent path
+initCodingAgent().then(() => {
+  if (createCodingAgentApp) {
+    // Mount the coding-agent app under /agent prefix
+    const codingAgentApp = createCodingAgentApp(httpServer);
+    app.use('/agent', codingAgentApp);
+    console.log('🤖 Coding Agent mounted at /agent');
+  }
+  
+  httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 SanjayAIHub Server running on http://localhost:${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔐 JWT expiry: 7 days (remember me) or 1 day`);
+    if (createCodingAgentApp) {
+      console.log(`👥 Coding Agent available at http://localhost:${PORT}/agent`);
+    }
+  });
+}).catch(err => {
+  console.error('❌ Failed to initialize server:', err);
+  process.exit(1);
 });
 
 module.exports = app;
