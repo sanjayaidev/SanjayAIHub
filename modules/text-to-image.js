@@ -109,18 +109,19 @@ async function textToImageHandler(requestBody, apiKeys, userId) {
     }
     
     try {
-      // For Alibaba, we use the vision endpoint for image generation
-      const messages = [{ role: 'user', content: `Generate an image: ${enhancedPrompt}` }];
-      const data = await alibaba.chatCompletion(messages, { 
-        model, 
-        temperature: 0.7,
-        max_tokens: 100
+      const result = await alibaba.imageGeneration(enhancedPrompt, {
+        model,
+        size: `${parseInt(width) || 1024}x${parseInt(height) || 1024}`,
+        seed: seed ? parseInt(seed) : undefined,
       });
-      
-      // Note: This is a placeholder - actual Alibaba image gen uses different endpoint
-      // For now, return a message indicating the limitation
+
+      const generated = result?.data?.[0];
+      if (!generated?.url) {
+        throw new Error('No image returned');
+      }
+
+      imageUrl = generated.url;
       imageDataUrl = null;
-      imageUrl = 'https://via.placeholder.com/1024x1024?text=Image+Generation+Placeholder';
     } catch (err) {
       throw new Error(`Alibaba Image error: ${err.message}`);
     }
