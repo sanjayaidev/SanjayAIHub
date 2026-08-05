@@ -1,40 +1,7 @@
 {
-  "name": "sanjayaihub",
+  "name": "instagram-reels-proxy",
   "version": "1.0.0",
-  "description": "Unified AI Hub",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "start:agent": "npm --prefix modules/coding-agent start",
-    "dev:agent": "npm --prefix modules/coding-agent run dev",
-    "start:all": "concurrently -n main,agent -c blue,magenta \"npm run start\" \"npm run start:agent\"",
-    "dev:all": "concurrently -n main,agent -c blue,magenta \"npm run dev\" \"npm run dev:agent\""
-  },
   "dependencies": {
-    "bcrypt": "^5.1.1",
-    "bcryptjs": "^3.0.3",
-    "complexity-report": "^2.0.0-alpha",
-    "cors": "^2.8.5",
-    "diff-match-patch": "^1.0.5",
-    "dotenv": "^16.3.1",
-    "eslint": "^10.8.0",
-    "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
-    "express-session": "^1.19.0",
-    "helmet": "^7.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "marked": "^18.0.9",
-    "multer": "^2.2.0",
-    "node-fetch": "^3.3.2",
-    "pg": "^8.11.3",
-    "prettier": "^3.9.6",
-    "socket.io": "^4.8.3",
-    "uuid": "^14.0.1",
-    "winston": "^3.19.0"
-  },
-  "devDependencies": {
-    "concurrently": "^10.0.4",
-    "nodemon": "^3.0.2"
+    "axios": "^1.6.0"
   }
 }

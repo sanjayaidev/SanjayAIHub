@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanjay's Reels</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #121212;
+            color: white;
+            padding: 2rem 1rem;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 3rem; }
+        .header h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #405de6, #833ab4, #e1306c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .reels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            justify-items: center;
+        }
+        .reel-card {
+            background: #1e1e1e;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            padding: 1rem;
+            width: 100%;
+            max-width: 400px;
+            transition: transform 0.2s;
+        }
+        .reel-card:hover { transform: translateY(-4px); }
+        
+        .video-wrapper {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            position: relative;
+            aspect-ratio: 9/16;
+        }
+        .video-wrapper iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .footer { text-align: center; margin-top: 3rem; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✨ AI Video Reels</h1>
+            <p>by <strong>@freelance.sanjay</strong></p>
+        </div>
+
+        <div class="reels-grid" id="reelsGrid"></div>
+
+        <div class="footer">
+            <a href="https://www.instagram.com/freelance.sanjay/" target="_blank" style="color:#e1306c;">
+                Follow @freelance.sanjay on Instagram
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const reelUrls = [
+            'https://www.instagram.com/freelance.sanjay/reel/Dbe3bXls-Vm/',
+            'https://www.instagram.com/freelance.sanjay/reel/DbZvbOsMomW/',
+            'https://www.instagram.com/freelance.sanjay/reel/DbcistBMBdb/',
+            'https://www.instagram.com/freelance.sanjay/reel/DbWJc4bS9hI/',
+            'https://www.instagram.com/freelance.sanjay/reel/DbSAdbtsSXD/',
+            'https://www.instagram.com/freelance.sanjay/reel/DbLZL7is2Sc/',
+            'https://www.instagram.com/freelance.sanjay/reel/DbBluUpygxa/',
+            'https://www.instagram.com/freelance.sanjay/reel/DbIz3o2ML7M/',
+            'https://www.instagram.com/freelance.sanjay/reel/DaDQVOasR8i/',
+            'https://www.instagram.com/freelance.sanjay/reel/DaF8eUoPhe4/',
+            'https://www.instagram.com/freelance.sanjay/reel/DaIU0uEMpW3/',
+            'https://www.instagram.com/freelance.sanjay/reel/DbFOJ5jSRlL/',
+            'https://www.instagram.com/freelance.sanjay/reel/DbkNnGKMfqs/'
+        ];
+
+        function loadReels() {
+            const grid = document.getElementById('reelsGrid');
+            grid.innerHTML = '';
+
+            for (const url of reelUrls) {
+                // Extract shortcode (e.g., 'Dbe3bXls-Vm' from the URL)
+                const match = url.match(/\/reel\/([^\/?]+)/) || url.match(/\/p\/([^\/?]+)/);
+                const shortcode = match ? match[1] : '';
+
+                if (!shortcode) continue;
+
+                const card = document.createElement('div');
+                card.className = 'reel-card';
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'video-wrapper';
+                
+                // Load the proxied embed page directly into the iframe
+                wrapper.innerHTML = `
+                    <iframe 
+                        src="/api/proxy?shortcode=${shortcode}" 
+                        allowfullscreen 
+                        allowtransparency="true" 
+                        scrolling="no"
+                        loading="lazy"
+                    ></iframe>
+                `;
+                
+                card.appendChild(wrapper);
+                grid.appendChild(card);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadReels);
+    </script>
+</body>
+</html>
