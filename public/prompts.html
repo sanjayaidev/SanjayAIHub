@@ -196,6 +196,7 @@
       flex: 1;
       overflow: hidden;
       flex-direction: row;
+      min-height: 0;
     }
 
     /* ── Prompt List (scrollable) ── */
@@ -511,6 +512,7 @@
 
     @media (max-width: 820px) {
       .dashboard { border-radius: 0; height: 100vh; max-height: 100vh; }
+      .dashboard { height: 100dvh; max-height: 100dvh; }
       body { padding: 0; }
 
       .hamburger-btn { display: flex; }
@@ -528,18 +530,21 @@
       }
       .sidebar.mobile-open { left: 0; }
 
-      .prompt-layout { flex-direction: column; }
+      .prompt-layout { flex-direction: column; min-height: 0; }
       .prompt-list {
         width: 100%;
         min-width: unset;
-        max-height: 45vh;
+        flex: 0 0 45%;
+        max-height: 45%;
         border-right: none;
         border-bottom: 1px solid rgba(255,255,255,0.04);
+        overflow-y: auto;
       }
       .prompt-preview {
         padding: 14px 14px;
-        min-height: 55vh;
-        max-height: 55vh;
+        flex: 1;
+        min-height: 0;
+        max-height: none;
         overflow-y: auto;
       }
       .preview-media { max-height: 260px; }
@@ -552,6 +557,11 @@
       .prompt-list-item .prompt-thumb { width: 56px; height: 56px; }
       .preview-header .preview-title { font-size: 18px; }
       .header-left .page-subtitle { display: inline; }
+
+      /* Preview panel stays idle (no detail content) until a prompt is tapped */
+      .prompt-preview:not(.fullscreen-mobile) {
+        display: none;
+      }
     }
 
     @media (max-width: 480px) {
@@ -733,6 +743,8 @@
   const sidebar = document.getElementById('sidebar');
   const sidebarOverlay = document.getElementById('sidebarOverlay');
 
+  function isMobile() { return window.innerWidth < 821; }
+
   function escapeHtml(text) { if (!text) return ''; const d=document.createElement('div'); d.textContent=text; return d.innerHTML; }
 
   function showToast(msg, type='info') {
@@ -835,11 +847,28 @@
     }
     updateCounts();
     renderList();
-    if (filteredPrompts.length) {
+
+    if (!filteredPrompts.length) {
+      selectedPromptId = null;
+      showEmptyPreview();
+      return;
+    }
+
+    // On mobile, never auto-open the detail/fullscreen preview on load or
+    // when filters change — only an explicit tap on a list item should do that.
+    if (isMobile()) {
       if (!selectedPromptId || !filteredPrompts.some(p => p.id === selectedPromptId)) {
-        selectPrompt(filteredPrompts[0].id);
-      } else renderPreview(selectedPromptId);
-    } else { selectedPromptId = null; showEmptyPreview(); }
+        selectedPromptId = null;
+      }
+      renderList();
+      return;
+    }
+
+    if (!selectedPromptId || !filteredPrompts.some(p => p.id === selectedPromptId)) {
+      selectPrompt(filteredPrompts[0].id);
+    } else {
+      renderPreview(selectedPromptId);
+    }
   }
 
   function updateCounts() {
@@ -883,8 +912,8 @@
     renderPreview(id);
     sidebar.classList.remove('mobile-open');
     sidebarOverlay.classList.remove('visible');
-    // on mobile, expand preview fullscreen
-    if (window.innerWidth < 821) {
+    // on mobile, expand preview fullscreen — only reached via explicit tap
+    if (isMobile()) {
       promptPreview.classList.add('fullscreen-mobile');
       // add close button if not exists
       if (!promptPreview.querySelector('.preview-close')) {
@@ -901,6 +930,12 @@
     promptPreview.classList.remove('fullscreen-mobile');
     const closeBtn = promptPreview.querySelector('.preview-close');
     if (closeBtn) closeBtn.remove();
+    // Deselect so the (hidden-on-mobile) preview panel goes back to idle
+    if (isMobile()) {
+      selectedPromptId = null;
+      renderList();
+      showEmptyPreview();
+    }
   };
   // close on scroll to top? we keep it simple.
 
@@ -988,12 +1023,17 @@
 
   // ── init ──
   loadPrompts();
-  // if resize to desktop, remove fullscreen class
+  // if resize to desktop, remove fullscreen class and restore inline preview
   window.addEventListener('resize', () => {
-    if (window.innerWidth >= 821) {
+    if (!isMobile()) {
       promptPreview.classList.remove('fullscreen-mobile');
       const close = promptPreview.querySelector('.preview-close');
       if (close) close.remove();
+      if (filteredPrompts.length && (!selectedPromptId || !filteredPrompts.some(p => p.id === selectedPromptId))) {
+        selectPrompt(filteredPrompts[0].id);
+      } else if (selectedPromptId) {
+        renderPreview(selectedPromptId);
+      }
     }
   });
 })();
