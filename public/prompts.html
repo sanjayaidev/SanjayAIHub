@@ -720,6 +720,28 @@
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
 
+    // Helper function to proxy image URLs through our server for better performance and CORS handling
+    function proxyImageUrl(originalUrl) {
+        if (!originalUrl) return originalUrl;
+        
+        // Don't proxy Instagram embed URLs or data URLs
+        if (originalUrl.includes('instagram.com') || 
+            originalUrl.startsWith('data:') || 
+            originalUrl.startsWith('blob:')) {
+            return originalUrl;
+        }
+        
+        // Proxy external images through our image proxy endpoint
+        // This provides better caching, timeout handling, and CORS support
+        try {
+            const encodedUrl = encodeURIComponent(originalUrl);
+            return `/api/image-proxy?url=${encodedUrl}&width=200&height=150`;
+        } catch (e) {
+            // If encoding fails, return original URL
+            return originalUrl;
+        }
+    }
+
     // ── API: load prompts from the real prompt library ──
     async function loadPrompts() {
         promptList.innerHTML = `<div class="loading-spinner"><div class="spinner"></div> Loading prompts...</div>`;

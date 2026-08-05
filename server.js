@@ -12,6 +12,7 @@ const apiKeyRoutes = require('./routes/apikeys');
 const chatRoutes = require('./routes/chat');
 const reelsRoutes = require('./routes/reels');
 const uploadRoutes = require('./routes/upload');
+const imageProxyRoutes = require('./routes/image-proxy');
 
 // Import coding-agent as ESM module (dynamic import)
 let createCodingAgentApp = null;
@@ -86,7 +87,7 @@ app.use(helmet({
         "fonts.googleapis.com"
       ],
       fontSrc: ["'self'", "cdnjs.cloudflare.com", "fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "blob:", "picsum.photos", "https://picsum.photos", "i.postimg.cc", "https://i.postimg.cc", "*"],
+      imgSrc: ["'self'", "data:", "blob:", "picsum.photos", "https://picsum.photos", "i.postimg.cc", "https://i.postimg.cc", "*", "api.allorigins.win", "corsproxy.io"],
       connectSrc: ["'self'", "http://localhost:3000"],
     },
   },
@@ -125,6 +126,7 @@ app.use('/api/keys', apiKeyRoutes);
 app.use('/api/chat', chatRoutes); // ← ADD THIS (replaces /api/modules/chat routes)
 app.use('/api/reels', reelsRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/image-proxy', imageProxyRoutes);
 
 // ── Health Check ──
 app.get('/api/health', (req, res) => {

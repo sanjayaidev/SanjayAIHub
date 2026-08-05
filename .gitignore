@@ -1,1 +1,1 @@
-(public/prompts.html)
+Nothing needs to be added to the .gitignore file based on the provided changes. The listed files (routes/image-proxy.js, public/prompts.html, server.js) are all source code files that should be tracked in version control.
