@@ -85,7 +85,7 @@ router.get('/proxy', async (req, res) => {
   }
 
   // Inject <base> so relative CSS/JS/image links resolve against Instagram
-  html = html.replace('<head>', '<head><base href="https://www.instagram.com/" target="_blank">');
+  html = html.replace('<head>', '<head><base href="https://www.instagram.com/">');
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   // Overrides helmet's default CSP for this response only, so it can be framed.
