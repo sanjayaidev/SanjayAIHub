@@ -606,308 +606,579 @@
       .hero { flex-direction: column; align-items: flex-start; gap: 16px; }
       .hero-text h1 { font-size: 22px; }
       .modules-grid { grid-template-columns: 1fr 1fr; }
-      .auth-modal { padding: 24px 20px; }
-      .auth-modal h2 { font-size: 18px; }
-      .footer { flex-direction: column; gap: 10px; }
+      .auth-modal { padding: 24px 20px; margin: 16px; }
+      .auth-modal-buttons { flex-direction: column; }
     }
 
     @media (max-width: 480px) {
       .modules-grid { grid-template-columns: 1fr; }
+      .hub-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .user-info-inner { padding: 4px 12px 4px 16px; gap: 8px; flex-wrap: wrap; }
+      .user-name { font-size: 12px; }
+      .user-tier { font-size: 10px; padding: 2px 8px; }
+      .auth-btn-login, .auth-btn-register { padding: 6px 14px; font-size: 12px; }
     }
   </style>
 </head>
 <body>
-  <div class="hub-wrapper">
-    <!-- Header -->
-    <header class="hub-header">
-      <div class="logo-area">
-        <div class="logo-icon">S</div>
-        <div class="logo-text">Sanjay<span>AI</span>Hub</div>
-      </div>
+<div class="hub-wrapper">
 
-      <div class="auth-buttons" id="authButtons">
-        <a href="login.html" class="auth-btn-login"><i class="fas fa-sign-in-alt"></i> Login</a>
-        <a href="login.html?register=true" class="auth-btn-register"><i class="fas fa-user-plus"></i> Register</a>
-      </div>
+  <!-- ─── HEADER ─── -->
+  <header class="hub-header">
+    <div class="logo-area">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">Sanjay<span>AI</span>Hub</div>
+    </div>
+    <!-- Auth buttons / user info will be injected here by JavaScript -->
+    <div id="headerAuth"></div>
+  </header>
 
-      <div class="user-info" id="userInfo" style="display:none;">
+  <!-- ─── HERO ─── -->
+  <div class="hero">
+    <div class="hero-text">
+      <h1><i class="fas fa-cube"></i>  One server. Every AI capability. No switching tabs.</h1>
+      <p>
+        SanjayAIHub brings together 16+ AI modules — from chatbots and image generation to voice cloning and coding agents — 
+        into a single, unified interface. Built for creators, developers, and teams who want to experiment, build, and deploy AI 
+        without juggling 10 different tools.
+      </p>
+      <div class="hero-badge">
+        <span class="pill"><i class="fas fa-bolt"></i> Deploy in minutes</span>
+        <span class="pill"><i class="fas fa-puzzle-piece"></i> All in one place</span>
+        <span class="pill"><i class="fas fa-lock"></i> Your data, your control</span>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px; min-width: 140px;">
+      <span style="font-size: 13px; color: #4f566b;"><i class="fas fa-check-circle" style="color: #00e8a2;"></i> 16 modules ready</span>
+      <span style="font-size: 13px; color: #4f566b;"><i class="fas fa-check-circle" style="color: #00e8a2;"></i> No setup required</span>
+      <span style="font-size: 13px; color: #4f566b;"><i class="fas fa-check-circle" style="color: #00e8a2;"></i> Self‑hosted</span>
+    </div>
+  </div>
+
+  <!-- ─── SECTION TITLE ─── -->
+  <div class="section-title">
+    <i class="fas fa-th-large"></i>  Choose your module. Start creating.
+  </div>
+  <div class="section-sub">
+    Each card below represents a standalone AI capability. 
+    <span id="accessMessage">Free modules: Chatbot &amp; Prompt Library — others require login.</span>
+  </div>
+
+  <!-- ─── MODULES GRID ─── -->
+  <div class="modules-grid">
+
+    <!-- 1. Simple Chatbots (FREE) -->
+    <div class="module-card card-chat" data-module="chatbot">
+      <div class="card-top">
+        <div class="card-icon">💬</div>
+        <span class="card-badge">chat <span class="free-badge">free</span></span>
+      </div>
+      <h3>Simple Chatbots</h3>
+      <p>Deploy lightweight, no‑code conversational agents for FAQs, support, or fun.</p>
+      <div class="card-footer">
+        <span class="tag">ready</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 2. Social Content, Resume & Email Writing -->
+    <div class="module-card card-social" data-module="social-content">
+      <div class="card-top">
+        <div class="card-icon">✍️</div>
+        <span class="card-badge">writing</span>
+      </div>
+      <h3>Social Content, Resume &amp; Email</h3>
+      <p>Generate LinkedIn posts, professional resumes, and polished emails in seconds.</p>
+      <div class="card-footer">
+        <span class="tag">multi‑language</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 3. Wish with Multilanguage -->
+    <div class="module-card card-wish" data-module="message-writer">
+      <div class="card-top">
+        <div class="card-icon">🌍</div>
+        <span class="card-badge">i18n</span>
+      </div>
+      <h3>Wish with Multilanguage</h3>
+      <p>Create personalized wishes and greetings in 10+ languages for any occasion.</p>
+      <div class="card-footer">
+        <span class="tag">10+ langs</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 4. Prompt Library (FREE) -->
+    <div class="module-card card-prompt" data-module="prompt-library">
+      <div class="card-top">
+        <div class="card-icon">📚</div>
+        <span class="card-badge">library <span class="free-badge">free</span></span>
+      </div>
+      <h3>Prompt Library</h3>
+      <p>A curated, read‑only collection of battle‑tested prompts — each with a unique ID for easy internal linking.</p>
+      <div class="card-footer">
+        <span class="tag">read‑only</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 5. Text to Image -->
+    <div class="module-card card-t2i" data-module="text-to-image">
+      <div class="card-top">
+        <div class="card-icon">🖼️</div>
+        <span class="card-badge">gen</span>
+      </div>
+      <h3>Text to Image</h3>
+      <p>Turn your imagination into high‑quality visuals using state‑of‑the‑art diffusion models.</p>
+      <div class="card-footer">
+        <span class="tag">T2I</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 6. Image to Image -->
+    <div class="module-card card-i2i" data-module="image-edit">
+      <div class="card-top">
+        <div class="card-icon">🎨</div>
+        <span class="card-badge">edit</span>
+      </div>
+      <h3>Image to Image</h3>
+      <p>Edit, restyle, or enhance existing photos — change mood, style, or remove objects.</p>
+      <div class="card-footer">
+        <span class="tag">I2I</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 7. Text to Video -->
+    <div class="module-card card-t2v" data-module="text-to-video">
+      <div class="card-top">
+        <div class="card-icon">🎬</div>
+        <span class="card-badge">video</span>
+      </div>
+      <h3>Text to Video</h3>
+      <p>Generate short cinematic clips from simple text prompts — no editing skills required.</p>
+      <div class="card-footer">
+        <span class="tag">T2V</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 8. Image to Video -->
+    <div class="module-card card-i2v" data-module="image-to-video">
+      <div class="card-top">
+        <div class="card-icon">📹</div>
+        <span class="card-badge">video</span>
+      </div>
+      <h3>Image to Video</h3>
+      <p>Bring a single image to life with motion, storytelling, and AI‑generated animation.</p>
+      <div class="card-footer">
+        <span class="tag">I2V</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 9. Video to Video -->
+    <div class="module-card card-v2v" data-module="video-to-video">
+      <div class="card-top">
+        <div class="card-icon">🎞️</div>
+        <span class="card-badge">video</span>
+      </div>
+      <h3>Video to Video</h3>
+      <p>Restyle, upscale, or transform existing videos with AI‑driven effects and enhancements.</p>
+      <div class="card-footer">
+        <span class="tag">V2V</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 10. Text to Audio (TTS) -->
+    <div class="module-card card-tts" data-module="text-to-speech">
+      <div class="card-top">
+        <div class="card-icon">🔊</div>
+        <span class="card-badge">audio</span>
+      </div>
+      <h3>Text to Audio (TTS)</h3>
+      <p>Convert any text into natural, human‑like speech for narration, podcasts, or accessibility.</p>
+      <div class="card-footer">
+        <span class="tag">TTS</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 11. Text to Song -->
+    <div class="module-card card-song" data-module="text-to-music">
+      <div class="card-top">
+        <div class="card-icon">🎵</div>
+        <span class="card-badge">music</span>
+      </div>
+      <h3>Text to Song</h3>
+      <p>Compose original songs with lyrics, melody, and instrumentation — from a single prompt.</p>
+      <div class="card-footer">
+        <span class="tag">lyrics+melody</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 12. Coding Agent -->
+    <div class="module-card card-coding" data-module="coding-agent">
+      <div class="card-top">
+        <div class="card-icon">💻</div>
+        <span class="card-badge">agent</span>
+      </div>
+      <h3>Coding Agent</h3>
+      <p>Get AI‑powered help writing, debugging, and explaining code in any programming language.</p>
+      <div class="card-footer">
+        <span class="tag">copilot</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 13. Voice Cloning (Alibaba) -->
+    <div class="module-card card-voice" data-module="voice-clone">
+      <div class="card-top">
+        <div class="card-icon">🗣️</div>
+        <span class="card-badge">clone</span>
+      </div>
+      <h3>Voice Cloning</h3>
+      <p>Clone voices with high fidelity — powered by Alibaba's enterprise‑grade speech models.</p>
+      <div class="card-footer">
+        <span class="tag">Alibaba</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 14. Design Studio -->
+    <div class="module-card card-design" data-module="design-studio">
+      <div class="card-top">
+        <div class="card-icon">🎯</div>
+        <span class="card-badge">studio</span>
+      </div>
+      <h3>Design Studio</h3>
+      <p>A full creative toolkit: layout, color palettes, typography, and asset generation.</p>
+      <div class="card-footer">
+        <span class="tag">pro</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 15. Chatbot Maker (Insta, FB, WhatsApp, Website) -->
+    <div class="module-card card-chatbot" data-module="chatbot-maker">
+      <div class="card-top">
+        <div class="card-icon">🤖</div>
+        <span class="card-badge">multi‑platform</span>
+      </div>
+      <h3>Chatbot Maker</h3>
+      <p>Build and deploy AI chatbots for Instagram, Facebook, WhatsApp, and your website — all from one dashboard.</p>
+      <div class="card-footer">
+        <span class="tag">Insta · FB · WA</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+    <!-- 16. MCP and Extension Integrator -->
+    <div class="module-card card-mcp" data-module="mcp-integrator">
+      <div class="card-top">
+        <div class="card-icon">🔌</div>
+        <span class="card-badge">integrate</span>
+      </div>
+      <h3>MCP &amp; Extension Integrator</h3>
+      <p>Connect external tools, plugins, and MCP extensions to extend the platform's power.</p>
+      <div class="card-footer">
+        <span class="tag">extend</span>
+        <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── FOOTER ─── -->
+  <footer class="footer">
+    <div>
+      <span class="dot"></span> SanjayAIHub — built for builders. All modules are self‑contained, API‑ready, and designed to work together or independently. No lock‑in. No subscription fees. Just AI, unified.
+    </div>
+    <div>
+      <a href="/" id="footerHome">Home</a>
+      <span style="color:#1f2433;">|</span>
+      <a href="#" id="footerDocs">Docs</a>
+      <span style="color:#1f2433;">|</span>
+      <a href="#" id="footerModules">Modules</a>
+    </div>
+  </footer>
+
+</div>
+
+<!-- ─── AUTH MODALS ─── -->
+
+<!-- Login Required Modal -->
+<div class="auth-modal-overlay" id="loginModal">
+  <div class="auth-modal">
+    <button class="auth-modal-close" id="loginModalClose">&times;</button>
+    <h2><i class="fas fa-lock"></i> Login Required</h2>
+    <p id="loginModalMessage">To access <strong>this module</strong>, please log in or create an account.</p>
+    <div class="auth-modal-buttons">
+      <a href="/login.html" class="btn-primary" id="loginModalLoginBtn">
+        <i class="fas fa-sign-in-alt"></i> Login
+      </a>
+      <a href="/login.html?tab=register" class="btn-secondary" id="loginModalRegisterBtn">
+        <i class="fas fa-user-plus"></i> Register
+      </a>
+    </div>
+    <p class="auth-modal-hint">Free modules: Chatbot &amp; Prompt Library — no login required.</p>
+  </div>
+</div>
+
+<!-- Upgrade Required Modal -->
+<div class="auth-modal-overlay" id="upgradeModal">
+  <div class="auth-modal">
+    <button class="auth-modal-close" id="upgradeModalClose">&times;</button>
+    <h2><i class="fas fa-crown"></i> Upgrade Required</h2>
+    <p id="upgradeModalMessage">To access <strong>this module</strong>, you need to upgrade your subscription.</p>
+    <div class="auth-modal-buttons">
+      <a href="/profile.html#tab-plan" class="btn-primary" id="upgradeModalPlanBtn">
+        <i class="fas fa-crown"></i> View Plans
+      </a>
+      <button class="btn-secondary" id="upgradeModalCancelBtn">
+        <i class="fas fa-times"></i> Cancel
+      </button>
+    </div>
+    <p class="auth-modal-hint" id="upgradeModalTier">Your current tier: <strong>Trial</strong></p>
+  </div>
+</div>
+
+<!-- ─── SCRIPTS ─── -->
+<script src="/js/auth.js"></script>
+<script src="/js/modules.js"></script>
+
+<script>
+  // ──────────────────────────────────────────────
+  // MODAL HELPERS
+  // ──────────────────────────────────────────────
+
+  function openModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.add('active');
+  }
+
+  function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.remove('active');
+  }
+
+  // ──────────────────────────────────────────────
+  // INITIALIZE HOME PAGE
+  // ──────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', async function() {
+    // 1. Verify session
+    await AUTH.verifySession();
+    const user = AUTH.getUser();
+    
+    // 2. Update header
+    updateHeader(user);
+    
+    // 3. Update module cards based on access
+    updateModules();
+    
+    // 4. Set up event listeners
+    setupEventListeners();
+  });
+
+  // ──────────────────────────────────────────────
+  // HEADER UPDATE
+  // ──────────────────────────────────────────────
+
+  function updateHeader(user) {
+  const container = document.getElementById('headerAuth');
+  
+  if (user) {
+    // Logged in - show user info
+    const tierEmoji = {
+      trial: '🔓',
+      basic: '🌟',
+      pro: '💎',
+      enterprise: '👑'
+    };
+    
+    const tierLabel = user.subscription_tier?.charAt(0).toUpperCase() + user.subscription_tier?.slice(1) || 'Trial';
+    
+    container.innerHTML = `
+      <div class="user-info">
         <div class="user-info-inner">
-          <div class="user-name"><i class="fas fa-user-circle"></i><span id="userName">User</span></div>
-          <div class="user-tier"><span class="tier-emoji">🌟</span><span id="userTierName">Free</span></div>
-          <button class="user-profile-btn" onclick="window.location.href='profile.html'"><i class="fas fa-cog"></i></button>
-          <button class="user-logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+          <span class="user-name"><i class="fas fa-user"></i> ${user.full_name || user.username}</span>
+          <span class="user-tier"><span class="tier-emoji">${tierEmoji[user.subscription_tier] || '🔓'}</span> ${tierLabel}</span>
+          <a href="/profile.html" class="user-profile-btn" id="profileBtn"><i class="fas fa-cog"></i></a>
+          <button class="user-logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
         </div>
       </div>
-    </header>
-
-    <!-- Hero -->
-    <section class="hero">
-      <div class="hero-text">
-        <h1><i class="fas fa-sparkles"></i> All-in-One AI Platform</h1>
-        <p>Access powerful AI tools for content creation, coding assistance, image generation, video editing, voice cloning, and more. Everything you need in one place.</p>
-        <div class="hero-badge">
-          <div class="pill"><i class="fas fa-bolt"></i> Instant Access</div>
-          <div class="pill"><i class="fas fa-shield-alt"></i> Secure & Private</div>
-          <div class="pill"><i class="fas fa-headset"></i> 24/7 Support</div>
-        </div>
+    `;
+    
+    // Add logout event listener
+    document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
+    
+  } else {
+    // Not logged in - show login/register
+    container.innerHTML = `
+      <div class="auth-buttons">
+        <a href="/login.html" class="auth-btn-login"><i class="fas fa-sign-in-alt"></i> Login</a>
+        <a href="/login.html?tab=register" class="auth-btn-register"><i class="fas fa-user-plus"></i> Register</a>
       </div>
-    </section>
+    `;
+  }
+}
 
-    <!-- Modules Section -->
-    <div class="section-title"><i class="fas fa-th-large"></i> AI Modules</div>
-    <div class="section-sub">Explore our collection of powerful AI-powered tools</div>
+  // ──────────────────────────────────────────────
+  // LOGOUT HANDLER
+  // ──────────────────────────────────────────────
 
-    <div class="modules-grid">
-      <!-- Chat -->
-      <a href="chatbot.html" class="module-card card-chat">
-        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
-        <div class="card-top">
-          <div class="card-icon"><i class="fas fa-comments"></i></div>
-          <div class="card-badge"><i class="fas fa-star"></i> Popular</div>
-        </div>
-        <h3>AI Chat Assistant</h3>
-        <p>Intelligent conversational AI for questions, tasks, and creative discussions</p>
-        <div class="card-footer">
-          <span class="tag"><i class="fas fa-bolt"></i> Real-time</span>
-          <i class="fas fa-arrow-right arrow"></i>
-        </div>
-      </a>
+  function handleLogout() {
+    if (confirm('Are you sure you want to logout?')) {
+      AUTH.logout();
+    }
+  }
 
-      <!-- Content Creator -->
-      <a href="content.html" class="module-card card-social">
-        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
-        <div class="card-top">
-          <div class="card-icon"><i class="fas fa-pen-fancy"></i></div>
-          <div class="card-badge"><i class="fas fa-fire"></i> Trending</div>
-        </div>
-        <h3>Content Creator</h3>
-        <p>Generate engaging social media posts, captions, and marketing copy</p>
-        <div class="card-footer">
-          <span class="tag"><i class="fas fa-hashtag"></i> Social</span>
-          <i class="fas fa-arrow-right arrow"></i>
-        </div>
-      </a>
+  // ──────────────────────────────────────────────
+  // MODULE CARD UPDATE
+  // ──────────────────────────────────────────────
 
-      <!-- Text to Image -->
-      <a href="text-image.html" class="module-card card-t2i">
-        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
-        <div class="card-top">
-          <div class="card-icon"><i class="fas fa-image"></i></div>
-          <div class="card-badge"><i class="fas fa-star"></i> Popular</div>
-        </div>
-        <h3>Text to Image</h3>
-        <p>Transform your ideas into stunning visuals with AI-powered generation</p>
-        <div class="card-footer">
-          <span class="tag"><i class="fas fa-palette"></i> Art</span>
-          <i class="fas fa-arrow-right arrow"></i>
-        </div>
-      </a>
-
-      <!-- Image to Image -->
-      <a href="imageedit.html" class="module-card card-i2i">
-        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
-        <div class="card-top">
-          <div class="card-icon"><i class="fas fa-magic"></i></div>
-          <div class="card-badge">New</div>
-        </div>
-        <h3>Image to Image</h3>
-        <p>Edit and transform existing images with AI-powered enhancements</p>
-        <div class="card-footer">
-          <span class="tag"><i class="fas fa-edit"></i> Edit</span>
-          <i class="fas fa-arrow-right arrow"></i>
-        </div>
-      </a>
-
-      <!-- Text to Video -->
-      <a href="text-video.html" class="module-card card-t2v">
-        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
-        <div class="card-top">
-          <div class="card-icon"><i class="fas fa-video"></i></div>
-          <div class="card-badge"><i class="fas fa-fire"></i> Hot</div>
-        </div>
-        <h3>Text to Video</h3>
-        <p>Create amazing videos from text descriptions using advanced AI</p>
-        <div class="card-footer">
-          <span class="tag"><i class="fas fa-film"></i> Video</span>
-          <i class="fas fa-arrow-right arrow"></i>
-        </div>
-      </a>
-
-      <!-- Image to Video -->
-      <a href="image-video.html" class="module-card card-i2v">
-        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
-        <div class="card-top">
-          <div class="card-icon"><i class="fas fa-photo-video"></i></div>
-          <div class="card-badge">New</div>
-        </div>
-        <h3>Image to Video</h3>
-        <p>Bring your images to life by converting them into dynamic videos</p>
-        <div class="card-footer">
-          <span class="tag"><i class="fas fa-play"></i> Motion</span>
-          <i class="fas fa-arrow-right arrow"></i>
-        </div>
-      </a>
-
-      <!-- Video to Video -->
-      <a href="video-edit.html" class="module-card card-v2v">
-        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
-        <div class="card-top">
-          <div class="card-icon"><i class="fas fa-film"></i></div>
-          <div class="card-badge">Advanced</div>
-        </div>
-        <h3>Video to Video</h3>
-        <p>Transform and enhance videos with AI-powered style transfer</p>
-        <div class="card-footer">
-          <span class="tag"><i class="fas fa-sliders-h"></i> VFX</span>
-          <i class="fas fa-arrow-right arrow"></i>
-        </div>
-      </a>
-
-      <!-- Text to Speech -->
-      <a href="tts.html" class="module-card card-tts">
-        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
-        <div class="card-top">
-          <div class="card-icon"><i class="fas fa-volume-up"></i></div>
-          <div class="card-badge"><i class="fas fa-star"></i> Popular</div>
-        </div>
-        <h3>Text to Speech</h3>
-        <p>Convert written text into natural-sounding speech with multiple voices</p>
-        <div class="card-footer">
-          <span class="tag"><i class="fas fa-microphone"></i> Audio</span>
-          <i class="fas fa-arrow-right arrow"></i>
-        </div>
-      </a>
-
-      <!-- Text to Music -->
-      <a href="ttmusic.html" class="module-card card-song">
-        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
-        <div class="card-top">
-          <div class="card-icon"><i class="fas fa-music"></i></div>
-          <div class="card-badge">Creative</div>
-        </div>
-        <h3>Text to Music</h3>
-        <p>Generate original music tracks from text descriptions and moods</p>
-        <div class="card-footer">
-          <span class="tag"><i class="fas fa-headphones"></i> Music</span>
-          <i class="fas fa-arrow-right arrow"></i>
-        </div>
-      </a>
-
-      <!-- Voice Clone -->
-      <a href="voiceclone.html" class="module-card card-voice">
-        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
-        <div class="card-top">
-          <div class="card-icon"><i class="fas fa-microphone-alt"></i></div>
-          <div class="card-badge">Advanced</div>
-        </div>
-        <h3>Voice Cloning</h3>
-        <p>Clone any voice with just a few seconds of audio sample</p>
-        <div class="card-footer">
-          <span class="tag"><i class="fas fa-user"></i> Clone</span>
-          <i class="fas fa-arrow-right arrow"></i>
-        </div>
-      </a>
-
-      <!-- Prompt Library -->
-      <a href="prompts.html" class="module-card card-prompt">
-        <div class="card-top">
-          <div class="card-icon"><i class="fas fa-book-open"></i></div>
-          <div class="card-badge"><span class="free-badge">FREE</span></div>
-        </div>
-        <h3>Prompt Library</h3>
-        <p>Discover and share effective prompts for all AI models</p>
-        <div class="card-footer">
-          <span class="tag"><i class="fas fa-library"></i> Resource</span>
-          <i class="fas fa-arrow-right arrow"></i>
-        </div>
-      </a>
-
-      <!-- Coding Agent -->
-      <a href="/agent" class="module-card card-coding">
-        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
-        <div class="card-top">
-          <div class="card-icon"><i class="fas fa-code"></i></div>
-          <div class="card-badge"><i class="fas fa-rocket"></i> Beta</div>
-        </div>
-        <h3>Coding Agent</h3>
-        <p>AI-powered coding assistant for development and debugging</p>
-        <div class="card-footer">
-          <span class="tag"><i class="fas fa-terminal"></i> Dev</span>
-          <i class="fas fa-arrow-right arrow"></i>
-        </div>
-      </a>
-
-      <!-- Message Writer -->
-      <a href="message.html" class="module-card card-wish">
-        <div class="card-top">
-          <div class="card-icon"><i class="fas fa-envelope-open-text"></i></div>
-          <div class="card-badge"><span class="free-badge">FREE</span></div>
-        </div>
-        <h3>Message Writer</h3>
-        <p>Craft perfect messages for any occasion with AI assistance</p>
-        <div class="card-footer">
-          <span class="tag"><i class="fas fa-pen"></i> Writing</span>
-          <i class="fas fa-arrow-right arrow"></i>
-        </div>
-      </a>
-    </div>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <div><span class="dot"></span>© 2024 SanjayAIHub. All rights reserved.</div>
-      <div>
-        <a href="#"><i class="fab fa-github"></i> GitHub</a> ·
-        <a href="#"><i class="fab fa-twitter"></i> Twitter</a> ·
-        <a href="#"><i class="fab fa-instagram"></i> Instagram</a>
-      </div>
-    </footer>
-  </div>
-
-  <!-- Auth Modal -->
-  <div class="auth-modal-overlay" id="authModal">
-    <div class="auth-modal">
-      <button class="auth-modal-close" onclick="closeAuthModal()">×</button>
-      <h2><i class="fas fa-user-circle"></i> Welcome Back!</h2>
-      <p>Sign in to access all AI modules and features. <strong>Free tier available!</strong></p>
-      <div class="auth-modal-buttons">
-        <a href="login.html" class="btn-primary"><i class="fas fa-sign-in-alt"></i> Sign In</a>
-        <a href="login.html?register=true" class="btn-secondary"><i class="fas fa-user-plus"></i> Create Account</a>
-      </div>
-      <p class="auth-modal-hint">Already have an account? Just sign in and continue creating!</p>
-    </div>
-  </div>
-
-  <script>
-    // Check authentication status
-    function checkAuth() {
-      const token = localStorage.getItem('token');
-      const user = localStorage.getItem('user');
+  function updateModules() {
+    const cards = document.querySelectorAll('.module-card');
+    const modules = MODULES.getAllModules();
+    
+    cards.forEach(card => {
+      const moduleKey = card.dataset.module;
       
-      if (token && user) {
-        try {
-          const userData = JSON.parse(user);
-          document.getElementById('authButtons').style.display = 'none';
-          document.getElementById('userInfo').style.display = 'flex';
-          document.getElementById('userName').textContent = userData.username || userData.email || 'User';
-          document.getElementById('userTierName').textContent = userData.tier || 'Free';
-        } catch (e) {
-          console.error('Error parsing user data:', e);
+      if (moduleKey && modules[moduleKey]) {
+        const module = modules[moduleKey];
+        
+        if (!module.hasAccess) {
+          // Lock the card
+          card.classList.add('locked');
+          
+          // Add lock badge if not exists
+          let lockBadge = card.querySelector('.lock-badge');
+          if (!lockBadge) {
+            lockBadge = document.createElement('div');
+            lockBadge.className = 'lock-badge';
+            lockBadge.innerHTML = '<i class="fas fa-lock"></i><span>locked</span>';
+            card.appendChild(lockBadge);
+          }
+          
+        } else {
+          // Unlock the card
+          card.classList.remove('locked');
+          const lockBadge = card.querySelector('.lock-badge');
+          if (lockBadge) lockBadge.remove();
         }
       }
-    }
+    });
+  }
 
-    function logout() {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.reload();
-    }
+  // ──────────────────────────────────────────────
+  // SETUP EVENT LISTENERS
+  // ──────────────────────────────────────────────
 
-    function closeAuthModal() {
-      document.getElementById('authModal').classList.remove('active');
-    }
+  function setupEventListeners() {
+    // ── Module Card Clicks ──
+    document.querySelectorAll('.module-card').forEach(card => {
+      card.addEventListener('click', function(e) {
+        // Ignore if clicking on interactive elements
+        if (e.target.closest('a') || e.target.closest('button')) return;
+        
+        const moduleKey = this.dataset.module;
+        if (!moduleKey) return;
+        
+        const module = MODULES.definitions[moduleKey];
+        if (!module) return;
+        
+        // Check if card is locked
+        if (this.classList.contains('locked')) {
+          e.preventDefault();
+          
+          // Check if user is logged in
+          if (!AUTH.isLoggedIn()) {
+            // Show login modal
+            const modalMessage = document.getElementById('loginModalMessage');
+            if (modalMessage) {
+              modalMessage.innerHTML = `To access <strong>${module.name}</strong>, please log in or create an account.`;
+            }
+            openModal('loginModal');
+          } else {
+            // Show upgrade modal
+            const user = AUTH.getUser();
+            const tier = user?.subscription_tier || 'Trial';
+            const requiredTier = module.tier.charAt(0).toUpperCase() + module.tier.slice(1);
+            
+            const modalMessage = document.getElementById('upgradeModalMessage');
+            if (modalMessage) {
+              modalMessage.innerHTML = `To access <strong>${module.name}</strong>, you need the <strong>${requiredTier}</strong> tier or higher.`;
+            }
+            
+            const tierDisplay = document.getElementById('upgradeModalTier');
+            if (tierDisplay) {
+              tierDisplay.innerHTML = `Your current tier: <strong>${tier.charAt(0).toUpperCase() + tier.slice(1)}</strong>`;
+            }
+            
+            openModal('upgradeModal');
+          }
+          return;
+        }
+        
+        // Module is accessible - navigate
+        MODULES.navigateToModule(moduleKey);
+      });
+    });
 
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', checkAuth);
-  </script>
+    // ── Modal Close Buttons ──
+    document.getElementById('loginModalClose')?.addEventListener('click', function() {
+      closeModal('loginModal');
+    });
+
+    document.getElementById('upgradeModalClose')?.addEventListener('click', function() {
+      closeModal('upgradeModal');
+    });
+
+    document.getElementById('upgradeModalCancelBtn')?.addEventListener('click', function() {
+      closeModal('upgradeModal');
+    });
+
+    // ── Close modals on overlay click ──
+    document.querySelectorAll('.auth-modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', function(e) {
+        if (e.target === this) {
+          this.classList.remove('active');
+        }
+      });
+    });
+
+    // ── Footer links ──
+    document.getElementById('footerDocs')?.addEventListener('click', function(e) {
+      e.preventDefault();
+      alert('Documentation placeholder');
+    });
+
+    document.getElementById('footerModules')?.addEventListener('click', function(e) {
+      e.preventDefault();
+      alert('Module list');
+    });
+  }
+
+  // ──────────────────────────────────────────────
+  // HANDLE LOGIN PAGE TAB PARAM
+  // ──────────────────────────────────────────────
+
+  if (window.location.pathname.includes('login.html')) {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'register') {
+      setTimeout(() => {
+        const registerTab = document.querySelector('.auth-tab[data-form="register"]');
+        if (registerTab) registerTab.click();
+      }, 100);
+    }
+  }
+</script>
+
 </body>
 </html>
