@@ -300,7 +300,12 @@
   </section>
 </main>
 <footer>SanjayAIHub · Image to Video · powered by Alibaba Cloud Model Studio</footer>
+<script src="/js/auth.js"></script>
 <script>
+  if (!window.AUTH || !AUTH.isLoggedIn()) {
+    window.location.href = '/login.html';
+  }
+
   const els = {
     form: document.getElementById("genForm"),
     prompt: document.getElementById("prompt"),
@@ -330,9 +335,11 @@
     url_pane: document.getElementById("url_pane"),
   };
 
-  fetch("/api/health").then(r=>r.json()).then(d=>{
-    els.keyStatus.textContent = d.keyConfigured ? "✅ API key: configured" : "⚠️ API key missing";
-    els.keyStatus.className = "key-status " + (d.keyConfigured ? "ok" : "bad");
+  fetch("/api/keys", { headers: AUTH.getAuthHeader() }).then(r=>r.json()).then(d=>{
+    const pixazo = d.keys?.find(k => k.provider === 'pixazo');
+    const configured = !!pixazo?.configured;
+    els.keyStatus.textContent = configured ? "✅ Pixazo key: configured" : "⚠️ Pixazo key missing — add it in Profile";
+    els.keyStatus.className = "key-status " + (configured ? "ok" : "bad");
   }).catch(()=>{ els.keyStatus.textContent="server unreachable"; els.keyStatus.className="key-status bad"; });
 
   document.querySelectorAll(".src-btn").forEach(btn => {
@@ -362,9 +369,9 @@
 
   async function uploadFile(file){
     const form = new FormData(); form.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", body: form });
+    const res = await fetch("/api/upload", { method: "POST", headers: AUTH.getAuthHeader(), body: form });
     const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.message || data.error || "Upload failed");
+    if (!res.ok || !data.success) throw new Error(data.message || "Upload failed");
     return data.url;
   }
 
@@ -391,11 +398,11 @@
     const timer = setInterval(() => { els.timecode.textContent = fmtElapsed(Date.now() - start) + " — RENDERING"; }, 1000);
 
     try {
-      const res = await fetch("/api/generate/image-to-video", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const res = await fetch("/api/modules/image-to-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...AUTH.getAuthHeader() },
         body: JSON.stringify({
           prompt, image_url: imageUrl, model: els.model.value,
-          strength: els.strength.value ? Number(els.strength.value) : undefined,
           width: els.width.value ? Number(els.width.value) : undefined,
           height: els.height.value ? Number(els.height.value) : undefined,
           num_frames: els.num_frames.value ? Number(els.num_frames.value) : undefined,
@@ -403,10 +410,10 @@
         }),
       });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.message || data.error || "Submission failed.");
+      if (!res.ok || !data.success) throw new Error(data.message || "Submission failed.");
       if (myToken !== genToken) return;
       setProgress(30); els.statusText.textContent = "processing…";
-      pollStatus(data.request_id, myToken, start, timer);
+      pollStatus(data.data.requestId, myToken, start, timer);
     } catch (err) {
       if (myToken !== genToken) return;
       setTally("err"); els.statusDot.className = "dot err"; els.statusText.textContent = "failed";
@@ -419,9 +426,14 @@
   async function pollStatus(requestId, myToken, start, timer){
     if (myToken !== genToken) { clearInterval(timer); return; }
     try {
-      const res = await fetch(`/api/status/${requestId}`);
+      const res = await fetch(`/api/modules/image-to-video/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...AUTH.getAuthHeader() },
+        body: JSON.stringify({ requestId }),
+      });
       const data = await res.json();
       if (myToken !== genToken) { clearInterval(timer); return; }
+      if (!res.ok || !data.success) throw new Error(data.message || "Status check failed.");
       if (data.status === "QUEUED" || data.status === "PROCESSING") {
         setProgress(data.status === "QUEUED" ? 40 : 65);
         els.statusText.textContent = data.status.toLowerCase() + "…";
@@ -431,7 +443,7 @@
         setProgress(100); setTally("done"); els.statusDot.className = "dot done";
         els.statusText.textContent = "complete"; clearInterval(timer);
         els.timecode.textContent = fmtElapsed(Date.now() - start) + " — COMPLETE";
-        const url = data.output && data.output.media_url && data.output.media_url[0];
+        const url = data.videoUrl;
         if (url) {
           els.outputArea.innerHTML = `<video src="${url}" controls autoplay loop muted playsinline></video>`;
           els.downloadLink.href = url; els.openLink.href = url;
@@ -439,7 +451,7 @@
         } else { showError("No media URL returned."); }
         els.genBtn.disabled = false; els.genBtn.textContent = "🎬 Generate Video";
       } else {
-        throw new Error(data.error || "Generation failed.");
+        throw new Error("Generation failed.");
       }
     } catch (err) {
       if (myToken !== genToken) { clearInterval(timer); return; }
