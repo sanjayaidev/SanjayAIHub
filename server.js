@@ -85,7 +85,7 @@ app.use(helmet({
         "fonts.googleapis.com"
       ],
       fontSrc: ["'self'", "cdnjs.cloudflare.com", "fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "blob:", "picsum.photos", "https://picsum.photos"],
+      imgSrc: ["'self'", "data:", "blob:", "picsum.photos", "https://picsum.photos", "i.postimg.cc", "https://i.postimg.cc"],
       connectSrc: ["'self'", "http://localhost:3000"],
     },
   },
