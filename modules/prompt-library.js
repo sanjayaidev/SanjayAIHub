@@ -40,7 +40,7 @@ async function listPrompts(filters = {}) {
 
   const query = `
     SELECT id, module_key, headline, description, full_prompt, sub_category, tags,
-           media_type, demo_url, max_images_allowed, views, popularity_score,
+           media_type, demo_url, img, max_images_allowed, views, popularity_score,
            is_featured, created_at
     FROM prompt_library
     WHERE ${conditions.join(' AND ')}
