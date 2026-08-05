@@ -50,7 +50,7 @@ async function listPrompts(filters = {}) {
   const result = await pool.query(query, params);
   return result.rows.map((row) => ({
     ...row,
-    instagram_shortcode: row.media_type === 'video' ? extractInstagramShortcode(row.demo_url) : null,
+    instagram_shortcode: extractInstagramShortcode(row.demo_url),
   }));
 }
 
