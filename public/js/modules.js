@@ -106,17 +106,46 @@ const MODULES = {
     'text-to-speech': '/tts.html',
     'text-to-music': '/ttmusic.html',
     'voice-clone': '/voiceclone.html'
-    // 'coding-agent', 'design-studio', 'chatbot-maker', 'mcp-integrator': not built yet
+    // 'coding-agent' is handled separately in navigateToModule() — it's a
+    // standalone service, not a page in this app (see launchCodingAgent()).
+    // 'design-studio', 'chatbot-maker', 'mcp-integrator': not built yet.
   },
 
   // Navigate to module page
   navigateToModule(moduleKey) {
+    // Coding Agent isn't a page in this app — it's a standalone service
+    // (modules/coding-agent) running on its own port/process. The main
+    // server exposes its URL via /api/config so this stays configurable
+    // per environment (e.g. a different host in production) instead of
+    // being hardcoded here.
+    if (moduleKey === 'coding-agent') {
+      this.launchCodingAgent();
+      return;
+    }
+
     const page = this.pages[moduleKey];
     if (page) {
       window.location.href = page;
     } else {
       const moduleName = this.definitions[moduleKey]?.name || moduleKey;
       alert(`${moduleName} is coming soon.`);
+    }
+  },
+
+  // Fetch the coding agent's URL from the main server and open it.
+  // It's a separate app with its own login (GitHub OAuth), so this just
+  // hands off to it rather than trying to share a session.
+  async launchCodingAgent() {
+    try {
+      const res = await fetch('/api/config');
+      const data = await res.json();
+      if (!data.success || !data.codingAgentUrl) {
+        throw new Error('Coding agent URL not configured');
+      }
+      window.open(data.codingAgentUrl, '_blank', 'noopener');
+    } catch (err) {
+      console.error('Failed to launch Coding Agent:', err);
+      alert('Coding Agent is currently unavailable. Please try again shortly.');
     }
   },
   

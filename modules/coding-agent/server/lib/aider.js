@@ -4,7 +4,13 @@ import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import { getModelById, WORKING_MODELS } from './models.js';
-import pool from '../../db/index.js';
+// NOTE: coding-agent shares SanjayAIHub's Postgres DB so users only have
+// to configure their Alibaba key once (Profile > API Keys) instead of
+// duplicating it here. This reaches up out of modules/coding-agent into
+// the main app's db/index.js — path was previously wrong (pointed at a
+// nonexistent modules/coding-agent/db/index.js), a leftover from when
+// this was split out of another project.
+import pool from '../../../../db/index.js';
 
 const execFileAsync = promisify(execFile);
 

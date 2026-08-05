@@ -1,1 +1,9 @@
-Nothing should be ignored based on the provided file changes. The only modified file is 'providers/alibaba.js', which is a source code file and should not be ignored. No build artifacts, dependencies, or temporary files are present in the changes.
+node_modules/
+modules/coding-agent/node_modules/
+.env
+modules/coding-agent/.env
+*.log
+modules/coding-agent/logs/
+public/uploads/*
+!public/uploads/.gitkeep
+.DS_Store

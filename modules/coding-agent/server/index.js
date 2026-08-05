@@ -1,11 +1,11 @@
 // index.js
+import './env.js'; // MUST stay first — see env.js for why
 import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer } from 'http';
-import dotenv from 'dotenv';
 
 import agentRoutes from './routes/agent.js';
 import authRoutes from './routes/auth.js';
@@ -16,10 +16,9 @@ import analysisRoutes from './routes/codeAnalysis.js';
 import { securityMiddleware, auditLogger, monitorRepoAccess } from './middleware/security.js';
 import { createLogger } from './utils/logger.js';
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 
 const app = express();
 const httpServer = createServer(app);
