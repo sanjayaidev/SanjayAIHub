@@ -1,7 +1,9 @@
 // Alibaba Cloud Model Studio (DashScope) provider wrapper
-// Uses the OpenAI-compatible endpoint, scoped to the user's workspace.
-// Docs pattern: https://{workspace_id}.{region}.maas.aliyuncs.com/compatible-mode/v1/chat/completions
-// Image/Video endpoints: https://{workspace_id}.{region}.maas.aliyuncs.com/api/v1/...
+// Chat uses the OpenAI-compatible endpoint, scoped to the user's workspace:
+//   https://{workspace_id}.{region}.maas.aliyuncs.com/compatible-mode/v1/chat/completions
+// Image generation/editing (unified as of Qwen-Image 3.0, Jul 2026) and
+// video use the native DashScope endpoints:
+//   https://{workspace_id}.{region}.maas.aliyuncs.com/api/v1/...
 
 const DEFAULT_REGION = 'ap-southeast-1'; // Singapore
 
@@ -51,30 +53,53 @@ class AlibabaProvider {
     return response.json();
   }
 
-  // Text-to-image via the DashScope multimodal-generation endpoint.
-  // Works with the synchronous Qwen-Image family (qwen-image, qwen-image-2.0,
-  // qwen-image-max, qwen-image-plus) as well as the Wan T2I models.
-  // Returns { output: { results: [{ url }] } } (DashScope shape).
+  // Text-to-image AND image-to-image (editing) via the DashScope
+  // multimodal-generation endpoint. As of the Qwen-Image 3.0 API (Jul 2026),
+  // both T2I and I2I go through the SAME endpoint/shape — the only
+  // difference is whether the message `content` array includes 1-3
+  // `{ image }` entries ahead of the required single `{ text }` entry.
+  // Docs: https://www.alibabacloud.com/help/en/model-studio/qwen-image-generation-and-editing-api-reference
+  //
+  // Request:  POST {baseUrl}/api/v1/services/aigc/multimodal-generation/generation
+  //   { model, input: { messages: [{ role: 'user', content: [...] }] }, parameters }
+  // Response (success):
+  //   { output: { choices: [{ finish_reason, message: { role, content: [{ image: url }, ...] } }] },
+  //     usage: { width, height, image_count }, request_id }
+  // Response (error): { request_id, code, message }
+  //
+  // `images`: optional array of 1-3 image URLs/base64 data URIs for I2I.
+  // Leave empty/omitted for plain text-to-image.
+  // Returns the raw DashScope JSON, plus a convenience `_imageUrls` array.
   async imageGeneration(prompt, options = {}) {
-    const { model, size = '1024*1024', n = 1, seed } = options;
+    const {
+      model,
+      images = [],
+      size,
+      n = 1,
+      seed,
+      negative_prompt,
+      prompt_extend = true,
+      watermark = false,
+    } = options;
+
     if (!model) throw new Error('Alibaba imageGeneration requires a model');
     if (!prompt || !prompt.trim()) throw new Error('prompt is required');
+    if (images.length > 3) throw new Error('At most 3 reference images are supported for image-to-image');
+
+    const content = images.filter(Boolean).map((img) => ({ image: img }));
+    content.push({ text: prompt });
+
+    const parameters = { prompt_extend: !!prompt_extend, watermark: !!watermark };
+    if (size) parameters.size = size;
+    if (n !== undefined && n !== null) parameters.n = parseInt(n) || 1;
+    if (negative_prompt && negative_prompt.trim()) parameters.negative_prompt = negative_prompt;
+    if (seed !== undefined && seed !== null && seed !== '') parameters.seed = parseInt(seed);
 
     const payload = {
       model,
-      input: {
-        messages: [{ role: 'user', content: [{ text: prompt }] }]
-      },
-      parameters: {
-        size: size,
-        n: parseInt(n) || 1,
-        prompt_extend: true,
-        watermark: false
-      }
+      input: { messages: [{ role: 'user', content }] },
+      parameters,
     };
-    if (seed !== undefined && seed !== null) {
-      payload.parameters.seed = seed;
-    }
 
     const response = await fetch(`${this.baseUrl}/api/v1/services/aigc/multimodal-generation/generation`, {
       method: 'POST',
@@ -85,62 +110,46 @@ class AlibabaProvider {
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      let detail = errorText;
-      try {
-        const errJson = JSON.parse(errorText);
-        detail = errJson.output?.text || errJson.message || errorText;
-      } catch (_) {}
-      throw new Error(`Alibaba image generation error (${response.status}): ${detail}`);
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || data.code) {
+      const detail = data.message || data.output?.text || `HTTP ${response.status}`;
+      throw new Error(`Alibaba image generation error (${data.code || response.status}): ${detail}`);
     }
 
-    const data = await response.json();
-    
-    // Handle both sync and async responses
-    // Sync: { output: { results: [{ url }] } }
-    // Async: { output: { task_id, task_status: 'PENDING'|'RUNNING'|'SUCCEEDED' } }
+    // Collect generated image URLs from every choice's content array.
+    const urls = [];
+    for (const choice of data?.output?.choices || []) {
+      for (const item of choice?.message?.content || []) {
+        if (item?.image) urls.push(item.image);
+      }
+    }
+
+    // Fallback for any older/async model still using the legacy shape
+    // ({ output: { results: [{ url }] } } or a task_id to poll).
+    if (urls.length === 0 && Array.isArray(data?.output?.results)) {
+      for (const r of data.output.results) if (r?.url) urls.push(r.url);
+    }
     const taskStatus = data?.output?.task_status;
     if (taskStatus === 'PENDING' || taskStatus === 'RUNNING') {
-      // For async models, return task info for polling
       data._async = true;
       data._taskId = data.output.task_id;
     }
-    
+
+    data._imageUrls = urls;
     return data;
   }
 
-  // Image editing via the qwen-image-edit model family. Takes a source image
-  // URL plus an edit instruction and returns an edited image.
-  // Returns { data: [{ url }] } (same shape as imageGeneration).
+  // Backward-compatible wrapper: image editing is now just imageGeneration()
+  // with one reference image attached. Kept so existing callers (and
+  // modules/image-to-image.js) don't need to change their call shape.
+  // `imageUrl` may be a single URL/base64 string, or an array of up to 3.
   async imageEdit(prompt, imageUrl, options = {}) {
-    const { model = 'qwen-image-edit-plus', size, seed, n = 1 } = options;
     if (!prompt || !prompt.trim()) throw new Error('prompt (edit instruction) is required');
-    if (!imageUrl || !imageUrl.trim()) throw new Error('imageUrl is required');
+    if (!imageUrl) throw new Error('imageUrl is required');
 
-    const payload = { model, prompt, image: imageUrl, n };
-    if (size) payload.size = size;
-    if (seed !== undefined && seed !== null) payload.seed = seed;
-
-    const response = await fetch(`${this.baseUrl}/api/v1/services/aigc/image-edit`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let detail = errorText;
-      try {
-        detail = JSON.parse(errorText).error?.message || errorText;
-      } catch (_) {}
-      throw new Error(`Alibaba image edit error (${response.status}): ${detail}`);
-    }
-
-    return response.json();
+    const images = Array.isArray(imageUrl) ? imageUrl : [imageUrl];
+    return this.imageGeneration(prompt, { ...options, images });
   }
 
   // Async video generation (Wan T2V/I2V models). DashScope-style: submit a

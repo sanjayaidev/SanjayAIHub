@@ -4,7 +4,7 @@
 // models in the Singapore region. ~140 models across all categories.
 // Kept in CommonJS to match the rest of SanjayAIHub's provider layer.
 //
-// Source snapshot last updated: 2026-06-23
+// Source snapshot last updated: 2026-08-05 (added qwen-image-3.0-pro)
 
 const MODELS = {
   // ── LLM Models (82 working) ──────────────────────────────────────────────
@@ -95,6 +95,9 @@ const MODELS = {
 
   // ── Vision Models (47 working) — image / video generation ──────────────
   vision: [
+    // Qwen-Image 3.0 (unified T2I + I2I, limited preview, Jul 2026)
+    'qwen-image-3.0-pro',
+
     // Qwen-Image series (synchronous)
     'qwen-image',
     'qwen-image-2.0',

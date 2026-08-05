@@ -1,14 +1,19 @@
 // modules/text-to-image.js
 // Text-to-Image module supporting multiple providers (Alibaba, Pixazo, Cloudflare)
-// with model-specific parameters
+// with model-specific parameters.
+//
+// UI contract: every parameter below is a `select`, `range`, or `checkbox`
+// field — never free-text number entry. The frontend renders controls
+// straight from PARAM_SCHEMAS (see getModelCatalog()) so each model only
+// shows the knobs it actually supports.
 
-const pool = require('../db');
 const AlibabaProvider = require('../providers/alibaba');
 const PixazoProvider = require('../providers/pixazo');
 const CloudflareProvider = require('../providers/cloudflare');
 
-// Provider configurations
+// ── Provider model lists ────────────────────────────────────────────────
 const ALIBABA_IMAGE_MODELS = [
+  'qwen-image-3.0-pro', // unified T2I + I2I, limited preview (Jul 2026)
   'qwen-image',
   'qwen-image-2.0',
   'qwen-image-max',
@@ -18,212 +23,262 @@ const ALIBABA_IMAGE_MODELS = [
 ];
 
 const PIXAZO_IMAGE_MODEL = 'flux-1-schnell';
-
 const CLOUDFLARE_IMAGE_MODEL = '@cf/black-forest-labs/flux-1-schnell';
 
-// Valid sizes for Alibaba image generation (verified working)
-// Reference: https://github.com/sanjayaidev/AlibabaCloud
-const ALIBABA_VALID_SIZES = [
-  '1024*1024',  // Square (default, most compatible)
-  '1664*928',   // Landscape 16:9
-  '1472*1104',  // Landscape 4:3
-  '1328*1328',  // Square alternative
-  '1104*1472',  // Portrait 3:4
-  '928*1664'    // Portrait 9:16
+// ── Alibaba size presets ────────────────────────────────────────────────
+// qwen-image-3.0-pro accepts any "W*H" with 512*512 <= W*H <= 2048*2048
+// (or omit `size` to let the model choose). Older Qwen-Image models are
+// restricted to a fixed, verified set of sizes.
+const ALIBABA_SIZE_OPTIONS_3_0 = [
+  { value: '', label: 'Auto (model decides)' },
+  { value: '1024*1024', label: 'Square (1024×1024)' },
+  { value: '1328*1328', label: 'Square (1328×1328)' },
+  { value: '1664*928', label: 'Landscape 16:9 (1664×928)' },
+  { value: '1472*1104', label: 'Landscape 4:3 (1472×1104)' },
+  { value: '1104*1472', label: 'Portrait 3:4 (1104×1472)' },
+  { value: '928*1664', label: 'Portrait 9:16 (928×1664)' },
+  { value: '2048*2048', label: 'Square Max (2048×2048)' },
 ];
 
-// Map common aspect ratios to Alibaba sizes
-function getAlibabaSize(width, height) {
-  const ratio = width / height;
-  
-  // Square or close to square
-  if (ratio >= 0.9 && ratio <= 1.1) return '1024*1024';
-  
-  // Landscape (width > height)
-  if (ratio > 1.1) {
-    if (ratio >= 1.7) return '1664*928'; // Ultra wide 16:9
-    return '1472*1104'; // Standard landscape 4:3
-  }
-  
-  // Portrait (height > width)
-  if (ratio < 0.9) {
-    if (ratio <= 0.6) return '928*1664'; // Ultra portrait 9:16
-    return '1104*1472'; // Standard portrait 3:4
-  }
-  
-  // Default to square
-  return '1024*1024';
+const ALIBABA_SIZE_OPTIONS_LEGACY = [
+  { value: '1328*1328', label: 'Square (1328×1328)' },
+  { value: '1664*928', label: 'Landscape 16:9 (1664×928)' },
+  { value: '1472*1104', label: 'Landscape 4:3 (1472×1104)' },
+  { value: '1104*1472', label: 'Portrait 3:4 (1104×1472)' },
+  { value: '928*1664', label: 'Portrait 9:16 (928×1664)' },
+];
+
+const ALIBABA_VALID_SIZES = [
+  '1024*1024', '1328*1328', '1664*928', '1472*1104', '1104*1472', '928*1664', '2048*2048'
+];
+
+// ── Per-model UI parameter schemas (select / range / checkbox ONLY) ────
+function alibabaSchema(is3Pro) {
+  return {
+    size: {
+      type: 'select',
+      label: 'Size',
+      options: is3Pro ? ALIBABA_SIZE_OPTIONS_3_0 : ALIBABA_SIZE_OPTIONS_LEGACY,
+      default: is3Pro ? '' : '1328*1328',
+    },
+    n: {
+      type: 'range',
+      label: 'Number of images',
+      min: 1, max: is3Pro ? 6 : 4, step: 1,
+      default: 1,
+    },
+    seed_mode: {
+      type: 'checkbox',
+      label: 'Use fixed seed',
+      default: false,
+    },
+    seed: {
+      type: 'range',
+      label: 'Seed',
+      min: 0, max: 999999999, step: 1,
+      default: 0,
+      dependsOn: 'seed_mode', // frontend only enables this slider when seed_mode is checked
+    },
+    prompt_extend: {
+      type: 'checkbox',
+      label: 'Smart prompt rewriting',
+      default: true,
+    },
+    watermark: {
+      type: 'checkbox',
+      label: 'Add watermark',
+      default: false,
+    },
+  };
 }
 
-// Parameters supported by each provider's models
-const MODEL_PARAMETERS = {
-  'alibaba': {
-    size: { 
-      type: 'select', 
-      options: [
-        { value: '1664*928', label: 'Landscape (1664×928)' },
-        { value: '1472*1104', label: 'Landscape (1472×1104)' },
-        { value: '1328*1328', label: 'Square (1328×1328)' },
-        { value: '1104*1472', label: 'Portrait (1104×1472)' },
-        { value: '928*1664', label: 'Portrait (928×1664)' }
-      ], 
-      default: '1328*1328', 
-      label: 'Size' 
+function pixazoOrCloudflareSchema() {
+  return {
+    width: {
+      type: 'select',
+      label: 'Width',
+      options: [512, 768, 1024],
+      default: 1024,
     },
-    num_steps: { type: 'range', min: 1, max: 50, default: 30, step: 1, label: 'Steps' },
-    seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
-    style: { type: 'select', options: ['realistic', 'artistic', 'anime', 'digital-art', 'photography'], default: 'realistic', label: 'Style' },
-  },
-  'pixazo': {
-    width: { type: 'select', options: [512, 768, 1024], default: 1024, label: 'Width' },
-    height: { type: 'select', options: [512, 768, 1024], default: 1024, label: 'Height' },
-    num_steps: { type: 'range', min: 1, max: 8, default: 4, step: 1, label: 'Steps' },
-    seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
-  },
-  'cloudflare': {
-    width: { type: 'select', options: [512, 768, 1024], default: 1024, label: 'Width' },
-    height: { type: 'select', options: [512, 768, 1024], default: 1024, label: 'Height' },
-    num_steps: { type: 'range', min: 1, max: 8, default: 4, step: 1, label: 'Steps' },
-    seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
-  }
-};
+    height: {
+      type: 'select',
+      label: 'Height',
+      options: [512, 768, 1024],
+      default: 1024,
+    },
+    num_steps: {
+      type: 'range',
+      label: 'Steps',
+      min: 1, max: 8, step: 1,
+      default: 4,
+    },
+    seed_mode: {
+      type: 'checkbox',
+      label: 'Use fixed seed',
+      default: false,
+    },
+    seed: {
+      type: 'range',
+      label: 'Seed',
+      min: 0, max: 999999999, step: 1,
+      default: 0,
+      dependsOn: 'seed_mode',
+    },
+  };
+}
+
+// Per-model schema map. Every entry in ALIBABA_IMAGE_MODELS/PIXAZO/CLOUDFLARE
+// must resolve to a schema here (fallback keeps things from breaking if a
+// model is added without a matching entry).
+const PARAM_SCHEMAS = {};
+for (const m of ALIBABA_IMAGE_MODELS) {
+  PARAM_SCHEMAS[m] = alibabaSchema(m === 'qwen-image-3.0-pro');
+}
+PARAM_SCHEMAS[PIXAZO_IMAGE_MODEL] = pixazoOrCloudflareSchema();
+PARAM_SCHEMAS[CLOUDFLARE_IMAGE_MODEL] = pixazoOrCloudflareSchema();
+
+function getSchemaForModel(model) {
+  return PARAM_SCHEMAS[model] || null;
+}
+
+// Build a size string from width/height for legacy callers that still pass
+// those instead of a size preset (kept for backward compatibility only).
+function nearestAlibabaSize(width, height) {
+  const ratio = (width || 1024) / (height || 1024);
+  if (ratio >= 0.9 && ratio <= 1.1) return '1328*1328';
+  if (ratio > 1.1) return ratio >= 1.7 ? '1664*928' : '1472*1104';
+  return ratio <= 0.6 ? '928*1664' : '1104*1472';
+}
 
 async function textToImageHandler(requestBody, apiKeys, userId) {
   const {
     prompt,
     provider = 'alibaba',
     model: requestedModel,
-    width = 1024,
-    height = 1024,
     size: requestedSize,
+    width,
+    height,
+    n,
     num_steps,
+    seed_mode,
     seed,
-    style = 'realistic',
+    negative_prompt,
+    prompt_extend,
+    watermark,
   } = requestBody;
 
   if (!prompt || !prompt.trim()) {
     throw new Error('Prompt is required for image generation');
   }
 
-  // Determine provider based on request or availability
+  // Determine provider from the selected model.
   let selectedProvider = provider;
-  
   if (requestedModel) {
-    if (ALIBABA_IMAGE_MODELS.includes(requestedModel)) {
-      selectedProvider = 'alibaba';
-    } else if (requestedModel === PIXAZO_IMAGE_MODEL) {
-      selectedProvider = 'pixazo';
-    } else if (requestedModel === CLOUDFLARE_IMAGE_MODEL) {
-      selectedProvider = 'cloudflare';
-    }
+    if (ALIBABA_IMAGE_MODELS.includes(requestedModel)) selectedProvider = 'alibaba';
+    else if (requestedModel === PIXAZO_IMAGE_MODEL) selectedProvider = 'pixazo';
+    else if (requestedModel === CLOUDFLARE_IMAGE_MODEL) selectedProvider = 'cloudflare';
   }
 
-  // Check API keys
   if (selectedProvider === 'alibaba' && (!apiKeys.alibaba?.api_key || !apiKeys.alibaba?.workspace_id)) {
     throw new Error('Alibaba Cloud API key + Workspace ID not configured. Add them in Profile > API Keys.');
   }
-  
   if (selectedProvider === 'pixazo' && !apiKeys.pixazo?.api_key) {
     throw new Error('Pixazo API key not configured. Add it in Profile > API Keys.');
   }
-  
   if (selectedProvider === 'cloudflare' && (!apiKeys.cloudflare?.api_key || !apiKeys.cloudflare?.account_id)) {
     throw new Error('Cloudflare API token + Account ID not configured. Add them in Profile > API Keys.');
   }
 
-  let imageDataUrl, imageUrl, model;
+  let imageDataUrl = null, imageUrl = null, model, resolvedParams = {};
 
   if (selectedProvider === 'alibaba') {
-    const alibaba = new AlibabaProvider(
-      apiKeys.alibaba.api_key,
-      apiKeys.alibaba.workspace_id
-    );
-    
-    model = requestedModel || 'qwen-image';
-    
-    // Build enhanced prompt with style
-    let enhancedPrompt = prompt;
-    if (style !== 'realistic') {
-      const stylePrompts = {
-        artistic: 'in an artistic style with creative interpretation',
-        anime: 'in anime/manga art style',
-        'digital-art': 'as digital art with vibrant colors',
-        photography: 'as a professional photograph'
-      };
-      enhancedPrompt = `${prompt}, ${stylePrompts[style] || ''}`;
-    }
-    
-    // Determine size - use requested size if valid, otherwise map from width/height
+    const alibaba = new AlibabaProvider(apiKeys.alibaba.api_key, apiKeys.alibaba.workspace_id);
+    model = ALIBABA_IMAGE_MODELS.includes(requestedModel) ? requestedModel : 'qwen-image';
+    const schema = getSchemaForModel(model) || alibabaSchema(false);
+
+    // size
     let sizeParam;
-    if (requestedSize && ALIBABA_VALID_SIZES.includes(requestedSize)) {
-      sizeParam = requestedSize;
+    if (requestedSize && (requestedSize === '' || ALIBABA_VALID_SIZES.includes(requestedSize))) {
+      sizeParam = requestedSize || undefined;
+    } else if (width && height) {
+      sizeParam = nearestAlibabaSize(parseInt(width), parseInt(height));
     } else {
-      sizeParam = getAlibabaSize(parseInt(width) || 1024, parseInt(height) || 1024);
+      sizeParam = schema.size.default || undefined;
     }
-    
+
+    const nParam = n !== undefined ? Math.min(Math.max(parseInt(n) || 1, schema.n.min), schema.n.max) : schema.n.default;
+    const useFixedSeed = seed_mode === true || seed_mode === 'true' || seed_mode === 'on';
+    const seedParam = useFixedSeed ? parseInt(seed) || 0 : undefined;
+    const promptExtendParam = prompt_extend !== undefined ? !!(prompt_extend === true || prompt_extend === 'true' || prompt_extend === 'on') : schema.prompt_extend.default;
+    const watermarkParam = watermark !== undefined ? !!(watermark === true || watermark === 'true' || watermark === 'on') : schema.watermark.default;
+
+    resolvedParams = { size: sizeParam, n: nParam, seed: seedParam, negative_prompt, prompt_extend: promptExtendParam, watermark: watermarkParam };
+
     try {
-      const result = await alibaba.imageGeneration(enhancedPrompt, {
+      const result = await alibaba.imageGeneration(prompt, {
         model,
         size: sizeParam,
-        seed: seed ? parseInt(seed) : undefined,
+        n: nParam,
+        seed: seedParam,
+        negative_prompt,
+        prompt_extend: promptExtendParam,
+        watermark: watermarkParam,
       });
 
-      // Check if this is an async task (for models that return task_id)
       if (result._async) {
         throw new Error(`Image generation is processing asynchronously. Task ID: ${result._taskId}. Please poll for completion.`);
       }
 
-      // DashScope returns: { output: { results: [{ url }] } }
-      const generated = result?.output?.results?.[0];
-      if (!generated?.url) {
-        // Provide more detailed error information
+      const urls = result._imageUrls || [];
+      if (urls.length === 0) {
         const errorMsg = result?.output?.text || result?.message || 'No image returned';
         throw new Error(errorMsg);
       }
 
-      imageUrl = generated.url;
-      imageDataUrl = null;
+      imageUrl = urls[0];
+      resolvedParams.allImageUrls = urls;
     } catch (err) {
       throw new Error(`Alibaba Image error: ${err.message}`);
     }
   } else if (selectedProvider === 'pixazo') {
     const pixazo = new PixazoProvider(apiKeys.pixazo.api_key);
-    
+    model = PIXAZO_IMAGE_MODEL;
+    const schema = getSchemaForModel(model);
+
+    const w = schema.width.options.includes(parseInt(width)) ? parseInt(width) : schema.width.default;
+    const h = schema.height.options.includes(parseInt(height)) ? parseInt(height) : schema.height.default;
+    const steps = num_steps !== undefined ? Math.min(Math.max(parseInt(num_steps) || 4, schema.num_steps.min), schema.num_steps.max) : schema.num_steps.default;
+    const useFixedSeed = seed_mode === true || seed_mode === 'true' || seed_mode === 'on';
+
+    resolvedParams = { width: w, height: h, num_steps: steps };
+
     try {
-      const params = {
-        prompt,
-        width: parseInt(width),
-        height: parseInt(height),
-        num_steps: parseInt(num_steps) || 4,
-      };
-      if (seed) params.seed = parseInt(seed);
-      
+      const params = { prompt, width: w, height: h, num_steps: steps };
+      if (useFixedSeed) { params.seed = parseInt(seed) || 0; resolvedParams.seed = params.seed; }
+
       const result = await pixazo.generateImage(params);
       imageUrl = result.output;
-      imageDataUrl = null; // Pixazo returns URL directly
-      model = PIXAZO_IMAGE_MODEL;
     } catch (err) {
       throw new Error(`Pixazo Image error: ${err.message}`);
     }
   } else {
-    const cloudflare = new CloudflareProvider(
-      apiKeys.cloudflare.api_key,
-      apiKeys.cloudflare.account_id
-    );
-    
+    const cloudflare = new CloudflareProvider(apiKeys.cloudflare.api_key, apiKeys.cloudflare.account_id);
+    model = CLOUDFLARE_IMAGE_MODEL;
+    const schema = getSchemaForModel(model);
+
+    const w = schema.width.options.includes(parseInt(width)) ? parseInt(width) : schema.width.default;
+    const h = schema.height.options.includes(parseInt(height)) ? parseInt(height) : schema.height.default;
+    const steps = num_steps !== undefined ? Math.min(Math.max(parseInt(num_steps) || 4, schema.num_steps.min), schema.num_steps.max) : schema.num_steps.default;
+    const useFixedSeed = seed_mode === true || seed_mode === 'true' || seed_mode === 'on';
+
+    resolvedParams = { width: w, height: h, num_steps: steps };
+
     try {
-      const params = {
-        prompt,
-        width: parseInt(width),
-        height: parseInt(height),
-        num_steps: parseInt(num_steps) || 4,
-      };
-      if (seed) params.seed = parseInt(seed);
-      
+      const params = { prompt, width: w, height: h, num_steps: steps };
+      if (useFixedSeed) { params.seed = parseInt(seed) || 0; resolvedParams.seed = params.seed; }
+
       const result = await cloudflare.textToImage(params);
       imageDataUrl = result.imageDataUrl;
-      imageUrl = null;
-      model = CLOUDFLARE_IMAGE_MODEL;
     } catch (err) {
       throw new Error(`Cloudflare Image error: ${err.message}`);
     }
@@ -234,39 +289,37 @@ async function textToImageHandler(requestBody, apiKeys, userId) {
     imageUrl,
     provider: selectedProvider,
     model,
-    parameters: { 
-      size: selectedProvider === 'alibaba' ? sizeParam : { width, height },
-      num_steps, 
-      seed, 
-      style 
-    }
+    parameters: resolvedParams,
   };
 }
 
 function getModelCatalog(userTier) {
   const isPaid = ['basic', 'pro', 'enterprise'].includes(userTier);
-  
+
   return {
     providers: ['alibaba', 'pixazo', 'cloudflare'],
     models: {
       alibaba: isPaid ? ALIBABA_IMAGE_MODELS : [],
       pixazo: [PIXAZO_IMAGE_MODEL],
-      cloudflare: [CLOUDFLARE_IMAGE_MODEL]
+      cloudflare: [CLOUDFLARE_IMAGE_MODEL],
     },
     defaults: {
       alibaba: 'qwen-image',
       pixazo: PIXAZO_IMAGE_MODEL,
-      cloudflare: CLOUDFLARE_IMAGE_MODEL
+      cloudflare: CLOUDFLARE_IMAGE_MODEL,
     },
-    parameters: MODEL_PARAMETERS
+    // Per-model UI schema — the frontend renders exactly these fields for
+    // whichever model is selected, using only select/range/checkbox controls.
+    schemas: PARAM_SCHEMAS,
   };
 }
 
 module.exports = {
   textToImageHandler,
   getModelCatalog,
-  MODEL_PARAMETERS,
+  getSchemaForModel,
+  PARAM_SCHEMAS,
   ALIBABA_IMAGE_MODELS,
   PIXAZO_IMAGE_MODEL,
-  CLOUDFLARE_IMAGE_MODEL
+  CLOUDFLARE_IMAGE_MODEL,
 };
