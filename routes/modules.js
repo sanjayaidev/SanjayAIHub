@@ -302,13 +302,20 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
       // Chatbot resolves its own required provider by tier inside the
       // handler, so it gives a precise "add your X key" error itself
       // instead of a generic missing-key 400 here.
+      //
+      // For every other module, requiredProviders is a list of ALTERNATIVES
+      // (e.g. text-to-speech works with either cloudflare OR elevenlabs), not
+      // a list of providers that must ALL be configured. Only block the
+      // request if none of the alternatives are available — otherwise a user
+      // who has only set up one of them (say, just Cloudflare) gets wrongly
+      // rejected for not having the other one too.
       if (moduleKey !== 'chatbot') {
-        const missingProviders = requiredProviders.filter(p => !apiKeys[p]);
-        if (missingProviders.length > 0) {
+        const hasAnyRequiredProvider = requiredProviders.some(p => apiKeys[p]);
+        if (!hasAnyRequiredProvider) {
           return res.status(400).json({
             success: false,
-            message: `Missing API keys for: ${missingProviders.join(', ')}`,
-            missing: missingProviders
+            message: `Missing API keys for: ${requiredProviders.join(' or ')}`,
+            missing: requiredProviders
           });
         }
       }

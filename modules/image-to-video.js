@@ -15,18 +15,22 @@ const ALIBABA_I2V_MODELS = alibabaModels.getModelsByCategory('vision').filter(m 
 const PIXAZO_VIDEO_MODEL = 'ltx-2.3';
 
 // Parameters supported by each provider's models
-// Based on https://github.com/sanjayaidev/AlibabaCloud - video generation uses prompt + optional image_url
+// Alibaba video-synthesis: source frame(s) go in `input.media`, sizing is a
+// `resolution` preset (no `ratio` needed here — the source frame already
+// fixes the aspect ratio for I2V).
 const MODEL_PARAMETERS = {
   'alibaba': {
-    size: {
+    resolution: {
       type: 'select',
-      options: ['480x480', '720x720', '1080x1080', '1280x720', '720x1280', '1920x1080', '1080x1920'],
-      default: '720x720',
+      options: ['480P', '720P', '1080P'],
+      default: '720P',
       label: 'Resolution'
     },
     duration: { type: 'select', options: [5, 10], default: 5, label: 'Duration (seconds)' },
     seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
     negative_prompt: { type: 'text', default: '', label: 'Negative prompt (optional)' },
+    prompt_extend: { type: 'boolean', default: true, label: 'Smart prompt rewriting' },
+    watermark: { type: 'boolean', default: true, label: 'Add watermark' },
   },
   'pixazo': {
     aspect: { type: 'select', options: ['16:9', '9:16', '1:1', '4:3'], default: '16:9', label: 'Aspect Ratio' },
@@ -43,6 +47,8 @@ async function imageToVideoHandler(requestBody, apiKeys, userId) {
   const {
     prompt,
     image_url,
+    last_frame_url,
+    driving_audio_url,
     provider = 'pixazo',
     model: requestedModel,
     width,
@@ -52,6 +58,11 @@ async function imageToVideoHandler(requestBody, apiKeys, userId) {
     seed,
     enhance_prompt = true,
     aspect = '16:9',
+    resolution,
+    duration,
+    negative_prompt,
+    prompt_extend = true,
+    watermark = true,
   } = requestBody;
 
   if (!prompt || !prompt.trim()) {
@@ -64,19 +75,57 @@ async function imageToVideoHandler(requestBody, apiKeys, userId) {
 
   // Determine provider
   let selectedProvider = provider;
-  
-  if (requestedModel && requestedModel === PIXAZO_VIDEO_MODEL) {
-    selectedProvider = 'pixazo';
+
+  if (requestedModel) {
+    if (ALIBABA_I2V_MODELS.includes(requestedModel)) selectedProvider = 'alibaba';
+    else if (requestedModel === PIXAZO_VIDEO_MODEL) selectedProvider = 'pixazo';
   }
 
   // Check API keys
+  if (selectedProvider === 'alibaba' && (!apiKeys.alibaba?.api_key || !apiKeys.alibaba?.workspace_id)) {
+    throw new Error('Alibaba Cloud API key + Workspace ID not configured. Add them in Profile > API Keys.');
+  }
+
   if (selectedProvider === 'pixazo' && !apiKeys.pixazo?.api_key) {
     throw new Error('Pixazo API key not configured. Add it in Profile > API Keys.');
   }
 
   let videoUrl, requestId, status, model;
 
-  if (selectedProvider === 'pixazo') {
+  if (selectedProvider === 'alibaba') {
+    const alibaba = new AlibabaProvider(
+      apiKeys.alibaba.api_key,
+      apiKeys.alibaba.workspace_id
+    );
+
+    model = ALIBABA_I2V_MODELS.includes(requestedModel) ? requestedModel : 'wan2.7-i2v';
+
+    // media: first_frame is required; last_frame and driving_audio are
+    // optional extras some Wan models accept (e.g. lip-sync/rap videos).
+    const media = [{ type: 'first_frame', url: image_url }];
+    if (last_frame_url && last_frame_url.trim()) media.push({ type: 'last_frame', url: last_frame_url });
+    if (driving_audio_url && driving_audio_url.trim()) media.push({ type: 'driving_audio', url: driving_audio_url });
+
+    try {
+      const result = await alibaba.videoGeneration(prompt, {
+        model,
+        media,
+        resolution: resolution || '720P',
+        duration: parseInt(duration) || 5,
+        seed: seed ? parseInt(seed) : undefined,
+        negative_prompt,
+        prompt_extend,
+        watermark,
+      });
+
+      // DashScope returns: { output: { task_id, task_status } }
+      requestId = result?.output?.task_id;
+      status = result?.output?.task_status || 'PENDING';
+      videoUrl = null; // Will be available after polling via checkVideoTask
+    } catch (err) {
+      throw new Error(`Alibaba Image-to-Video error: ${err.message}`);
+    }
+  } else if (selectedProvider === 'pixazo') {
     const pixazo = new PixazoProvider(apiKeys.pixazo.api_key);
     
     model = PIXAZO_VIDEO_MODEL;
@@ -109,15 +158,47 @@ async function imageToVideoHandler(requestBody, apiKeys, userId) {
     status,
     provider: selectedProvider,
     model,
-    parameters: { width, height, num_frames, frame_rate, seed, enhance_prompt, aspect, image_url }
+    parameters: selectedProvider === 'alibaba'
+      ? { resolution, duration, seed, negative_prompt, prompt_extend, watermark, image_url, last_frame_url, driving_audio_url }
+      : { width, height, num_frames, frame_rate, seed, enhance_prompt, aspect, image_url }
   };
 }
 
-async function checkVideoStatus(requestId, apiKeys) {
+async function checkVideoStatus(requestId, apiKeys, provider = 'pixazo') {
   if (!requestId) {
     throw new Error('Request ID is required');
   }
-  
+
+  if (provider === 'alibaba') {
+    if (!apiKeys.alibaba?.api_key || !apiKeys.alibaba?.workspace_id) {
+      throw new Error('Alibaba Cloud API key + Workspace ID not configured');
+    }
+
+    const alibaba = new AlibabaProvider(
+      apiKeys.alibaba.api_key,
+      apiKeys.alibaba.workspace_id
+    );
+
+    try {
+      const result = await alibaba.checkVideoTask(requestId);
+      const taskStatus = result?.output?.task_status;
+      let status = 'pending';
+
+      if (taskStatus === 'SUCCEEDED') status = 'completed';
+      else if (taskStatus === 'FAILED') status = 'failed';
+      else if (taskStatus === 'RUNNING') status = 'processing';
+      else status = 'pending';
+
+      return {
+        status,
+        videoUrl: result?.output?.video_url || null,
+        progress: status === 'completed' ? 100 : (status === 'processing' ? 50 : 0)
+      };
+    } catch (err) {
+      throw new Error(`Alibaba status check error: ${err.message}`);
+    }
+  }
+
   if (!apiKeys.pixazo?.api_key) {
     throw new Error('Pixazo API key not configured');
   }
@@ -137,12 +218,16 @@ async function checkVideoStatus(requestId, apiKeys) {
 }
 
 function getModelCatalog(userTier) {
+  const isPaid = ['basic', 'pro', 'enterprise'].includes(userTier);
+
   return {
-    providers: ['pixazo'],
+    providers: ['alibaba', 'pixazo'],
     models: {
+      alibaba: isPaid ? ALIBABA_I2V_MODELS : [],
       pixazo: [PIXAZO_VIDEO_MODEL]
     },
     defaults: {
+      alibaba: 'wan2.7-i2v',
       pixazo: PIXAZO_VIDEO_MODEL
     },
     parameters: MODEL_PARAMETERS,

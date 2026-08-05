@@ -18,15 +18,23 @@ const PIXAZO_VIDEO_MODEL = 'ltx-2.3';
 // Based on https://github.com/sanjayaidev/AlibabaCloud index.js /v1/videos/generations
 const MODEL_PARAMETERS = {
   'alibaba': {
-    size: {
+    resolution: {
       type: 'select',
-      options: ['480x480', '720x720', '1080x1080', '1280x720', '720x1280', '1920x1080', '1080x1920'],
-      default: '720x720',
+      options: ['480P', '720P', '1080P'],
+      default: '720P',
       label: 'Resolution'
+    },
+    ratio: {
+      type: 'select',
+      options: ['16:9', '9:16', '1:1', '4:3', '3:4'],
+      default: '16:9',
+      label: 'Aspect Ratio'
     },
     duration: { type: 'select', options: [5, 10], default: 5, label: 'Duration (seconds)' },
     seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
     negative_prompt: { type: 'text', default: '', label: 'Negative prompt (optional)' },
+    prompt_extend: { type: 'boolean', default: true, label: 'Smart prompt rewriting' },
+    watermark: { type: 'boolean', default: true, label: 'Add watermark' },
   },
   'pixazo': {
     aspect: { type: 'select', options: ['16:9', '9:16', '1:1', '4:3'], default: '16:9', label: 'Aspect Ratio' },
@@ -52,6 +60,11 @@ async function textToVideoHandler(requestBody, apiKeys, userId) {
     seed,
     enhance_prompt = true,
     aspect = '16:9',
+    resolution,
+    ratio,
+    negative_prompt,
+    prompt_extend = true,
+    watermark = true,
   } = requestBody;
 
   if (!prompt || !prompt.trim()) {
@@ -89,15 +102,18 @@ async function textToVideoHandler(requestBody, apiKeys, userId) {
     model = requestedModel || 'wan2.6-t2v';
     
     try {
-      // Build size from width/height or use default
-      const size = (width && height) ? `${parseInt(width)}x${parseInt(height)}` : '720x720';
-      
-      // Submit async video generation task
+      // Submit async video generation task. Pure T2V models have no source
+      // frame to infer aspect ratio from, so `ratio` is sent alongside
+      // `resolution` (e.g. "720P" + "16:9") rather than a pixel size.
       const result = await alibaba.videoGeneration(prompt, {
         model,
-        size,
+        resolution: resolution || '720P',
+        ratio: ratio || aspect || '16:9',
         duration: parseInt(duration) || 5,
         seed: seed ? parseInt(seed) : undefined,
+        negative_prompt,
+        prompt_extend,
+        watermark,
       });
 
       // DashScope returns: { output: { task_id, task_status } }
@@ -139,7 +155,9 @@ async function textToVideoHandler(requestBody, apiKeys, userId) {
     status,
     provider: selectedProvider,
     model,
-    parameters: { width, height, num_frames, frame_rate, duration, seed, enhance_prompt, aspect }
+    parameters: selectedProvider === 'alibaba'
+      ? { resolution, ratio: ratio || aspect, duration, seed, negative_prompt, prompt_extend, watermark }
+      : { width, height, num_frames, frame_rate, duration, seed, enhance_prompt, aspect }
   };
 }
 

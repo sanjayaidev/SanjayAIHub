@@ -4,6 +4,7 @@ const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 const AlibabaProvider = require('../providers/alibaba');
 const NvidiaProvider = require('../providers/nvidia');
+const CloudflareProvider = require('../providers/cloudflare');
 
 const VALID_PROVIDERS = ['alibaba', 'cloudflare', 'nvidia', 'elevenlabs', 'pixazo'];
 const PROVIDERS_NEEDING_WORKSPACE = new Set(['alibaba']);
@@ -106,7 +107,7 @@ router.post('/:provider/test', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, message: `No ${provider} key configured` });
     }
 
-    const { api_key, workspace_id } = result.rows[0];
+    const { api_key, workspace_id, account_id } = result.rows[0];
 
     if (provider === 'nvidia') {
       const nvidia = new NvidiaProvider(api_key);
@@ -121,6 +122,15 @@ router.post('/:provider/test', authenticateToken, async (req, res) => {
         { model: 'qwen-flash', max_tokens: 4 }
       );
       return res.json({ success: true, message: 'Alibaba key is valid' });
+    }
+
+    if (provider === 'cloudflare') {
+      if (!account_id) {
+        return res.status(400).json({ success: false, message: 'Cloudflare Account ID is missing. Re-save the key with your Account ID.' });
+      }
+      const cloudflare = new CloudflareProvider(api_key, account_id);
+      await cloudflare.testConnection();
+      return res.json({ success: true, message: 'Cloudflare key is valid' });
     }
 
     // No live test implemented yet for this provider — treat presence as OK.

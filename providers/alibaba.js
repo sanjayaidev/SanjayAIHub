@@ -152,21 +152,51 @@ class AlibabaProvider {
     return this.imageGeneration(prompt, { ...options, images });
   }
 
-  // Async video generation (Wan T2V/I2V models). DashScope-style: submit a
-  // task, then poll it with checkVideoTask(). Mirrors the async pattern the
-  // rest of this app already uses for Pixazo video jobs.
+  // Async video generation (Wan T2V/I2V/R2V + HappyHorse models). DashScope-
+  // style: submit a task, then poll it with checkVideoTask(). Mirrors the
+  // async pattern the rest of this app already uses for Pixazo video jobs.
+  //
+  // As of the current video-synthesis API, source assets go in a single
+  // `input.media` array of `{ type, url }` entries instead of a flat
+  // `img_url` field, and sizing is expressed as a `resolution` preset
+  // (e.g. "480P"/"720P"/"1080P") — T2V models additionally take a `ratio`
+  // (e.g. "16:9") since there's no source frame to infer aspect from.
+  // Docs: https://www.alibabacloud.com/help/en/model-studio/video-generation-wan
+  //
+  // `media` types in use: 'first_frame', 'last_frame', 'driving_audio',
+  // 'reference_image' (R2V). `image_url` is kept as a back-compat shortcut
+  // for the common single-image I2V case — it's converted into a
+  // `first_frame` media entry if `media` doesn't already define one.
+  //
   // Returns { output: { task_id, task_status } }.
   async videoGeneration(prompt, options = {}) {
-    const { model, image_url, size, duration, seed, negative_prompt } = options;
+    const {
+      model,
+      media = [],
+      image_url,
+      resolution,
+      ratio,
+      duration,
+      seed,
+      negative_prompt,
+      prompt_extend = true,
+      watermark = true,
+    } = options;
     if (!model) throw new Error('Alibaba videoGeneration requires a model');
     if (!prompt || !prompt.trim()) throw new Error('prompt is required');
 
+    const mediaList = media.filter(Boolean).map((m) => ({ ...m }));
+    if (image_url && !mediaList.some((m) => m.type === 'first_frame')) {
+      mediaList.unshift({ type: 'first_frame', url: image_url });
+    }
+
     const input = { prompt };
-    if (image_url) input.img_url = image_url;
+    if (mediaList.length > 0) input.media = mediaList;
     if (negative_prompt) input.negative_prompt = negative_prompt;
 
-    const parameters = {};
-    if (size) parameters.size = size;
+    const parameters = { prompt_extend: !!prompt_extend, watermark: !!watermark };
+    if (resolution) parameters.resolution = resolution;
+    if (ratio) parameters.ratio = ratio;
     if (duration) parameters.duration = duration;
     if (seed !== undefined && seed !== null) parameters.seed = seed;
 
