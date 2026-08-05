@@ -10,6 +10,7 @@ const moduleRoutes = require('./routes/modules');
 const apiKeyRoutes = require('./routes/apikeys');
 const chatRoutes = require('./routes/chat');
 const reelsRoutes = require('./routes/reels');
+const uploadRoutes = require('./routes/upload');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -108,6 +109,7 @@ app.use('/api/modules', moduleRoutes);
 app.use('/api/keys', apiKeyRoutes);
 app.use('/api/chat', chatRoutes); // ← ADD THIS (replaces /api/modules/chat routes)
 app.use('/api/reels', reelsRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // ── Health Check ──
 app.get('/api/health', (req, res) => {
@@ -115,6 +117,18 @@ app.get('/api/health', (req, res) => {
     success: true,
     message: 'SanjayAIHub API is running',
     timestamp: new Date().toISOString()
+  });
+});
+
+// ── Runtime config for the frontend ──
+// Coding Agent (modules/coding-agent) is a standalone ESM service with its
+// own sessions + Socket.IO, so it runs as a separate process rather than
+// being merged into this CommonJS app. The frontend launches it by URL —
+// see public/js/modules.js navigateToModule('coding-agent').
+app.get('/api/config', (req, res) => {
+  res.json({
+    success: true,
+    codingAgentUrl: process.env.CODING_AGENT_URL || 'http://localhost:4001'
   });
 });
 
