@@ -1,12 +1,5 @@
-```
-# Dependencies
-node_modules/
+(public/index.html is a source/config file, and there are no build artifacts, dependencies, or temp files in the changes)
 
-# Editors
-.vscode/
+```text
 
-# Environment
-.env
-.env.local
-.env.*
 ```
