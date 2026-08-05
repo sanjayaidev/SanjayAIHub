@@ -66,6 +66,7 @@ if (process.env.RENDER_EXTERNAL_URL) {
 // ── Security Middleware with relaxed CSP for development ──
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
+  referrerPolicy: { policy: ["no-referrer", "strict-origin-when-cross-origin"] },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -85,7 +86,7 @@ app.use(helmet({
         "fonts.googleapis.com"
       ],
       fontSrc: ["'self'", "cdnjs.cloudflare.com", "fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "blob:", "picsum.photos", "https://picsum.photos", "i.postimg.cc", "https://i.postimg.cc"],
+      imgSrc: ["'self'", "data:", "blob:", "picsum.photos", "https://picsum.photos", "i.postimg.cc", "https://i.postimg.cc", "*"],
       connectSrc: ["'self'", "http://localhost:3000"],
     },
   },
