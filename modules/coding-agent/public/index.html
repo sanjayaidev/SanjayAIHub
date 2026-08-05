@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coding Agent · 68 Alibaba Models</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0c0e0f;
+      --panel: #131619;
+      --panel-2: #191d21;
+      --border: #262b2f;
+      --text: #e6e9ea;
+      --text-dim: #8a9298;
+      --text-faint: #565d62;
+      --green: #7ee787;
+      --green-dim: #2e5f34;
+      --red: #f47067;
+      --blue: #58a6ff;
+      --amber: #e3b341;
+      --radius: 10px;
+      --font: 'Inter', system-ui, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+    }
+    ::selection { background: var(--green-dim); }
+
+    .app { display: flex; flex-direction: column; height: 100vh; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px; border-bottom: 1px solid var(--border);
+      background: var(--panel);
+      flex-shrink: 0;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .logo { font-weight: 700; font-size: 16px; letter-spacing: -0.01em; }
+    .logo span { color: var(--green); }
+    .badge {
+      font-size: 11px; font-family: var(--mono); color: var(--text-dim);
+      background: var(--panel-2); padding: 2px 10px; border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+    .topbar-right { display: flex; align-items: center; gap: 14px; }
+
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    .sidebar {
+      width: 260px; background: var(--panel); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; flex-shrink: 0;
+    }
+    .sidebar-header {
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text-faint); display: flex; align-items: center; justify-content: space-between;
+    }
+    .sidebar-header-actions { display: flex; align-items: center; gap: 4px; }
+    .sidebar-header-btn {
+      background: none; border: none; cursor: pointer; font-size: 13px;
+      color: var(--text-faint); padding: 2px 5px; border-radius: 4px; line-height: 1;
+    }
+    .sidebar-header-btn:hover { background: var(--panel-2); color: var(--text); }
+    .file-tree {
+      flex: 1; overflow-y: auto; padding: 8px;
+    }
+    .file-item {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 8px; border-radius: 6px; cursor: pointer;
+      font-size: 13px; color: var(--text-dim); transition: all 0.15s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .file-item:hover { background: var(--panel-2); color: var(--text); }
+    .file-item.active {
+      background: var(--green-dim); color: var(--text);
+    }
+    .file-item .icon { font-size: 14px; width: 16px; text-align: center; }
+    .file-item .name { overflow: hidden; text-overflow: ellipsis; }
+    .folder-toggle {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; cursor: pointer; color: var(--text-faint);
+      transition: transform 0.15s;
+    }
+    .folder-toggle.expanded { transform: rotate(90deg); }
+    .folder-children { display: none; }
+    .folder-children.open { display: block; }
+
+    /* Context Menu Styles */
+    .context-menu-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 9998;
+    }
+    .context-menu {
+      position: fixed; z-index: 9999;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 8px; padding: 4px 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      min-width: 160px;
+    }
+    .context-menu-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; cursor: pointer;
+      font-size: 13px; color: var(--text-dim);
+      transition: all 0.15s;
+    }
+    .context-menu-item:hover {
+      background: var(--panel-2); color: var(--text);
+    }
+    .context-menu-item.danger {
+      color: var(--red);
+    }
+    .context-menu-item.danger:hover {
+      background: rgba(244, 112, 103, 0.15);
+    }
+    .context-menu-divider {
+      height: 1px; background: var(--border);
+      margin: 4px 0;
+    }
+    .context-menu-input-row {
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 8px 12px;
+    }
+    .context-menu-input-row input {
+      background: var(--panel-2); border: 1px solid var(--border);
+      border-radius: 4px; padding: 6px 8px; color: var(--text);
+      font-family: var(--mono); font-size: 12px; outline: none;
+    }
+    .context-menu-input-row input:focus {
+      border-color: var(--green);
+    }
+    .context-menu-buttons {
+      display: flex; gap: 6px; justify-content: flex-end;
+    }
+    .context-menu-buttons button {
+      padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border);
+      background: var(--panel-2); color: var(--text); font-size: 11px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .context-menu-buttons button:hover { background: var(--border); }
+    .context-menu-buttons button.primary {
+      background: var(--green); color: #0c0e0f; border-color: var(--green);
+    }
+
+    .center-panel {
+      flex: 1; display: flex; flex-direction: column; background: var(--bg);
+      min-width: 0;
+    }
+    .editor-container {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .editor-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; border-bottom: 1px solid var(--border);
+      background: var(--panel); flex-shrink: 0;
+    }
+    .editor-path {
+      font-family: var(--mono); font-size: 12px; color: var(--text-dim);
+    }
+    .editor-actions { display: flex; gap: 8px; }
+    .editor-actions button {
+      padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--panel-2); color: var(--text); font-size: 11px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .editor-actions button:hover { background: var(--border); }
+    .editor-actions button.save-btn {
+      background: var(--green-dim); border-color: var(--green);
+    }
+    #monaco-editor { flex: 1; }
+
+    .terminal-container {
+      height: 55vh; min-height: 420px; border-top: 1px solid var(--border);
+      background: #0a0b0c; display: flex; flex-direction: column;
+      flex-shrink: 0;
+      resize: vertical; overflow: hidden;
+    }
+    .terminal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 12px; border-bottom: 1px solid var(--border);
+      background: var(--panel); font-size: 11px; color: var(--text-faint);
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .terminal-body {
+      flex: 1; padding: 8px; overflow-y: auto; font-family: var(--mono);
+      font-size: 12px; color: var(--text-dim);
+    }
+    .terminal-line { white-space: pre-wrap; word-break: break-all; }
+    .terminal-line.prompt { color: var(--green); }
+    .terminal-line.error { color: var(--red); }
+    .terminal-line.info { color: var(--blue); }
+    .terminal-input-row {
+      display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+      border-top: 1px solid var(--border); background: var(--panel);
+    }
+    .terminal-prompt { color: var(--green); font-family: var(--mono); font-size: 12px; }
+    .terminal-input {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: var(--text); font-family: var(--mono); font-size: 12px;
+    }
+
+    .chat-sidebar {
+      width: 380px; background: var(--panel); border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; flex-shrink: 0;
+    }
+    .chat-header {
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .chat-title {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text-faint);
+    }
+    .model-select-inline {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--panel-2);
+    }
+    .model-select-inline select {
+      background: none; border: none; color: var(--text);
+      font-family: var(--mono); font-size: 11px; padding: 2px 4px;
+      outline: none; cursor: pointer;
+    }
+    .chat-messages {
+      flex: 1; overflow-y: auto; padding: 12px; display: flex;
+      flex-direction: column; gap: 10px;
+    }
+    .chat-message {
+      max-width: 90%; padding: 10px 12px; border-radius: var(--radius);
+      font-size: 13px; line-height: 1.5; white-space: pre-wrap;
+    }
+    .chat-message.user {
+      align-self: flex-end; background: var(--green-dim);
+      border: 1px solid rgba(126,231,135,0.15);
+    }
+    .chat-message.assistant {
+      align-self: flex-start; background: var(--panel-2);
+      border: 1px solid var(--border);
+    }
+    .chat-message code {
+      background: rgba(255,255,255,0.06); padding: 0.1em 0.3em;
+      border-radius: 4px; font-family: var(--mono); font-size: 11px;
+    }
+    .chat-message pre {
+      margin: 6px 0 0; background: #08090a; padding: 8px 10px;
+      border-radius: 6px; overflow: auto; border: 1px solid rgba(255,255,255,0.06);
+      font-size: 11px;
+    }
+    .chat-composer {
+      padding: 12px; border-top: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .chat-composer textarea {
+      width: 100%; padding: 10px 12px; border-radius: var(--radius);
+      background: var(--panel-2); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--font); font-size: 13px;
+      resize: none; min-height: 60px; line-height: 1.5;
+    }
+    .chat-composer textarea:focus { outline: none; border-color: var(--green); }
+    .chat-composer button {
+      padding: 10px 18px; border-radius: var(--radius); border: none;
+      background: var(--green); color: #0c0e0f; font-weight: 700;
+      cursor: pointer; transition: all 0.15s; font-size: 13px;
+      align-self: flex-end;
+    }
+    .chat-composer button:hover { filter: brightness(1.1); }
+    .chat-composer button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .diff-preview {
+      margin-top: 8px; padding: 8px; background: #08090a;
+      border-radius: 6px; border: 1px solid var(--border);
+      font-family: var(--mono); font-size: 11px; overflow: auto;
+      max-height: 150px;
+    }
+    .diff-preview .add { color: var(--green); }
+    .diff-preview .del { color: var(--red); }
+    .diff-preview .meta { color: var(--text-faint); }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    @media (max-width: 1000px) {
+      .chat-sidebar { display: none; }
+    }
+    @media (max-width: 700px) {
+      .sidebar { display: none; }
+      .topbar { flex-wrap: wrap; gap: 8px; }
+      .topbar-right { width: 100%; flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.28.4/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+
+const { useState, useEffect, useRef, useCallback } = React;
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, { credentials: 'same-origin', ...opts });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+function joinPath(dir, name) {
+  return dir ? `${dir}/${name}` : name;
+}
+
+function dirnameOf(relPath) {
+  const idx = relPath.lastIndexOf('/');
+  return idx === -1 ? '' : relPath.slice(0, idx);
+}
+
+function duplicateName(name) {
+  const dot = name.lastIndexOf('.');
+  return dot > 0 ? `${name.slice(0, dot)} copy${name.slice(dot)}` : `${name} copy`;
+}
+
+// Context Menu Component
+function ContextMenu({ x, y, item, repoPath, onClose, onRefresh }) {
+  const [showRenameInput, setShowRenameInput] = useState(false);
+  const [newName, setNewName] = useState(item?.name || '');
+  const [menuPosition, setMenuPosition] = useState({ x, y });
+  const [showFileInput, setShowFileInput] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+  const [folderBasePath, setFolderBasePath] = useState('');
+
+  const handleCreateFile = (basePath) => {
+    setFolderBasePath(basePath);
+    setNewFileName('');
+    setShowFileInput(true);
+  };
+
+  const handleCreateFolder = (basePath) => {
+    const name = prompt('Enter folder name:');
+    if (!name || !name.trim()) return;
+    fetchJSON('/api/files/create-directory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        repoPath,
+        path: joinPath(basePath, name.trim()),
+      }),
+    }).then(() => {
+      onRefresh();
+      onClose();
+    }).catch(err => {
+      console.error('Failed to create folder:', err);
+      alert('Failed to create folder: ' + err.message);
+    });
+  };
+
+  const handleCreateFileSubmit = async () => {
+    if (!newFileName.trim()) {
+      setShowFileInput(false);
+      return;
+    }
+    try {
+      await fetchJSON('/api/files/create-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repoPath,
+          path: joinPath(folderBasePath, newFileName.trim()),
+          content: '',
+        }),
+      });
+      onRefresh();
+      onClose();
+    } catch (err) {
+      console.error('Failed to create file:', err);
+      alert('Failed to create file: ' + err.message);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const handleCopy = async () => {
+    try {
+      const destPath = joinPath(dirnameOf(item.path), duplicateName(item.name));
+      await fetchJSON('/api/files/copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repoPath,
+          sourcePath: item.path,
+          destPath,
+        }),
+      });
+      onRefresh();
+      onClose();
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await fetchJSON('/api/files/item', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repoPath,
+          path: item.path,
+        }),
+      });
+      onRefresh();
+      onClose();
+    } catch (err) {
+      console.error('Failed to delete:', err);
+    }
+  };
+
+  const handleRenameStart = () => {
+    setNewName(item.name);
+    setShowRenameInput(true);
+  };
+
+  const handleRenameSubmit = async () => {
+    if (!newName.trim() || newName === item.name) {
+      setShowRenameInput(false);
+      return;
+    }
+    try {
+      const newPath = joinPath(dirnameOf(item.path), newName);
+      await fetchJSON('/api/files/rename', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repoPath,
+          oldPath: item.path,
+          newPath,
+        }),
+      });
+      onRefresh();
+      onClose();
+    } catch (err) {
+      console.error('Failed to rename:', err);
+    }
+  };
+
+  const handleMove = async () => {
+    const newDir = prompt('Enter destination directory path (relative to repo):', dirnameOf(item.path));
+    if (newDir === null) return;
+    try {
+      const destPath = joinPath(newDir, item.name);
+      await fetchJSON('/api/files/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repoPath,
+          sourcePath: item.path,
+          destPath,
+        }),
+      });
+      onRefresh();
+      onClose();
+    } catch (err) {
+      console.error('Failed to move:', err);
+      alert('Failed to move: ' + err.message);
+    }
+  };
+
+  // Adjust position if menu goes off-screen
+  useEffect(() => {
+    const rect = { x: menuPosition.x, y: menuPosition.y };
+    const menuWidth = 180;
+    const menuHeight = 250;
+    if (rect.x + menuWidth > window.innerWidth) {
+      rect.x = window.innerWidth - menuWidth - 10;
+    }
+    if (rect.y + menuHeight > window.innerHeight) {
+      rect.y = window.innerHeight - menuHeight - 10;
+    }
+    setMenuPosition(rect);
+  }, []);
+
+  return (
+    <>
+      <div className="context-menu-overlay" onClick={onClose} />
+      <div
+        className="context-menu"
+        style={{ left: `${menuPosition.x}px`, top: `${menuPosition.y}px` }}
+      >
+        {!showRenameInput ? (
+          <>
+            <div className="context-menu-item" onClick={() => handleCreateFile(item.type === 'directory' ? item.path : dirnameOf(item.path))}>
+              📄 New File
+            </div>
+            <div className="context-menu-item" onClick={() => handleCreateFolder(item.type === 'directory' ? item.path : dirnameOf(item.path))}>
+              📁 New Folder
+            </div>
+            {item.path !== '' && (
+              <>
+                <div className="context-menu-divider" />
+                <div className="context-menu-item" onClick={handleCopy}>
+                  📋 Copy
+                </div>
+                <div className="context-menu-item" onClick={handleMove}>
+                  ➡️ Move
+                </div>
+                <div className="context-menu-item" onClick={handleRenameStart}>
+                  ✏️ Rename
+                </div>
+                <div className="context-menu-divider" />
+                <div className="context-menu-item danger" onClick={handleDelete}>
+                  🗑️ Delete
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <div className="context-menu-input-row">
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleRenameSubmit();
+                if (e.key === 'Escape') setShowRenameInput(false);
+              }}
+              autoFocus
+            />
+            <div className="context-menu-buttons">
+              <button onClick={() => setShowRenameInput(false)}>Cancel</button>
+              <button className="primary" onClick={handleRenameSubmit}>Rename</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function FileTreeItem({ item, depth = 0, onSelect, onActivate, selectedPath, activePath, onContextMenu }) {
+  const [expanded, setExpanded] = useState(depth < 1);
+
+  const handleClick = () => {
+    onActivate(item);
+    if (item.type === 'directory') {
+      setExpanded(!expanded);
+    } else {
+      onSelect(item);
+    }
+  };
+
+  const handleRightClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onContextMenu(e.clientX, e.clientY, item);
+  };
+
+  const icon = item.type === 'directory'
+    ? (expanded ? '📂' : '📁')
+    : (item.name.endsWith('.js') || item.name.endsWith('.jsx') ? '📜' :
+       item.name.endsWith('.html') ? '🌐' :
+       item.name.endsWith('.css') ? '🎨' :
+       item.name.endsWith('.md') ? '📝' : '📄');
+
+  if (item.type === 'directory') {
+    return (
+      <div>
+        <div
+          className={`file-item ${activePath === item.path ? 'active' : ''}`}
+          onClick={handleClick}
+          onContextMenu={handleRightClick}
+          style={{ paddingLeft: `${8 + depth * 16}px` }}
+        >
+          <span className="folder-toggle">{expanded ? '▼' : '▶'}</span>
+          <span className="icon">{icon}</span>
+          <span className="name">{item.name}</span>
+        </div>
+        <div className={`folder-children ${expanded ? 'open' : ''}`}>
+          {item.children?.map(child => (
+            <FileTreeItem
+              key={child.path}
+              item={child}
+              depth={depth + 1}
+              onSelect={onSelect}
+              onActivate={onActivate}
+              selectedPath={selectedPath}
+              activePath={activePath}
+              onContextMenu={onContextMenu}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`file-item ${selectedPath === item.path || activePath === item.path ? 'active' : ''}`}
+      onClick={handleClick}
+      onContextMenu={handleRightClick}
+      style={{ paddingLeft: `${8 + depth * 16}px` }}
+    >
+      <span className="icon">{icon}</span>
+      <span className="name">{item.name}</span>
+    </div>
+  );
+}
+
+function Terminal({ repoPath }) {
+  const [history, setHistory] = useState([
+    { type: 'info', text: 'Terminal initialized. Type commands below.' }
+  ]);
+  const [input, setInput] = useState('');
+  const bodyRef = useRef(null);
+
+  useEffect(() => {
+    if (bodyRef.current) {
+      bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+    }
+  }, [history]);
+
+  const executeCommand = async (cmd) => {
+    if (!cmd.trim()) return;
+    setHistory(prev => [...prev, { type: 'prompt', text: `$ ${cmd}` }]);
+    setInput('');
+
+    try {
+      const response = await fetch('/api/repos/exec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoPath, command: cmd }),
+      });
+      const data = await response.json();
+      if (data.output) {
+        setHistory(prev => [...prev, { type: 'normal', text: data.output }]);
+      }
+      if (data.error) {
+        setHistory(prev => [...prev, { type: 'error', text: data.error }]);
+      }
+    } catch (error) {
+      setHistory(prev => [...prev, { type: 'error', text: error.message }]);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      executeCommand(input);
+    }
+  };
+
+  return (
+    <div className="terminal-container">
+      <div className="terminal-header">
+        <span>⌨️ Terminal</span>
+        <span style={{ fontSize: 10 }}>{repoPath || 'No repo loaded'}</span>
+      </div>
+      <div className="terminal-body" ref={bodyRef}>
+        {history.map((line, i) => (
+          <div key={i} className={`terminal-line ${line.type}`}>{line.text}</div>
+        ))}
+      </div>
+      <div className="terminal-input-row">
+        <span className="terminal-prompt">$</span>
+        <input
+          type="text"
+          className="terminal-input"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Type a command..."
+          disabled={!repoPath}
+        />
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [models, setModels] = useState([]);
+  const [chatModel, setChatModel] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setLoading] = useState(false);
+  const [status, setStatus] = useState({ online: true, modelCount: 0 });
+
+  const [user, setUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [repos, setRepos] = useState([]);
+  const [selectedRepo, setSelectedRepo] = useState(null);
+  const [repoPath, setRepoPath] = useState('');
+  const [repoLoading, setRepoLoading] = useState(false);
+  const [repoError, setRepoError] = useState('');
+
+  const [fileTree, setFileTree] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [editorContent, setEditorContent] = useState('');
+  const [editorDirty, setEditorDirty] = useState(false);
+  const [diffPreview, setDiffPreview] = useState('');
+  const [contextMenu, setContextMenu] = useState(null);
+
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+  const chatEndRef = useRef(null);
+
+  const handleFileContextMenu = (x, y, item) => {
+    setContextMenu({ x, y, item });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  useEffect(() => {
+    fetchJSON('/api/agent/models')
+      .then(data => {
+        setModels(data.models || []);
+        setStatus({ online: true, modelCount: data.total || 0 });
+        if (data.models?.length) {
+          const defaultModel = data.models.find(m => m.category === 'coding') || data.models[0];
+          setChatModel(defaultModel);
+        }
+      })
+      .catch(() => setStatus({ online: false, modelCount: 0 }));
+  }, []);
+
+  useEffect(() => {
+    fetchJSON('/api/auth/me')
+      .then(data => setUser(data.user))
+      .catch(() => setUser(null))
+      .finally(() => setAuthChecked(true));
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchJSON('/api/repos')
+      .then(data => setRepos(data.repos || []))
+      .catch(err => setRepoError(err.message));
+  }, [user]);
+
+  const loadRepo = useCallback(async () => {
+    if (!selectedRepo) return;
+    setRepoLoading(true);
+    setRepoError('');
+    try {
+      const data = await fetchJSON('/api/repos/clone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: selectedRepo.fullName,
+          cloneUrl: selectedRepo.cloneUrl,
+          defaultBranch: selectedRepo.defaultBranch,
+        }),
+      });
+      setRepoPath(data.path);
+      setChatMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `✅ Loaded \`${selectedRepo.fullName}\` — ready for tasks.`,
+      }]);
+      // Load file tree
+      loadFileTree(data.path);
+    } catch (err) {
+      setRepoError(err.message);
+    } finally {
+      setRepoLoading(false);
+    }
+  }, [selectedRepo]);
+
+  const loadFileTree = async (path) => {
+    try {
+      const data = await fetchJSON(`/api/files/tree?repoPath=${encodeURIComponent(path)}`);
+      setFileTree(data.tree || []);
+    } catch (err) {
+      console.error('Failed to load file tree:', err);
+    }
+  };
+
+  const loadFileContent = async (file) => {
+    try {
+      const data = await fetchJSON(`/api/files/content?repoPath=${encodeURIComponent(repoPath)}&path=${encodeURIComponent(file.path)}`);
+      setEditorContent(data.content || '');
+      setSelectedFile(file);
+      setEditorDirty(false);
+
+      if (monacoRef.current) {
+        monacoRef.current.setValue(data.content || '');
+      }
+    } catch (err) {
+      console.error('Failed to load file:', err);
+    }
+  };
+
+  const saveFile = async () => {
+    if (!selectedFile || !repoPath) return;
+    try {
+      await fetchJSON('/api/files/content', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repoPath,
+          path: selectedFile.path,
+          content: editorContent,
+        }),
+      });
+      setEditorDirty(false);
+      setChatMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `✅ Saved \`${selectedFile.path}\``,
+      }]);
+    } catch (err) {
+      console.error('Failed to save file:', err);
+    }
+  };
+
+  const logout = useCallback(async () => {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+    setUser(null);
+    setRepos([]);
+    setSelectedRepo(null);
+    setRepoPath('');
+    setFileTree([]);
+    setSelectedFile(null);
+  }, []);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  useEffect(() => {
+    require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
+    require(['vs/editor/editor.main'], function () {
+      monacoRef.current = monaco.editor.create(editorRef.current, {
+        value: editorContent,
+        language: 'javascript',
+        theme: 'vs-dark',
+        automaticLayout: true,
+        minimap: { enabled: true },
+        fontSize: 14,
+        fontFamily: 'JetBrains Mono',
+      });
+
+      monacoRef.current.onDidChangeModelContent(() => {
+        const val = monacoRef.current.getValue();
+        setEditorContent(val);
+        setEditorDirty(true);
+      });
+    });
+  }, []);
+
+  const sendMessage = useCallback(async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || chatLoading || !chatModel || !repoPath) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput('');
+    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setLoading(true);
+
+    setChatMessages(prev => [...prev, { role: 'assistant', content: '...', loading: true }]);
+
+    try {
+      const data = await fetchJSON('/api/agent/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repoPath,
+          task: userMessage,
+          modelId: chatModel.id,
+        }),
+      });
+
+      setDiffPreview(data.diff || '');
+
+      setChatMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last && last.loading) {
+          const content = data.success
+            ? (data.output || 'Done — no output.')
+            : `⚠️ ${data.error || 'aider reported an error'}\n\n${data.output || ''}`;
+          return [...prev.slice(0, -1), { role: 'assistant', content }];
+        }
+        return prev;
+      });
+
+      // Refresh file tree after changes
+      loadFileTree(repoPath);
+    } catch (error) {
+      setChatMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last && last.loading) {
+          return [...prev.slice(0, -1), { role: 'assistant', content: `⚠️ Error: ${error.message}` }];
+        }
+        return prev;
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [chatInput, chatLoading, chatModel, repoPath]);
+
+  const groupedModels = models.reduce((acc, m) => {
+    if (!acc[m.category]) acc[m.category] = [];
+    acc[m.category].push(m);
+    return acc;
+  }, {});
+
+  return (
+    <div className="app">
+      <header className="topbar">
+        <div className="topbar-left">
+          <div className="logo">⚡ <span>Code</span>Agent</div>
+          <span className="badge">{status.modelCount} models</span>
+        </div>
+        <div className="topbar-right">
+          <span className="badge">
+            <span className="status-dot green"></span>
+            {status.online ? 'Connected' : 'Offline'}
+          </span>
+          <span className="badge">Alibaba · SG</span>
+          {authChecked && (
+            user ? (
+              <span className="badge" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <img src={user.avatarUrl} alt="" style={{ width: 16, height: 16, borderRadius: '50%' }} />
+                {user.login}
+                <button
+                  onClick={logout}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', fontSize: 11, padding: 0, marginLeft: 4 }}
+                >
+                  log out
+                </button>
+              </span>
+            ) : (
+              <a href="/api/auth/github" className="badge" style={{ textDecoration: 'none', color: 'var(--green)' }}>
+                🔗 Connect GitHub
+              </a>
+            )
+          )}
+        </div>
+      </header>
+
+      <div className="main">
+        {/* Left Sidebar - Files */}
+        <aside className="sidebar">
+          <div className="sidebar-header">
+            <span>📁 Files</span>
+            {repoPath && (
+              <div className="sidebar-header-actions">
+                <button
+                  className="sidebar-header-btn"
+                  title="New File"
+                  onClick={(e) => handleFileContextMenu(e.clientX, e.clientY, { path: '', type: 'directory', name: '' })}
+                >📄</button>
+                <button
+                  className="sidebar-header-btn"
+                  title="New Folder"
+                  onClick={(e) => handleFileContextMenu(e.clientX, e.clientY, { path: '', type: 'directory', name: '' })}
+                >📁</button>
+              </div>
+            )}
+          </div>
+          <div
+            className="file-tree"
+            onContextMenu={(e) => {
+              if (e.target === e.currentTarget && repoPath) {
+                e.preventDefault();
+                handleFileContextMenu(e.clientX, e.clientY, { path: '', type: 'directory', name: '' });
+              }
+            }}
+          >
+            {!repoPath ? (
+              <div style={{ padding: '16px', color: 'var(--text-faint)', fontSize: 12 }}>
+                Load a repo to see files
+              </div>
+            ) : (
+              fileTree.map(item => (
+                <FileTreeItem
+                  key={item.path}
+                  item={item}
+                  onSelect={loadFileContent}
+                  onActivate={(item) => {}}
+                  selectedPath={selectedFile?.path}
+                  activePath={selectedFile?.path}
+                  onContextMenu={handleFileContextMenu}
+                />
+              ))
+            )}
+          </div>
+        </aside>
+
+        {/* Context Menu */}
+        {contextMenu && (
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            item={contextMenu.item}
+            repoPath={repoPath}
+            onClose={closeContextMenu}
+            onRefresh={() => loadFileTree(repoPath)}
+          />
+        )}
+
+        {/* Center Panel - Editor + Terminal */}
+        <div className="center-panel">
+          {/* Repo picker bar */}
+          {user && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+              <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>📁 Repo:</span>
+              <select
+                value={selectedRepo?.fullName || ''}
+                onChange={e => {
+                  const r = repos.find(rr => rr.fullName === e.target.value);
+                  setSelectedRepo(r || null);
+                }}
+                style={{ padding: '4px 8px', borderRadius: 6, background: 'var(--panel-2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--mono)', fontSize: 12 }}
+              >
+                <option value="">Select a repo…</option>
+                {repos.map(r => (
+                  <option key={r.fullName} value={r.fullName}>
+                    {r.fullName}{r.private ? ' 🔒' : ''}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={loadRepo}
+                disabled={!selectedRepo || repoLoading}
+                style={{ padding: '4px 12px', borderRadius: 6, border: '1px solid var(--border)', background: repoPath && selectedRepo?.fullName ? 'var(--green-dim)' : 'var(--panel-2)', color: 'var(--text)', fontSize: 12, cursor: 'pointer' }}
+              >
+                {repoLoading ? 'Loading…' : 'Load repo'}
+              </button>
+              {repoPath && (
+                <span style={{ fontSize: 11, color: 'var(--text-faint)', fontFamily: 'var(--mono)' }}>{repoPath}</span>
+              )}
+              {repoError && <span style={{ fontSize: 11, color: 'var(--red)' }}>{repoError}</span>}
+            </div>
+          )}
+
+          {/* Editor */}
+          <div className="editor-container">
+            <div className="editor-header">
+              <span className="editor-path">
+                {selectedFile ? selectedFile.path : 'No file selected'}
+                {editorDirty && <span style={{ color: 'var(--amber)' }}> ●</span>}
+              </span>
+              <div className="editor-actions">
+                <button onClick={saveFile} disabled={!editorDirty || !selectedFile} className="save-btn">
+                  💾 Save
+                </button>
+              </div>
+            </div>
+            <div id="monaco-editor" ref={editorRef}></div>
+          </div>
+
+          {/* Terminal */}
+          <Terminal repoPath={repoPath} />
+        </div>
+
+        {/* Right Sidebar - Chat */}
+        <aside className="chat-sidebar">
+          <div className="chat-header">
+            <span className="chat-title">💬 AI Assistant</span>
+            <div className="model-select-inline">
+              <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>Model:</span>
+              <select
+                value={chatModel?.id || ''}
+                onChange={e => {
+                  const m = models.find(mm => mm.id === e.target.value);
+                  if (m) setChatModel(m);
+                }}
+              >
+                {models.map(m => (
+                  <option key={m.id} value={m.id}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="chat-messages">
+            {chatMessages.length === 0 && (
+              <div style={{ color: 'var(--text-faint)', textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ fontSize: 24, marginBottom: 8 }}>💬</div>
+                <div style={{ fontSize: 12 }}>Ask AI to generate code or create PR</div>
+              </div>
+            )}
+            {chatMessages.map((msg, i) => (
+              <div key={i} className={`chat-message ${msg.role}`}>
+                <div dangerouslySetInnerHTML={{
+                  __html: msg.loading ? '…' : (msg.content ? marked.parse(msg.content) : '')
+                }} />
+              </div>
+            ))}
+            <div ref={chatEndRef} />
+          </div>
+
+          {diffPreview && (
+            <div style={{ padding: '0 12px' }}>
+              <div className="diff-preview">
+                <div className="meta">📊 Diff Preview</div>
+                <pre>{diffPreview}</pre>
+              </div>
+            </div>
+          )}
+
+          <form className="chat-composer" onSubmit={sendMessage}>
+            <textarea
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              placeholder={!repoPath ? 'Load a repo first…' : 'Describe what you want to build...'}
+              disabled={!chatModel || !repoPath || chatLoading}
+              rows={3}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage(e);
+                }
+              }}
+            />
+            <button type="submit" disabled={!chatInput.trim() || !chatModel || !repoPath || chatLoading}>
+              {chatLoading ? '…' : 'Send'}
+            </button>
+          </form>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+</script>
+</body>
+</html>
