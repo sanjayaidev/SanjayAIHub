@@ -271,7 +271,12 @@
   </section>
 </main>
 <footer>SanjayAIHub · Text to Image · powered by Alibaba Cloud Model Studio</footer>
+<script src="/js/auth.js"></script>
 <script>
+  if (!window.AUTH || !AUTH.isLoggedIn()) {
+    window.location.href = '/login.html';
+  }
+
   const els = {
     form: document.getElementById("genForm"),
     prompt: document.getElementById("prompt"),
@@ -296,9 +301,11 @@
     keyStatus: document.getElementById("keyStatus"),
   };
 
-  fetch("/api/health").then(r=>r.json()).then(d=>{
-    els.keyStatus.textContent = d.keyConfigured ? "✅ API key: configured" : "⚠️ API key missing";
-    els.keyStatus.className = "key-status " + (d.keyConfigured ? "ok" : "bad");
+  fetch("/api/keys", { headers: AUTH.getAuthHeader() }).then(r=>r.json()).then(d=>{
+    const alibaba = d.keys?.find(k => k.provider === 'alibaba');
+    const configured = !!alibaba?.configured;
+    els.keyStatus.textContent = configured ? "✅ Alibaba key: configured" : "⚠️ Alibaba key missing — add it in Profile";
+    els.keyStatus.className = "key-status " + (configured ? "ok" : "bad");
   }).catch(()=>{ els.keyStatus.textContent="server unreachable"; els.keyStatus.className="key-status bad"; });
 
   function setTally(kind){ els.tally.className = "tally" + (kind ? " " + kind : ""); }
@@ -320,25 +327,26 @@
       els.timecode.textContent = fmtElapsed(Date.now() - start) + " — RENDERING";
     }, 1000);
     try {
-      const res = await fetch("/api/image/generate", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const res = await fetch("/api/modules/text-to-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...AUTH.getAuthHeader() },
         body: JSON.stringify({
           prompt,
           width: els.img_width.value ? Number(els.img_width.value) : undefined,
           height: els.img_height.value ? Number(els.img_height.value) : undefined,
           num_steps: els.img_num_steps.value ? Number(els.img_num_steps.value) : undefined,
           seed: els.img_seed.value ? Number(els.img_seed.value) : undefined,
-          aspect: els.aspect.value || undefined,
           model: els.model.value,
         }),
       });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.message || data.error || "Generation failed.");
+      if (!res.ok || !data.success) throw new Error(data.message || "Generation failed.");
+      const output = data.data.imageUrl || data.data.imageDataUrl;
       setProgress(100); setTally("done"); els.statusDot.className = "dot done";
       els.statusText.textContent = "complete"; clearInterval(timer);
       els.timecode.textContent = fmtElapsed(Date.now() - start) + " — COMPLETE";
-      els.outputArea.innerHTML = `<img src="${data.output}" alt="Generated image" />`;
-      els.downloadLink.href = data.output; els.openLink.href = data.output;
+      els.outputArea.innerHTML = `<img src="${output}" alt="Generated image" />`;
+      els.downloadLink.href = output; els.openLink.href = output;
       els.resultActions.style.display = "flex";
     } catch (err) { setTally("err"); els.statusDot.className = "dot err";
       els.statusText.textContent = "failed"; showError(err.message);
