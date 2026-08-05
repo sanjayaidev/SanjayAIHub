@@ -2,20 +2,12 @@
 # Dependencies
 node_modules/
 
-# Environment variables
+# Environment files
 .env
 .env.local
-.env.*
+*.env.*
 
-# Logs
-*.log
-
-# Temporary files
-*.tmp
-*.swp
-*.swo
-
-# Build artifacts
+# Build outputs
 dist/
 build/
 target/
@@ -30,35 +22,46 @@ env/
 venv/
 .venv/
 .ENV
-.ENV.local
+.python-version
 
-# Compiled Binary Files
-*.class
-*.o
-*.so
-*.dll
-*.exe
-*.a
-*.obj
-*.out
+# Logs
+*.log
 
-# IDE specific
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# System
-.DS_Store
-Thumbs.db
+*.tmp
 
 # Coverage
+.coverage
 coverage/
 htmlcov/
-.coverage
 
-# Cache
+# Testing
 .mypy_cache/
 .pytest_cache/
-.gradle/
+.nyc_output/
+coverage-final.json
+
+# Distribution
+*.tar.gz
+*.egg-info/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Temporary
+*.tmp
+*~
+```
+
+Wait, let me reconsider this. The only modified file is `package.json`, which suggests this is primarily a Node.js project. However, there are no actual build artifacts, dependency directories, or temporary files in the change list. The file list shows only a single JSON configuration file was modified.
+
+Since only a source/config file (`package.json`) was modified and there are no build artifacts, dependencies, or temp files in the changes, I should output an empty .gitignore.
+
 ```
