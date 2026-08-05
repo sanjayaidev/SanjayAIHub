@@ -89,7 +89,8 @@ router.get('/proxy', async (req, res) => {
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   // Overrides helmet's default CSP for this response only, so it can be framed.
-  res.setHeader('Content-Security-Policy', 'frame-ancestors *');
+  // Also allow Instagram domains for XHR/fetch requests made by the embedded content
+  res.setHeader('Content-Security-Policy', "frame-ancestors *; script-src 'self' 'unsafe-inline' https://www.instagram.com https://instagram.com https://*.instagram.com; connect-src 'self' https://graph.instagram.com https://www.instagram.com https://instagram.com https://*.instagram.com");
   res.send(html);
 });
 
