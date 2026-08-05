@@ -4,8 +4,13 @@ const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 
 // Import module handlers
-const { chatbotHandler, getModelCatalog } = require('../modules/chatbot');
+const { chatbotHandler, getModelCatalog: getChatModelCatalog } = require('../modules/chatbot');
 const promptLibrary = require('../modules/prompt-library');
+const { messageWriterHandler, getModelCatalog: getMessageModelCatalog } = require('../modules/message-writer');
+const { contentCreatorHandler, getModelCatalog: getContentModelCatalog } = require('../modules/content-creator');
+const { ttsHandler, getModelCatalog: getTTSModelCatalog } = require('../modules/text-to-speech');
+const { textToImageHandler, getModelCatalog: getImageModelCatalog } = require('../modules/text-to-image');
+const { textToVideoHandler, getModelCatalog: getVideoModelCatalog } = require('../modules/text-to-video');
 
 // ──────────────────────────────────────────────
 // GET /api/modules - List all modules with access
@@ -77,10 +82,53 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/chatbot/models', authenticateToken, async (req, res) => {
   try {
     const userTier = req.user.subscription_tier || 'trial';
-    const catalog = getModelCatalog(userTier);
+    const catalog = getChatModelCatalog(userTier);
     res.json({ success: true, ...catalog });
   } catch (error) {
     console.error('Get model catalog error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// GET /api/modules/:moduleKey/models - Get model catalog for specific module
+// This allows UI to show parameters specific to each model/provider
+// ──────────────────────────────────────────────
+router.get('/:moduleKey/models', authenticateToken, async (req, res) => {
+  try {
+    const { moduleKey } = req.params;
+    const userTier = req.user.subscription_tier || 'trial';
+    
+    let catalog;
+    switch (moduleKey) {
+      case 'chatbot':
+        catalog = getChatModelCatalog(userTier);
+        break;
+      case 'message-writer':
+        catalog = getMessageModelCatalog(userTier);
+        break;
+      case 'social-content':
+        catalog = getContentModelCatalog(userTier);
+        break;
+      case 'text-to-speech':
+        catalog = getTTSModelCatalog(userTier);
+        break;
+      case 'text-to-image':
+        catalog = getImageModelCatalog(userTier);
+        break;
+      case 'text-to-video':
+        catalog = getVideoModelCatalog(userTier);
+        break;
+      default:
+        return res.status(404).json({ 
+          success: false, 
+          message: `Model catalog not found for module '${moduleKey}'` 
+        });
+    }
+    
+    res.json({ success: true, ...catalog });
+  } catch (error) {
+    console.error('Get module model catalog error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -252,12 +300,24 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
       case 'chatbot':
         result = await chatbotHandler(req.body, apiKeys, userId, userTier);
         break;
+      case 'message-writer':
+        result = await messageWriterHandler(req.body, apiKeys, userId);
+        break;
+      case 'social-content':
+        result = await contentCreatorHandler(req.body, apiKeys, userId);
+        break;
+      case 'text-to-speech':
+        result = await ttsHandler(req.body, apiKeys, userId);
+        break;
+      case 'text-to-image':
+        result = await textToImageHandler(req.body, apiKeys, userId);
+        break;
+      case 'text-to-video':
+        result = await textToVideoHandler(req.body, apiKeys, userId);
+        break;
       // Note: 'prompt-library' is a browse/favorite experience, not a
       // generation action, so it doesn't go through this generic execute
       // endpoint — see the dedicated /prompt-library/* routes below.
-      case 'text-to-image':
-        result = await require('../modules/text-to-image')(req.body, apiKeys, userId);
-        break;
       default:
         return res.status(501).json({
           success: false,
