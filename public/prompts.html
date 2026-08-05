@@ -1,1164 +1,1001 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SanjayAIHub · Prompt Library</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+  <title>SanjayAIHub · Prompt Library</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #0a0c10;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-        }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0c10;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
 
-        .dashboard {
-            max-width: 1400px;
-            width: 100%;
-            height: 92vh;
-            max-height: 920px;
-            background: rgba(18, 22, 28, 0.85);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border-radius: 40px;
-            box-shadow: 0 30px 60px -12px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.04);
-            display: flex;
-            overflow: hidden;
-            position: relative;
-        }
+    .dashboard {
+      max-width: 1400px;
+      width: 100%;
+      height: 100vh;
+      max-height: 100vh;
+      background: rgba(18, 22, 28, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 0;
+      box-shadow: 0 30px 60px -12px rgba(0,0,0,0.9);
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
 
-        /* ── Sidebar ── */
-        .sidebar {
-            width: 240px;
-            min-width: 240px;
-            background: rgba(12, 16, 22, 0.7);
-            border-right: 1px solid rgba(255,255,255,0.04);
-            padding: 18px 12px 14px 12px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            flex-shrink: 0;
-        }
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 240px;
+      min-width: 240px;
+      background: rgba(12, 16, 22, 0.8);
+      border-right: 1px solid rgba(255,255,255,0.04);
+      padding: 18px 12px 14px 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+      transition: transform 0.25s ease;
+      z-index: 100;
+    }
 
-        .sidebar-brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 18px;
-            padding: 0 6px;
-            flex-shrink: 0;
-        }
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      padding: 0 6px;
+      flex-shrink: 0;
+    }
 
-        .brand-icon {
-            width: 40px; height: 40px;
-            background: linear-gradient(135deg, #00e8a2, #00b37a);
-            border-radius: 14px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 20px; color: #060d0b;
-            box-shadow: 0 8px 24px -6px rgba(0,232,162,0.3);
-            flex-shrink: 0;
-        }
+    .brand-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, #00e8a2, #00b37a);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; color: #060d0b;
+      box-shadow: 0 8px 24px -6px rgba(0,232,162,0.3);
+      flex-shrink: 0;
+    }
 
-        .brand-text h1 { font-size: 18px; font-weight: 700; color: #f0f4fe; letter-spacing: -0.3px; }
-        .brand-text span { font-size: 11px; color: #8896b0; display: block; margin-top: 1px; }
+    .brand-text h1 { font-size: 18px; font-weight: 700; color: #f0f4fe; letter-spacing: -0.3px; }
+    .brand-text span { font-size: 11px; color: #8896b0; display: block; margin-top: 1px; }
 
-        .sidebar-section { flex-shrink: 0; margin-bottom: 2px; }
-        .sidebar-section-label {
-            font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px;
-            color: #4d5872; padding: 4px 8px 4px 8px; font-weight: 700;
-        }
+    .sidebar-section { flex-shrink: 0; margin-bottom: 2px; }
+    .sidebar-section-label {
+      font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px;
+      color: #4d5872; padding: 4px 8px 4px 8px; font-weight: 700;
+    }
 
-        .sidebar-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 7px 12px; border-radius: 8px;
-            color: #8896b0; font-size: 12.5px; cursor: pointer;
-            transition: 0.15s; font-weight: 500;
-            user-select: none; border: 1px solid transparent;
-        }
-        .sidebar-item:hover { background: rgba(255,255,255,0.04); color: #eef2f9; }
-        .sidebar-item.active { 
-            background: rgba(0,232,162,0.1); 
-            color: #00e8a2; 
-            border-color: rgba(0,232,162,0.12);
-        }
-        .sidebar-item i { width: 16px; font-size: 14px; text-align: center; flex-shrink: 0; }
-        .sidebar-item .badge {
-            margin-left: auto;
-            font-size: 8px;
-            background: rgba(255,255,255,0.06);
-            padding: 1px 7px;
-            border-radius: 8px;
-            color: #5b6a84;
-            font-weight: 600;
-        }
+    .sidebar-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 12px; border-radius: 8px;
+      color: #8896b0; font-size: 12.5px; cursor: pointer;
+      transition: 0.15s; font-weight: 500;
+      user-select: none; border: 1px solid transparent;
+    }
+    .sidebar-item:hover { background: rgba(255,255,255,0.04); color: #eef2f9; }
+    .sidebar-item.active {
+      background: rgba(0,232,162,0.1);
+      color: #00e8a2;
+      border-color: rgba(0,232,162,0.12);
+    }
+    .sidebar-item i { width: 16px; font-size: 14px; text-align: center; flex-shrink: 0; }
+    .sidebar-item .badge {
+      margin-left: auto;
+      font-size: 8px;
+      background: rgba(255,255,255,0.06);
+      padding: 1px 7px;
+      border-radius: 8px;
+      color: #5b6a84;
+      font-weight: 600;
+    }
 
-        .sidebar-divider {
-            height: 1px;
-            background: rgba(255,255,255,0.04);
-            margin: 6px 8px 8px 8px;
-            flex-shrink: 0;
-        }
+    .sidebar-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.04);
+      margin: 6px 8px 8px 8px;
+      flex-shrink: 0;
+    }
 
-        .back-hub {
-            margin-top: auto;
-            border-top: 1px solid rgba(255,255,255,0.04);
-            padding-top: 10px;
-            flex-shrink: 0;
-        }
+    .back-hub {
+      margin-top: auto;
+      border-top: 1px solid rgba(255,255,255,0.04);
+      padding-top: 10px;
+      flex-shrink: 0;
+    }
 
-        /* ── Main Content ── */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            min-width: 0;
-        }
+    /* ── Main Content ── */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+      background: rgba(10, 12, 16, 0.6);
+    }
 
-        /* ── Header ── */
-        .chat-header {
-            padding: 12px 22px;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-            min-height: 50px;
-            gap: 10px;
-        }
-        .header-left { display: flex; align-items: center; gap: 10px; }
-        .header-left .page-title { color: #eef2f9; font-weight: 600; font-size: 15px; }
-        .header-left .page-subtitle { color: #6a7a94; font-size: 12px; margin-left: 6px; font-weight: 400; }
+    /* ── Header ── */
+    .chat-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      min-height: 50px;
+      gap: 10px;
+      background: rgba(0,0,0,0.2);
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .header-left .page-title { color: #eef2f9; font-weight: 600; font-size: 15px; }
+    .header-left .page-subtitle { color: #6a7a94; font-size: 12px; margin-left: 6px; font-weight: 400; display: none; }
+    .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
+    /* ── Filter Bar ── */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.02);
+      flex-shrink: 0;
+      align-items: flex-end;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1 0 100px;
+      min-width: 80px;
+    }
+    .filter-group label {
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6a7a94;
+      font-weight: 600;
+    }
+    .filter-group select,
+    .filter-group input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 6px 8px;
+      color: #eef2f9;
+      font-size: 11px;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: 0.2s;
+      width: 100%;
+      cursor: pointer;
+    }
+    .filter-group select option { background: #1a1f29; color: #eef2f9; }
+    .filter-group select:focus,
+    .filter-group input:focus {
+      border-color: #00e8a2;
+      box-shadow: 0 0 0 3px rgba(0,232,162,0.08);
+    }
 
-        /* ── Filter Bar ── */
-        .filter-bar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 12px 20px 12px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
-            background: rgba(255,255,255,0.02);
-            flex-shrink: 0;
-            align-items: flex-end;
-        }
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            flex: 1;
-            min-width: 120px;
-        }
-        .filter-group label {
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #6a7a94;
-            font-weight: 600;
-        }
-        .filter-group select,
-        .filter-group input {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 8px;
-            padding: 7px 10px;
-            color: #eef2f9;
-            font-size: 12px;
-            font-family: 'Inter', sans-serif;
-            outline: none;
-            transition: 0.2s;
-            width: 100%;
-            cursor: pointer;
-        }
-        .filter-group select option { background: #1a1f29; color: #eef2f9; }
-        .filter-group select:focus,
-        .filter-group input:focus {
-            border-color: #00e8a2;
-            box-shadow: 0 0 0 3px rgba(0,232,162,0.08);
-        }
+    /* ── Prompt Layout ── */
+    .prompt-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      flex-direction: row;
+    }
 
-        /* ── Prompt Library Layout ── */
-        .prompt-layout {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
+    /* ── Prompt List (scrollable) ── */
+    .prompt-list {
+      width: 45%;
+      min-width: 280px;
+      overflow-y: auto;
+      padding: 10px 12px;
+      border-right: 1px solid rgba(255,255,255,0.04);
+      flex-shrink: 0;
+      background: rgba(0,0,0,0.15);
+      max-height: 100%;
+    }
+    .prompt-list::-webkit-scrollbar { width: 4px; }
+    .prompt-list::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
 
-        /* ── Prompt List ── */
-        .prompt-list {
-            width: 45%;
-            min-width: 320px;
-            overflow-y: auto;
-            padding: 12px 14px;
-            border-right: 1px solid rgba(255,255,255,0.04);
-            flex-shrink: 0;
-        }
-        .prompt-list::-webkit-scrollbar { width: 4px; }
-        .prompt-list::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
+    .prompt-list-item {
+      display: flex;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 6px;
+      background: rgba(255,255,255,0.02);
+    }
+    .prompt-list-item:hover {
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.06);
+    }
+    .prompt-list-item.active {
+      background: rgba(0,232,162,0.08);
+      border-color: rgba(0,232,162,0.2);
+    }
 
-        .prompt-list-item {
-            display: flex;
-            gap: 12px;
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 6px;
-            background: rgba(255,255,255,0.02);
-        }
-        .prompt-list-item:hover {
-            background: rgba(255,255,255,0.05);
-            border-color: rgba(255,255,255,0.06);
-        }
-        .prompt-list-item.active {
-            background: rgba(0,232,162,0.08);
-            border-color: rgba(0,232,162,0.2);
-        }
+    .prompt-list-item .prompt-thumb {
+      width: 70px;
+      height: 70px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      overflow: hidden;
+      background: rgba(255,255,255,0.05);
+      display: flex;
+      align-items: center;
+      position: relative;
+      justify-content: center;
+      font-size: 24px;
+      color: #3a4356;
+    }
+    .prompt-list-item .prompt-thumb img,
+    .prompt-list-item .prompt-thumb video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
 
-        .prompt-list-item .prompt-thumb {
-            width: 80px;
-            height: 80px;
-            border-radius: 8px;
-            flex-shrink: 0;
-            overflow: hidden;
-            background: rgba(255,255,255,0.05);
-            display: flex;
-            align-items: center;
-            position: relative;
-            justify-content: center;
-            font-size: 28px;
-            color: #3a4356;
-        }
-        .prompt-list-item .prompt-thumb img,
-        .prompt-list-item .prompt-thumb video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+    .prompt-list-item .prompt-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .prompt-list-item .prompt-info .headline {
+      font-size: 13px;
+      font-weight: 600;
+      color: #eef2f9;
+      margin-bottom: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .prompt-list-item .prompt-info .desc {
+      font-size: 11px;
+      color: #6a7a94;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .prompt-list-item .prompt-info .meta {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+      font-size: 9px;
+      color: #4d5872;
+      flex-wrap: wrap;
+    }
+    .prompt-list-item .prompt-info .meta .tag {
+      background: rgba(255,255,255,0.06);
+      padding: 1px 7px;
+      border-radius: 8px;
+      color: #6a7a94;
+    }
+    .prompt-list-item .prompt-info .meta .tag.category-t2i { color: #00e8a2; background: rgba(0,232,162,0.1); }
+    .prompt-list-item .prompt-info .meta .tag.category-t2v { color: #4d8eff; background: rgba(77,142,255,0.1); }
+    .prompt-list-item .prompt-info .meta .tag.category-edit { color: #f472b6; background: rgba(244,114,182,0.1); }
+    .prompt-list-item .prompt-info .meta .tag.category-i2v { color: #a78bfa; background: rgba(167,139,250,0.1); }
+    .prompt-list-item .prompt-info .meta .tag.category-v2v { color: #fbbf24; background: rgba(251,191,36,0.1); }
 
-        .prompt-list-item .prompt-info {
-            flex: 1;
-            min-width: 0;
-        }
-        .prompt-list-item .prompt-info .headline {
-            font-size: 13px;
-            font-weight: 600;
-            color: #eef2f9;
-            margin-bottom: 3px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .prompt-list-item .prompt-info .desc {
-            font-size: 11px;
-            color: #6a7a94;
-            line-height: 1.4;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        .prompt-list-item .prompt-info .meta {
-            display: flex;
-            gap: 8px;
-            margin-top: 4px;
-            font-size: 10px;
-            color: #4d5872;
-        }
-        .prompt-list-item .prompt-info .meta .tag {
-            background: rgba(255,255,255,0.06);
-            padding: 1px 8px;
-            border-radius: 8px;
-            color: #6a7a94;
-        }
-        .prompt-list-item .prompt-info .meta .tag.category-t2i { color: #00e8a2; background: rgba(0,232,162,0.1); }
-        .prompt-list-item .prompt-info .meta .tag.category-t2v { color: #4d8eff; background: rgba(77,142,255,0.1); }
-        .prompt-list-item .prompt-info .meta .tag.category-edit { color: #f472b6; background: rgba(244,114,182,0.1); }
-        .prompt-list-item .prompt-info .meta .tag.category-i2v { color: #a78bfa; background: rgba(167,139,250,0.1); }
-        .prompt-list-item .prompt-info .meta .tag.category-v2v { color: #fbbf24; background: rgba(251,191,36,0.1); }
+    .prompt-list-empty {
+      color: #5b6a84;
+      text-align: center;
+      padding: 40px 20px;
+      font-size: 13px;
+    }
 
-        .prompt-list-empty {
-            color: #5b6a84;
-            text-align: center;
-            padding: 40px 20px;
-            font-size: 13px;
-        }
+    /* ── Prompt Preview (full screen on mobile when clicked) ── */
+    .prompt-preview {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: rgba(0,0,0,0.2);
+      transition: all 0.2s;
+    }
+    .prompt-preview::-webkit-scrollbar { width: 4px; }
+    .prompt-preview::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
 
-        /* ── Prompt Preview ── */
-        .prompt-preview {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            background: rgba(255,255,255,0.02);
-        }
-        .prompt-preview::-webkit-scrollbar { width: 4px; }
-        .prompt-preview::-webkit-scrollbar-thumb { background: #3d4452; border-radius: 10px; }
+    .preview-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #5b6a84;
+      gap: 10px;
+      text-align: center;
+    }
+    .preview-empty i { font-size: 40px; color: #3a4356; }
+    .preview-empty p { font-size: 13px; line-height: 1.6; }
 
-        .preview-empty {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #5b6a84;
-            gap: 10px;
-            text-align: center;
-        }
-        .preview-empty i { font-size: 40px; color: #3a4356; }
-        .preview-empty p { font-size: 13px; line-height: 1.6; }
+    .preview-header { flex-shrink: 0; }
+    .preview-header .preview-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #eef2f9;
+      margin-bottom: 4px;
+    }
+    .preview-header .preview-category {
+      font-size: 12px;
+      color: #6a7a94;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+    .preview-header .preview-category .cat-badge {
+      background: rgba(0,232,162,0.1);
+      color: #00e8a2;
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+    }
 
-        .preview-header {
-            flex-shrink: 0;
-        }
-        .preview-header .preview-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: #eef2f9;
-            margin-bottom: 4px;
-        }
-        .preview-header .preview-category {
-            font-size: 12px;
-            color: #6a7a94;
-        }
-        .preview-header .preview-category .cat-badge {
-            background: rgba(0,232,162,0.1);
-            color: #00e8a2;
-            padding: 2px 10px;
-            border-radius: 10px;
-            font-size: 10px;
-            font-weight: 600;
-        }
+    .preview-media {
+      flex-shrink: 0;
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.03);
+      position: relative;
+      max-height: 380px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+    .preview-media img,
+    .preview-media video {
+      width: 100%;
+      max-height: 380px;
+      object-fit: contain;
+      border-radius: 12px;
+    }
+    .preview-media .media-placeholder {
+      padding: 30px;
+      color: #4d5872;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .preview-media .media-placeholder i { font-size: 40px; color: #3a4356; }
+    .preview-media iframe {
+      width: 100%;
+      max-width: 340px;
+      aspect-ratio: 9/16;
+      border: none;
+      border-radius: 12px;
+      background: #000;
+    }
 
-        .preview-media {
-            flex-shrink: 0;
-            border-radius: 12px;
-            overflow: hidden;
-            background: rgba(255,255,255,0.03);
-            position: relative;
-            max-height: 400px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .preview-media img,
-        .preview-media video {
-            width: 100%;
-            max-height: 400px;
-            object-fit: contain;
-            border-radius: 12px;
-        }
-        .preview-media .media-placeholder {
-            padding: 40px;
-            color: #4d5872;
-            font-size: 14px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
-        .preview-media .media-placeholder i { font-size: 48px; color: #3a4356; }
+    .preview-prompt-box {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+      padding: 14px 16px;
+      flex-shrink: 0;
+    }
+    .preview-prompt-box .label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6a7a94;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .preview-prompt-box .prompt-text {
+      color: #eef2f9;
+      font-size: 14px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
 
-        .preview-prompt-box {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 10px;
-            padding: 14px 16px;
-            flex-shrink: 0;
-        }
-        .preview-prompt-box .label {
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #6a7a94;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-        .preview-prompt-box .prompt-text {
-            color: #eef2f9;
-            font-size: 14px;
-            line-height: 1.7;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
+    .preview-actions {
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .preview-actions button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      transition: 0.2s;
+      font-family: 'Inter', sans-serif;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: #00e8a2;
+      color: #060d0b;
+      box-shadow: 0 8px 24px -8px rgba(0,232,162,0.3);
+    }
+    .btn-primary:hover { filter: brightness(1.08); }
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: #8896b0;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); color: #eef2f9; }
 
-        .preview-actions {
-            display: flex;
-            gap: 10px;
-            flex-shrink: 0;
-            flex-wrap: wrap;
-        }
-        .preview-actions button {
-            padding: 8px 18px;
-            border-radius: 8px;
-            border: none;
-            font-weight: 600;
-            font-size: 12px;
-            cursor: pointer;
-            transition: 0.2s;
-            font-family: 'Inter', sans-serif;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .btn-primary {
-            background: #00e8a2;
-            color: #060d0b;
-            box-shadow: 0 8px 24px -8px rgba(0,232,162,0.3);
-        }
-        .btn-primary:hover { filter: brightness(1.08); }
-        .btn-secondary {
-            background: rgba(255,255,255,0.06);
-            color: #8896b0;
-            border: 1px solid rgba(255,255,255,0.08);
-        }
-        .btn-secondary:hover { background: rgba(255,255,255,0.1); color: #eef2f9; }
+    .loading-spinner {
+      text-align: center;
+      padding: 40px;
+      color: #5b6a84;
+      grid-column: 1 / -1;
+    }
+    .loading-spinner .spinner {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(0,232,162,0.15);
+      border-top-color: #00e8a2;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ── Loading ── */
-        .loading-spinner {
-            text-align: center;
-            padding: 40px;
-            color: #5b6a84;
-            grid-column: 1 / -1;
-        }
-        .loading-spinner .spinner {
-            display: inline-block;
-            width: 28px;
-            height: 28px;
-            border: 3px solid rgba(0,232,162,0.15);
-            border-top-color: #00e8a2;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1a1f29;
+      color: #eef2f9;
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 999;
+      font-size: 13px;
+      max-width: 400px;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: rgba(0,232,162,0.3); }
+    .toast.error { border-color: rgba(255,90,90,0.3); color: #ff9b9b; }
 
-        /* ── Toast ── */
-        .toast {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            background: #1a1f29;
-            color: #eef2f9;
-            padding: 12px 20px;
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.06);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-            transform: translateY(80px);
-            opacity: 0;
-            transition: all 0.3s ease;
-            z-index: 999;
-            font-size: 13px;
-            max-width: 400px;
-        }
-        .toast.show { transform: translateY(0); opacity: 1; }
-        .toast.success { border-color: rgba(0,232,162,0.3); }
-        .toast.error { border-color: rgba(255,90,90,0.3); color: #ff9b9b; }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 99;
+      backdrop-filter: blur(2px);
+    }
+    .sidebar-overlay.visible { display: block; }
+    .hamburger-btn {
+      display: none;
+      background: transparent;
+      border: none;
+      color: #8896b0;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px;
+    }
 
-        /* ── Mobile Sidebar Overlay ── */
-        .sidebar-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6);
-            z-index: 999;
-            backdrop-filter: blur(2px);
-        }
-        .sidebar-overlay.visible { display: block; }
-        .hamburger-btn {
-            display: none;
-            background: transparent;
-            border: none;
-            color: #8896b0;
-            font-size: 18px;
-            cursor: pointer;
-            padding: 4px;
-        }
+    /* ── Responsive Mobile First ── */
+    @media (max-width: 1024px) {
+      .prompt-list { width: 40%; min-width: 240px; }
+    }
 
-        /* ── Responsive ── */
-        @media (max-width: 1024px) {
-            .prompt-list { width: 40%; min-width: 260px; }
-        }
+    @media (max-width: 820px) {
+      .dashboard { border-radius: 0; height: 100vh; max-height: 100vh; }
+      body { padding: 0; }
 
-        @media (max-width: 768px) {
-            .dashboard { border-radius: 0; height: 100vh; max-height: none; }
-            body { padding: 0; }
+      .hamburger-btn { display: flex; }
+      .sidebar {
+        position: fixed;
+        left: -280px;
+        top: 0; bottom: 0;
+        width: 280px;
+        z-index: 1000;
+        transition: left 0.25s ease;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.6);
+        background: rgba(12,16,22,0.98);
+        border-radius: 0;
+        transform: translateX(0);
+      }
+      .sidebar.mobile-open { left: 0; }
 
-            .hamburger-btn { display: flex; }
-            .sidebar {
-                position: fixed;
-                left: -260px;
-                top: 0; bottom: 0;
-                width: 260px;
-                z-index: 1000;
-                transition: left 0.3s ease;
-                box-shadow: 4px 0 20px rgba(0,0,0,0.5);
-                background: rgba(12,16,22,0.98);
-                border-radius: 0;
-            }
-            .sidebar.mobile-open { left: 0; }
+      .prompt-layout { flex-direction: column; }
+      .prompt-list {
+        width: 100%;
+        min-width: unset;
+        max-height: 45vh;
+        border-right: none;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+      }
+      .prompt-preview {
+        padding: 14px 14px;
+        min-height: 50vh;
+        max-height: 55vh;
+        overflow-y: auto;
+      }
+      .preview-media { max-height: 260px; }
+      .preview-media img,
+      .preview-media video { max-height: 260px; }
+      .filter-bar { padding: 8px 12px; gap: 6px; }
+      .filter-group { min-width: 70px; flex: 1 0 80px; }
+      .chat-header { padding: 8px 12px; flex-wrap: wrap; }
+      .header-right { flex-wrap: wrap; }
+      .prompt-list-item .prompt-thumb { width: 56px; height: 56px; }
+      .preview-header .preview-title { font-size: 18px; }
+      .header-left .page-subtitle { display: inline; }
+    }
 
-            .prompt-layout { flex-direction: column; }
-            .prompt-list {
-                width: 100%;
-                min-width: unset;
-                max-height: 45vh;
-                border-right: none;
-                border-bottom: 1px solid rgba(255,255,255,0.04);
-            }
-            .prompt-preview { padding: 12px 14px; }
-            .preview-media { max-height: 250px; }
-            .preview-media img,
-            .preview-media video { max-height: 250px; }
-            .filter-bar { padding: 10px 14px; }
-            .filter-group { min-width: 80px; }
-            .chat-header { padding: 8px 14px; flex-wrap: wrap; }
-            .header-right { flex-wrap: wrap; }
-            .prompt-list-item .prompt-thumb { width: 60px; height: 60px; }
-        }
+    @media (max-width: 480px) {
+      .filter-bar { flex-direction: row; flex-wrap: wrap; gap: 4px; }
+      .filter-group { min-width: 60px; flex: 1 0 70px; }
+      .preview-header .preview-title { font-size: 16px; }
+      .prompt-list-item .prompt-info .headline { font-size: 12px; }
+      .prompt-list-item { padding: 8px 10px; gap: 8px; }
+      .prompt-list-item .prompt-thumb { width: 48px; height: 48px; }
+      .prompt-preview { padding: 10px 12px; }
+      .preview-actions button { font-size: 11px; padding: 6px 12px; }
+    }
 
-        @media (max-width: 480px) {
-            .filter-bar { flex-direction: column; gap: 8px; }
-            .filter-group { min-width: 100%; }
-            .preview-header .preview-title { font-size: 17px; }
-            .prompt-list-item .prompt-info .headline { font-size: 12px; }
-        }
+    @media (min-width: 821px) {
+      .hamburger-btn { display: none !important; }
+      .sidebar-overlay { display: none !important; }
+    }
 
-        @media (min-width: 769px) {
-            .hamburger-btn { display: none !important; }
-            .sidebar-overlay { display: none !important; }
-        }
-    </style>
+    /* fullscreen detail on mobile: we use the preview panel itself */
+    .prompt-preview.fullscreen-mobile {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 200;
+      background: rgba(10,12,16,0.98);
+      padding: 20px 16px;
+      overflow-y: auto;
+      border-radius: 0;
+      backdrop-filter: blur(10px);
+    }
+    .prompt-preview.fullscreen-mobile .preview-close {
+      display: flex;
+      position: sticky;
+      top: 0;
+      background: rgba(10,12,16,0.9);
+      padding: 8px 0;
+      margin-bottom: 8px;
+      z-index: 10;
+      justify-content: flex-end;
+    }
+    .preview-close { display: none; }
+    .prompt-preview.fullscreen-mobile .preview-close { display: flex; }
+    .preview-close button {
+      background: rgba(255,255,255,0.08);
+      border: none;
+      color: #eef2f9;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
 <div class="dashboard">
 
-    <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-brand">
-            <div class="brand-icon"><i class="fas fa-book"></i></div>
-            <div class="brand-text">
-                <h1>SanjayAIHub</h1>
-                <span>Prompt Library</span>
-            </div>
-        </div>
-
-        <div class="sidebar-section">
-            <div class="sidebar-section-label">Categories</div>
-            <div class="sidebar-item active" data-category="all">
-                <i class="fas fa-th-large"></i> <span>All Prompts</span>
-                <span class="badge" id="countAll">0</span>
-            </div>
-            <div class="sidebar-item" data-category="t2i">
-                <i class="fas fa-image"></i> <span>Text to Image</span>
-                <span class="badge" id="countT2I">0</span>
-            </div>
-            <div class="sidebar-item" data-category="t2v">
-                <i class="fas fa-video"></i> <span>Text to Video</span>
-                <span class="badge" id="countT2V">0</span>
-            </div>
-            <div class="sidebar-item" data-category="edit">
-                <i class="fas fa-pen-fancy"></i> <span>Image Edit</span>
-                <span class="badge" id="countEdit">0</span>
-            </div>
-            <div class="sidebar-item" data-category="i2v">
-                <i class="fas fa-film"></i> <span>Image to Video</span>
-                <span class="badge" id="countI2V">0</span>
-            </div>
-            <div class="sidebar-item" data-category="v2v">
-                <i class="fas fa-rotate"></i> <span>Video to Video</span>
-                <span class="badge" id="countV2V">0</span>
-            </div>
-        </div>
-
-        <div class="sidebar-divider"></div>
-
-        <div class="back-hub">
-            <div class="sidebar-item" onclick="window.location.href='/'">
-                <i class="fas fa-arrow-left"></i> <span>Back to Hub</span>
-            </div>
-        </div>
-    </aside>
-
-    <!-- Sidebar Overlay (mobile) -->
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-    <!-- MAIN CONTENT -->
-    <div class="main-content">
-
-        <!-- Header -->
-        <div class="chat-header">
-            <div class="header-left">
-                <button class="hamburger-btn" id="hamburgerBtn"><i class="fas fa-bars"></i></button>
-                <span class="page-title">Prompt Library</span>
-                <span class="page-subtitle">Curated prompts with video previews</span>
-            </div>
-            <div class="header-right">
-                <span style="font-size:11px;color:#6a7a94;" id="promptCount">0 prompts</span>
-            </div>
-        </div>
-
-        <!-- Filter Bar -->
-        <div class="filter-bar">
-            <div class="filter-group">
-                <label>Sub-Category</label>
-                <select id="subCategoryFilter">
-                    <option value="">All Sub-Categories</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Search</label>
-                <input type="text" id="searchFilter" placeholder="Search prompts..." />
-            </div>
-            <div class="filter-group">
-                <label>Sort By</label>
-                <select id="sortFilter">
-                    <option value="newest">Newest</option>
-                    <option value="popular">Most Popular</option>
-                    <option value="views">Most Viewed</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Prompt Layout -->
-        <div class="prompt-layout">
-
-            <!-- Prompt List -->
-            <div class="prompt-list" id="promptList">
-                <div class="loading-spinner"><div class="spinner"></div> Loading prompts...</div>
-            </div>
-
-            <!-- Prompt Preview -->
-            <div class="prompt-preview" id="promptPreview">
-                <div class="preview-empty">
-                    <i class="fas fa-hand-pointer"></i>
-                    <p>Select a prompt from the list to preview it here</p>
-                    <p style="font-size:11px;color:#4d5872;">Video previews render directly from Instagram</p>
-                </div>
-            </div>
-
-        </div>
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fas fa-book"></i></div>
+      <div class="brand-text">
+        <h1>SanjayAIHub</h1>
+        <span>Prompt Library</span>
+      </div>
     </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Categories</div>
+      <div class="sidebar-item active" data-category="all">
+        <i class="fas fa-th-large"></i> <span>All Prompts</span>
+        <span class="badge" id="countAll">0</span>
+      </div>
+      <div class="sidebar-item" data-category="t2i">
+        <i class="fas fa-image"></i> <span>Text to Image</span>
+        <span class="badge" id="countT2I">0</span>
+      </div>
+      <div class="sidebar-item" data-category="t2v">
+        <i class="fas fa-video"></i> <span>Text to Video</span>
+        <span class="badge" id="countT2V">0</span>
+      </div>
+      <div class="sidebar-item" data-category="edit">
+        <i class="fas fa-pen-fancy"></i> <span>Image Edit</span>
+        <span class="badge" id="countEdit">0</span>
+      </div>
+      <div class="sidebar-item" data-category="i2v">
+        <i class="fas fa-film"></i> <span>Image to Video</span>
+        <span class="badge" id="countI2V">0</span>
+      </div>
+      <div class="sidebar-item" data-category="v2v">
+        <i class="fas fa-rotate"></i> <span>Video to Video</span>
+        <span class="badge" id="countV2V">0</span>
+      </div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+    <div class="back-hub">
+      <div class="sidebar-item" onclick="window.location.href='/'">
+        <i class="fas fa-arrow-left"></i> <span>Back to Hub</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+
+    <div class="chat-header">
+      <div class="header-left">
+        <button class="hamburger-btn" id="hamburgerBtn"><i class="fas fa-bars"></i></button>
+        <span class="page-title">Prompt Library</span>
+        <span class="page-subtitle">curated prompts</span>
+      </div>
+      <div class="header-right">
+        <span style="font-size:11px;color:#6a7a94;" id="promptCount">0 prompts</span>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Sub-Category</label>
+        <select id="subCategoryFilter"><option value="">All</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Search</label>
+        <input type="text" id="searchFilter" placeholder="Search..." />
+      </div>
+      <div class="filter-group">
+        <label>Sort</label>
+        <select id="sortFilter">
+          <option value="newest">Newest</option>
+          <option value="popular">Popular</option>
+          <option value="views">Most Viewed</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="prompt-layout">
+      <div class="prompt-list" id="promptList">
+        <div class="loading-spinner"><div class="spinner"></div> Loading prompts...</div>
+      </div>
+
+      <div class="prompt-preview" id="promptPreview">
+        <div class="preview-empty">
+          <i class="fas fa-hand-pointer"></i>
+          <p>Select a prompt to preview</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- ── TOAST ── -->
 <div class="toast" id="toast"></div>
 
-<script src="/js/auth.js"></script>   <!-- ← Must load first -->
-<script src="/js/modules.js"></script>
 <script>
 (function() {
-    // ── module_key (DB) <-> short category code (UI) ──
-    const MODULE_KEY_TO_CATEGORY = {
-        'text-to-image': 't2i',
-        'text-to-video': 't2v',
-        'image-edit': 'edit',
-        'image-to-video': 'i2v',
-        'video-to-video': 'v2v'
-    };
-    const CATEGORY_TO_MODULE_KEY = {
-        't2i': 'text-to-image',
-        't2v': 'text-to-video',
-        'edit': 'image-edit',
-        'i2v': 'image-to-video',
-        'v2v': 'video-to-video'
-    };
+  // ── helpers ──
+  const MODULE_KEY_TO_CATEGORY = {
+    'text-to-image': 't2i','text-to-video':'t2v','image-edit':'edit',
+    'image-to-video':'i2v','video-to-video':'v2v'
+  };
+  const CATEGORY_LABELS = { 't2i':'Text to Image','t2v':'Text to Video','edit':'Image Edit','i2v':'Image to Video','v2v':'Video to Edit' };
+  const CATEGORY_ICONS = { 't2i':'fa-image','t2v':'fa-video','edit':'fa-pen-fancy','i2v':'fa-film','v2v':'fa-rotate' };
 
-    // ── Category Labels ──
-    const CATEGORY_LABELS = {
-        't2i': 'Text to Image',
-        't2v': 'Text to Video',
-        'edit': 'Image Edit',
-        'i2v': 'Image to Video',
-        'v2v': 'Video to Edit'
-    };
+  let prompts = [], filteredPrompts = [], selectedPromptId = null;
+  let currentCategory = 'all', currentSubCategory = '', currentSearch = '', currentSort = 'newest';
+  let favoriteIds = new Set();
 
-    const CATEGORY_ICONS = {
-        't2i': 'fa-image',
-        't2v': 'fa-video',
-        'edit': 'fa-pen-fancy',
-        'i2v': 'fa-film',
-        'v2v': 'fa-rotate'
-    };
+  const promptList = document.getElementById('promptList');
+  const promptPreview = document.getElementById('promptPreview');
+  const subCategoryFilter = document.getElementById('subCategoryFilter');
+  const searchFilter = document.getElementById('searchFilter');
+  const sortFilter = document.getElementById('sortFilter');
+  const promptCount = document.getElementById('promptCount');
+  const toastEl = document.getElementById('toast');
+  const hamburgerBtn = document.getElementById('hamburgerBtn');
+  const sidebar = document.getElementById('sidebar');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
 
-    // ── State ──
-    let prompts = [];
-    let filteredPrompts = [];
-    let selectedPromptId = null;
-    let currentCategory = 'all';
-    let currentSubCategory = '';
-    let currentSearch = '';
-    let currentSort = 'newest';
-    let favoriteIds = new Set();
+  function escapeHtml(text) { if (!text) return ''; const d=document.createElement('div'); d.textContent=text; return d.innerHTML; }
 
-    // ── DOM refs ──
-    const promptList = document.getElementById('promptList');
-    const promptPreview = document.getElementById('promptPreview');
-    const subCategoryFilter = document.getElementById('subCategoryFilter');
-    const searchFilter = document.getElementById('searchFilter');
-    const sortFilter = document.getElementById('sortFilter');
-    const promptCount = document.getElementById('promptCount');
-    const toastEl = document.getElementById('toast');
-    const hamburgerBtn = document.getElementById('hamburgerBtn');
-    const sidebar = document.getElementById('sidebar');
-    const sidebarOverlay = document.getElementById('sidebarOverlay');
+  function showToast(msg, type='info') {
+    toastEl.textContent = msg;
+    toastEl.className = `toast ${type} show`;
+    clearTimeout(toastEl._timeout);
+    toastEl._timeout = setTimeout(() => toastEl.classList.remove('show'), 2800);
+  }
 
-    // Helper function to proxy image URLs through our server for better performance and CORS handling
-    function proxyImageUrl(originalUrl) {
-        if (!originalUrl) return originalUrl;
-        
-        // Don't proxy Instagram embed URLs or data URLs
-        if (originalUrl.includes('instagram.com') || 
-            originalUrl.startsWith('data:') || 
-            originalUrl.startsWith('blob:')) {
-            return originalUrl;
-        }
-        
-        // Proxy external images through our image proxy endpoint
-        // This provides better caching, timeout handling, and CORS support
-        try {
-            const encodedUrl = encodeURIComponent(originalUrl);
-            return `/api/image-proxy?url=${encodedUrl}&width=200&height=150`;
-        } catch (e) {
-            // If encoding fails, return original URL
-            return originalUrl;
-        }
-    }
+  // ── Mobile sidebar toggle ──
+  hamburgerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    sidebar.classList.toggle('mobile-open');
+    sidebarOverlay.classList.toggle('visible');
+  });
+  sidebarOverlay.addEventListener('click', () => {
+    sidebar.classList.remove('mobile-open');
+    sidebarOverlay.classList.remove('visible');
+  });
 
-    // ── API: load prompts from the real prompt library ──
-    async function loadPrompts() {
-        promptList.innerHTML = `<div class="loading-spinner"><div class="spinner"></div> Loading prompts...</div>`;
-        try {
-            const res = await fetch('/api/modules/prompt-library/prompts');
-            const data = await res.json();
-            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load prompts');
-
-            prompts = data.prompts.map(p => ({
-                id: p.id,
-                headline: p.headline,
-                description: p.description,
-                category: MODULE_KEY_TO_CATEGORY[p.module_key] || p.module_key,
-                module_key: p.module_key,
-                sub_category: p.sub_category,
-                full_prompt: p.full_prompt,
-                tags: p.tags || [],
-                media_type: p.media_type,
-                img: p.img,
-                demo_url: p.demo_url,
-                instagram_shortcode: p.instagram_shortcode,
-                max_images_allowed: p.max_images_allowed,
-                views: p.views,
-                popular: p.is_featured,
-                created_at: p.created_at
-            }));
-
-            if (window.AUTH && AUTH.isLoggedIn()) {
-                await loadFavorites();
-            }
-
-            updateSubCategories();
-            applyFilters();
-        } catch (err) {
-            promptList.innerHTML = `<div class="prompt-list-empty">Couldn't load prompts. ${escapeHtml(err.message)}</div>`;
-            showToast(err.message || 'Failed to load prompts', 'error');
-        }
-    }
-
-    // ── API: load the current user's favorited prompt IDs ──
-    async function loadFavorites() {
-        try {
-            const res = await fetch('/api/modules/prompt-library/favorites', {
-                headers: AUTH.getAuthHeader()
-            });
-            const data = await res.json();
-            if (res.ok && data.success) {
-                favoriteIds = new Set(data.favorites);
-            }
-        } catch (_) {
-            // Non-fatal — favorites just won't be pre-marked.
-        }
-    }
-
-    // ── Toast ──
-    function showToast(message, type = 'info') {
-        toastEl.textContent = message;
-        toastEl.className = `toast ${type} show`;
-        clearTimeout(toastEl._timeout);
-        toastEl._timeout = setTimeout(() => toastEl.classList.remove('show'), 3000);
-    }
-
-    // ── Mobile sidebar ──
-    hamburgerBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('mobile-open');
-        sidebarOverlay.classList.toggle('visible');
+  // ── sidebar category clicks ──
+  document.querySelectorAll('.sidebar-item[data-category]').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.sidebar-item[data-category]').forEach(el => el.classList.remove('active'));
+      item.classList.add('active');
+      currentCategory = item.dataset.category;
+      applyFilters();
+      sidebar.classList.remove('mobile-open');
+      sidebarOverlay.classList.remove('visible');
     });
-    sidebarOverlay.addEventListener('click', () => {
-        sidebar.classList.remove('mobile-open');
-        sidebarOverlay.classList.remove('visible');
+  });
+
+  // ── load prompts ──
+  async function loadPrompts() {
+    promptList.innerHTML = `<div class="loading-spinner"><div class="spinner"></div> Loading prompts...</div>`;
+    try {
+      const res = await fetch('/api/modules/prompt-library/prompts');
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load');
+      prompts = data.prompts.map(p => ({
+        id: p.id,
+        headline: p.headline,
+        description: p.description,
+        category: MODULE_KEY_TO_CATEGORY[p.module_key] || p.module_key,
+        module_key: p.module_key,
+        sub_category: p.sub_category,
+        full_prompt: p.full_prompt,
+        tags: p.tags || [],
+        media_type: p.media_type,
+        img: p.img,
+        demo_url: p.demo_url,
+        instagram_shortcode: p.instagram_shortcode,
+        views: p.views,
+        popular: p.is_featured,
+        created_at: p.created_at
+      }));
+      if (window.AUTH && AUTH.isLoggedIn()) await loadFavorites();
+      updateSubCategories();
+      applyFilters();
+    } catch(err) {
+      promptList.innerHTML = `<div class="prompt-list-empty">⚠️ ${escapeHtml(err.message)}</div>`;
+      showToast(err.message, 'error');
+    }
+  }
+
+  async function loadFavorites() {
+    try {
+      const res = await fetch('/api/modules/prompt-library/favorites', { headers: AUTH.getAuthHeader() });
+      const data = await res.json();
+      if (res.ok && data.success) favoriteIds = new Set(data.favorites);
+    } catch(_) {}
+  }
+
+  function updateSubCategories() {
+    const cats = currentCategory === 'all' ? ['t2i','t2v','edit','i2v','v2v'] : [currentCategory];
+    const subCats = new Set();
+    prompts.forEach(p => { if (cats.includes(p.category) && p.sub_category) subCats.add(p.sub_category); });
+    subCategoryFilter.innerHTML = '<option value="">All</option>';
+    [...subCats].sort().forEach(sc => {
+      subCategoryFilter.innerHTML += `<option value="${escapeHtml(sc)}">${escapeHtml(sc)}</option>`;
     });
+  }
 
-    // ── Sidebar category filter ──
-    document.querySelectorAll('.sidebar-item[data-category]').forEach(item => {
-        item.addEventListener('click', () => {
-            document.querySelectorAll('.sidebar-item[data-category]').forEach(el => el.classList.remove('active'));
-            item.classList.add('active');
-            currentCategory = item.dataset.category;
-            applyFilters();
-            // Close mobile sidebar
-            sidebar.classList.remove('mobile-open');
-            sidebarOverlay.classList.remove('visible');
-        });
+  function applyFilters() {
+    const cats = currentCategory === 'all' ? ['t2i','t2v','edit','i2v','v2v'] : [currentCategory];
+    filteredPrompts = prompts.filter(p => {
+      if (!cats.includes(p.category)) return false;
+      if (currentSubCategory && p.sub_category !== currentSubCategory) return false;
+      if (currentSearch) {
+        const s = currentSearch.toLowerCase();
+        return p.headline.toLowerCase().includes(s) || p.description.toLowerCase().includes(s) ||
+               p.full_prompt.toLowerCase().includes(s) || p.tags.some(t => t.toLowerCase().includes(s));
+      }
+      return true;
     });
-
-    // ── Filter functions ──
-    function updateSubCategories() {
-        const categories = currentCategory === 'all' 
-            ? ['t2i', 't2v', 'edit', 'i2v', 'v2v']
-            : [currentCategory];
-        
-        const subCats = new Set();
-        prompts.forEach(p => {
-            if (categories.includes(p.category) && p.sub_category) {
-                subCats.add(p.sub_category);
-            }
-        });
-
-        subCategoryFilter.innerHTML = '<option value="">All Sub-Categories</option>';
-        [...subCats].sort().forEach(sc => {
-            subCategoryFilter.innerHTML += `<option value="${escapeHtml(sc)}">${escapeHtml(sc)}</option>`;
-        });
+    switch(currentSort) {
+      case 'popular': filteredPrompts.sort((a,b) => (b.popular?1:0)-(a.popular?1:0) || b.views-a.views); break;
+      case 'views': filteredPrompts.sort((a,b) => b.views-a.views); break;
+      default: filteredPrompts.sort((a,b) => new Date(b.created_at)-new Date(a.created_at));
     }
+    updateCounts();
+    renderList();
+    if (filteredPrompts.length) {
+      if (!selectedPromptId || !filteredPrompts.some(p => p.id === selectedPromptId)) {
+        selectPrompt(filteredPrompts[0].id);
+      } else renderPreview(selectedPromptId);
+    } else { selectedPromptId = null; showEmptyPreview(); }
+  }
 
-    function applyFilters() {
-        const categories = currentCategory === 'all' 
-            ? ['t2i', 't2v', 'edit', 'i2v', 'v2v']
-            : [currentCategory];
-        
-        filteredPrompts = prompts.filter(p => {
-            // Category filter
-            if (!categories.includes(p.category)) return false;
-            // Sub-category filter
-            if (currentSubCategory && p.sub_category !== currentSubCategory) return false;
-            // Search filter
-            if (currentSearch) {
-                const search = currentSearch.toLowerCase();
-                return p.headline.toLowerCase().includes(search) ||
-                       p.description.toLowerCase().includes(search) ||
-                       p.full_prompt.toLowerCase().includes(search) ||
-                       p.tags.some(t => t.toLowerCase().includes(search));
-            }
-            return true;
-        });
+  function updateCounts() {
+    const counts = { all: prompts.length, t2i:0, t2v:0, edit:0, i2v:0, v2v:0 };
+    prompts.forEach(p => { if (counts[p.category] !== undefined) counts[p.category]++; });
+    document.getElementById('countAll').textContent = counts.all;
+    document.getElementById('countT2I').textContent = counts.t2i;
+    document.getElementById('countT2V').textContent = counts.t2v;
+    document.getElementById('countEdit').textContent = counts.edit;
+    document.getElementById('countI2V').textContent = counts.i2v;
+    document.getElementById('countV2V').textContent = counts.v2v;
+    promptCount.textContent = `${filteredPrompts.length} prompts`;
+  }
 
-        // Sort
-        switch (currentSort) {
-            case 'popular':
-                filteredPrompts.sort((a, b) => (b.popular ? 1 : 0) - (a.popular ? 1 : 0) || b.views - a.views);
-                break;
-            case 'views':
-                filteredPrompts.sort((a, b) => b.views - a.views);
-                break;
-            case 'newest':
-            default:
-                filteredPrompts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                break;
-        }
+  function renderList() {
+    if (!filteredPrompts.length) { promptList.innerHTML = `<div class="prompt-list-empty">No prompts found</div>`; return; }
+    promptList.innerHTML = filteredPrompts.map(p => {
+      const active = p.id === selectedPromptId;
+      const catLabel = CATEGORY_LABELS[p.category] || p.category;
+      const catClass = `category-${p.category}`;
+      const icon = CATEGORY_ICONS[p.category] || 'fa-file';
+      const isFav = favoriteIds.has(p.id);
+      return `<div class="prompt-list-item ${active?'active':''}" onclick="selectPrompt('${p.id}')" data-id="${p.id}">
+        <div class="prompt-thumb">
+          ${p.img ? `<img src="${escapeHtml(p.img)}" alt="${escapeHtml(p.headline)}" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\\'fas ${icon}\\' style=\\'font-size:24px;color:#3a4356;\\'></i>'" />` :
+          `<i class="fas ${icon}" style="font-size:24px;color:#3a4356;"></i>`}
+          ${isFav ? '<i class="fas fa-heart" style="position:absolute;top:4px;right:4px;color:#e1306c;font-size:10px;text-shadow:0 1px 2px rgba(0,0,0,0.5);"></i>' : ''}
+        </div>
+        <div class="prompt-info">
+          <div class="headline">${escapeHtml(p.headline)}</div>
+          <div class="desc">${escapeHtml(p.description)}</div>
+          <div class="meta"><span class="tag ${catClass}">${escapeHtml(catLabel)}</span>${p.sub_category?`<span class="tag">${escapeHtml(p.sub_category)}</span>`:''}${p.popular?'<span class="tag" style="color:#fbbf24;background:rgba(251,191,36,0.1);">⭐</span>':''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
 
-        updateCounts();
-        renderPromptList();
-
-        // Select first prompt if available and none selected
-        if (filteredPrompts.length > 0) {
-            if (!selectedPromptId || !filteredPrompts.some(p => p.id === selectedPromptId)) {
-                selectPrompt(filteredPrompts[0].id);
-            } else {
-                renderPreview(selectedPromptId);
-            }
-        } else {
-            selectedPromptId = null;
-            showEmptyPreview();
-        }
+  window.selectPrompt = function(id) {
+    selectedPromptId = id;
+    renderList();
+    renderPreview(id);
+    sidebar.classList.remove('mobile-open');
+    sidebarOverlay.classList.remove('visible');
+    // on mobile, expand preview fullscreen
+    if (window.innerWidth < 821) {
+      promptPreview.classList.add('fullscreen-mobile');
+      // add close button if not exists
+      if (!promptPreview.querySelector('.preview-close')) {
+        const closeDiv = document.createElement('div');
+        closeDiv.className = 'preview-close';
+        closeDiv.innerHTML = `<button onclick="closeFullscreenPreview()"><i class="fas fa-arrow-left"></i> Back to list</button>`;
+        promptPreview.prepend(closeDiv);
+      }
+    } else {
+      promptPreview.classList.remove('fullscreen-mobile');
     }
+  };
+  window.closeFullscreenPreview = function() {
+    promptPreview.classList.remove('fullscreen-mobile');
+    const closeBtn = promptPreview.querySelector('.preview-close');
+    if (closeBtn) closeBtn.remove();
+  };
+  // close on scroll to top? we keep it simple.
 
-    function updateCounts() {
-        const counts = { all: prompts.length, t2i: 0, t2v: 0, edit: 0, i2v: 0, v2v: 0 };
-        prompts.forEach(p => {
-            if (counts[p.category] !== undefined) counts[p.category]++;
-        });
-        document.getElementById('countAll').textContent = counts.all;
-        document.getElementById('countT2I').textContent = counts.t2i;
-        document.getElementById('countT2V').textContent = counts.t2v;
-        document.getElementById('countEdit').textContent = counts.edit;
-        document.getElementById('countI2V').textContent = counts.i2v;
-        document.getElementById('countV2V').textContent = counts.v2v;
-        promptCount.textContent = `${filteredPrompts.length} prompts`;
+  function renderPreview(id) {
+    const p = prompts.find(p => p.id === id);
+    if (!p) { showEmptyPreview(); return; }
+    const catLabel = CATEGORY_LABELS[p.category] || p.category;
+    const catClass = `category-${p.category}`;
+    const icon = CATEGORY_ICONS[p.category] || 'fa-file';
+    const isFav = favoriteIds.has(p.id);
+    let mediaHtml = '';
+    if (p.instagram_shortcode) {
+      mediaHtml = `<iframe src="/api/reels/proxy?shortcode=${encodeURIComponent(p.instagram_shortcode)}" allowfullscreen loading="lazy" scrolling="no"></iframe>`;
+    } else if (p.img) {
+      mediaHtml = `<img src="${escapeHtml(p.img)}" alt="${escapeHtml(p.headline)}" onerror="this.parentElement.innerHTML='<div class=\\'media-placeholder\\'><i class=\\'fas ${icon}\\'></i><span>No image</span></div>'" />`;
+    } else if (p.demo_url) {
+      mediaHtml = `<img src="${escapeHtml(p.demo_url)}" alt="${escapeHtml(p.headline)}" onerror="this.parentElement.innerHTML='<div class=\\'media-placeholder\\'><i class=\\'fas ${icon}\\'></i><span>No preview</span></div>'" />`;
+    } else {
+      mediaHtml = `<div class="media-placeholder"><i class="fas ${icon}"></i><span>No media</span></div>`;
     }
+    promptPreview.innerHTML = `
+      ${promptPreview.querySelector('.preview-close') ? promptPreview.querySelector('.preview-close').outerHTML : ''}
+      <div class="preview-header">
+        <div class="preview-title">${escapeHtml(p.headline)}</div>
+        <div class="preview-category"><span class="cat-badge ${catClass}">${escapeHtml(catLabel)}</span>${p.sub_category?` → ${escapeHtml(p.sub_category)}`:''}<span style="color:#4d5872;margin-left:8px;">👁️ ${p.views}</span>${p.popular?' ⭐':''}</div>
+      </div>
+      <div class="preview-media">${mediaHtml}</div>
+      <div class="preview-prompt-box"><div class="label"><i class="fas fa-quote-right"></i> Full Prompt</div><div class="prompt-text">${escapeHtml(p.full_prompt)}</div></div>
+      <div class="preview-actions">
+        <button class="btn-primary" onclick="copyPrompt('${p.id}')"><i class="fas fa-copy"></i> Copy</button>
+        <button class="btn-secondary" onclick="usePrompt('${p.id}')"><i class="fas fa-wand-magic-sparkles"></i> Use</button>
+        <button class="btn-secondary" onclick="toggleFavorite('${p.id}')"><i class="fa${isFav?'s':'r'} fa-heart" style="${isFav?'color:#e1306c;':''}"></i> ${isFav?'Favorited':'Favorite'}</button>
+        ${p.tags?.length ? `<span style="display:flex;gap:4px;flex-wrap:wrap;margin-left:auto;">${p.tags.map(t=>`<span style="font-size:10px;color:#6a7a94;background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:8px;">#${escapeHtml(t)}</span>`).join('')}</span>` : ''}
+      </div>
+    `;
+    fetch(`/api/modules/prompt-library/${p.id}/view`, { method:'POST' }).catch(()=>{});
+  }
 
-    // ── Render Prompt List ──
-    function renderPromptList() {
-        if (filteredPrompts.length === 0) {
-            promptList.innerHTML = `<div class="prompt-list-empty">No prompts found matching your filters</div>`;
-            return;
-        }
+  function showEmptyPreview() {
+    promptPreview.innerHTML = `<div class="preview-empty"><i class="fas fa-hand-pointer"></i><p>Select a prompt to preview</p></div>`;
+  }
 
-        promptList.innerHTML = filteredPrompts.map(p => {
-            const isActive = p.id === selectedPromptId;
-            const catLabel = CATEGORY_LABELS[p.category] || p.category;
-            const catClass = `category-${p.category}`;
-            const icon = CATEGORY_ICONS[p.category] || 'fa-file';
-            const isVideo = p.media_type === 'video';
-            const isFav = favoriteIds.has(p.id);
-
-            return `
-                <div class="prompt-list-item ${isActive ? 'active' : ''}" onclick="selectPrompt('${p.id}')" data-id="${p.id}">
-                    <div class="prompt-thumb">
-                        ${p.img ?
-                            `<img src="${escapeHtml(p.img)}" alt="${escapeHtml(p.headline)}" loading="lazy" crossorigin="anonymous" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\\'fas ${icon}\\' style=\\'font-size:28px;color:#3a4356;\\'></i>'" />` :
-                            (isVideo ?
-                                `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"><i class="fas fa-film" style="font-size:28px;color:#3a4356;"></i></div>` :
-                                `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
-                                    <i class="fas ${icon}" style="font-size:28px;color:#3a4356;"></i>
-                                 </div>`
-                            )
-                        }
-                        ${isFav ? '<i class="fas fa-heart" style="position:absolute;top:4px;right:4px;color:#e1306c;font-size:11px;text-shadow:0 1px 2px rgba(0,0,0,0.5);"></i>' : ''}
-                    </div>
-                    <div class="prompt-info">
-                        <div class="headline">${escapeHtml(p.headline)}</div>
-                        <div class="desc">${escapeHtml(p.description)}</div>
-                        <div class="meta">
-                            <span class="tag ${catClass}">${escapeHtml(catLabel)}</span>
-                            ${p.sub_category ? `<span class="tag">${escapeHtml(p.sub_category)}</span>` : ''}
-                            ${p.popular ? `<span class="tag" style="color:#fbbf24;background:rgba(251,191,36,0.1);">⭐ Popular</span>` : ''}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-    }
-
-    // ── Select Prompt ──
-    window.selectPrompt = function(id) {
-        selectedPromptId = id;
-        renderPromptList();
-        renderPreview(id);
-        // Close mobile sidebar if open
-        sidebar.classList.remove('mobile-open');
-        sidebarOverlay.classList.remove('visible');
-    };
-
-    // ── Render Preview ──
-    function renderPreview(id) {
-        const prompt = prompts.find(p => p.id === id);
-        if (!prompt) {
-            showEmptyPreview();
-            return;
-        }
-
-        const catLabel = CATEGORY_LABELS[prompt.category] || prompt.category;
-        const catClass = `category-${prompt.category}`;
-        const isVideo = prompt.media_type === 'video';
-        const icon = CATEGORY_ICONS[prompt.category] || 'fa-file';
-        const isFav = favoriteIds.has(prompt.id);
-
-        let mediaHtml;
-        if (prompt.instagram_shortcode) {
-            // Real Instagram reel/post, rendered in-place via our own proxy —
-            // no redirect off-site. Works for any Instagram URL with a shortcode.
-            mediaHtml = `
-                <div style="width:100%;max-width:340px;margin:0 auto;aspect-ratio:9/16;border-radius:12px;overflow:hidden;background:#000;">
-                    <iframe src="/api/reels/proxy?shortcode=${encodeURIComponent(prompt.instagram_shortcode)}"
-                            style="width:100%;height:100%;border:none;"
-                            allowfullscreen loading="lazy" scrolling="no"></iframe>
-                </div>
-            `;
-        } else if (prompt.img) {
-            // Image from database (e.g., GitHub or external URL)
-            mediaHtml = `<img src="${escapeHtml(prompt.img)}" alt="${escapeHtml(prompt.headline)}" crossorigin="anonymous" style="width:100%;max-height:400px;object-fit:contain;border-radius:12px;" onerror="this.parentElement.innerHTML='<div class=\\'media-placeholder\\'><i class=\\'fas ${icon}\\'></i><span>No image available</span></div>'" />`;
-        } else if (isVideo) {
-            mediaHtml = `<div class="media-placeholder"><i class="fas ${icon}"></i><span>No preview available</span></div>`;
-        } else {
-            mediaHtml = `<img src="${escapeHtml(prompt.demo_url)}" alt="${escapeHtml(prompt.headline)}" crossorigin="anonymous" style="width:100%;max-height:400px;object-fit:contain;border-radius:12px;" onerror="this.parentElement.innerHTML='<div class=\\'media-placeholder\\'><i class=\\'fas ${icon}\\'></i><span>No image available</span></div>'" />`;
-        }
-
-        promptPreview.innerHTML = `
-            <div class="preview-header">
-                <div class="preview-title">${escapeHtml(prompt.headline)}</div>
-                <div class="preview-category">
-                    <span class="cat-badge ${catClass}">${escapeHtml(catLabel)}</span>
-                    ${prompt.sub_category ? ` → ${escapeHtml(prompt.sub_category)}` : ''}
-                    <span style="color:#4d5872;margin-left:12px;">👁️ ${prompt.views} views</span>
-                    ${prompt.popular ? '<span style="color:#fbbf24;margin-left:8px;">⭐ Popular</span>' : ''}
-                </div>
-            </div>
-
-            <div class="preview-media">
-                ${mediaHtml}
-            </div>
-
-            <div class="preview-prompt-box">
-                <div class="label"><i class="fas fa-quote-right"></i> Full Prompt</div>
-                <div class="prompt-text">${escapeHtml(prompt.full_prompt)}</div>
-            </div>
-
-            <div class="preview-actions">
-                <button class="btn-primary" onclick="copyPrompt('${prompt.id}')">
-                    <i class="fas fa-copy"></i> Copy Prompt
-                </button>
-                <button class="btn-secondary" onclick="usePrompt('${prompt.id}')">
-                    <i class="fas fa-wand-magic-sparkles"></i> Use in Generator
-                </button>
-                <button class="btn-secondary" id="favBtn" onclick="toggleFavorite('${prompt.id}')">
-                    <i class="fa${isFav ? 's' : 'r'} fa-heart" style="${isFav ? 'color:#e1306c;' : ''}"></i> ${isFav ? 'Favorited' : 'Favorite'}
-                </button>
-                ${prompt.tags && prompt.tags.length > 0 ? `
-                    <span style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-left:auto;">
-                        ${prompt.tags.map(t => `<span style="font-size:10px;color:#6a7a94;background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:8px;">#${escapeHtml(t)}</span>`).join('')}
-                    </span>
-                ` : ''}
-            </div>
-        `;
-
-        // Fire-and-forget view tracking — not critical if it fails.
-        fetch(`/api/modules/prompt-library/${prompt.id}/view`, { method: 'POST' }).catch(() => {});
-    }
-
-    function showEmptyPreview() {
-        promptPreview.innerHTML = `
-            <div class="preview-empty">
-                <i class="fas fa-hand-pointer"></i>
-                <p>Select a prompt from the list to preview it here</p>
-                <p style="font-size:11px;color:#4d5872;">Video previews render directly from Instagram</p>
-            </div>
-        `;
-    }
-
-    // ── Actions ──
-    window.copyPrompt = function(id) {
-        const prompt = prompts.find(p => p.id === id);
-        if (!prompt) return;
-        navigator.clipboard.writeText(prompt.full_prompt).then(() => {
-            showToast('Prompt copied to clipboard!', 'success');
-        }).catch(() => {
-            // Fallback
-            const textarea = document.createElement('textarea');
-            textarea.value = prompt.full_prompt;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            showToast('Prompt copied to clipboard!', 'success');
-        });
-    };
-
-    window.usePrompt = function(id) {
-        const prompt = prompts.find(p => p.id === id);
-        if (!prompt) return;
-
-        const page = window.MODULES && MODULES.pages ? MODULES.pages[prompt.module_key] : null;
-        if (!page) {
-            showToast('That generator isn\'t wired up yet — copy the prompt for now.', 'info');
-            return;
-        }
-
-        // Hand the prompt off via localStorage; the target page's own
-        // wiring (built module-by-module) reads this key to prefill itself.
-        localStorage.setItem('prefill_prompt', JSON.stringify({
-            prompt: prompt.full_prompt,
-            module_key: prompt.module_key,
-            from_prompt_id: prompt.id
-        }));
-
-        showToast(`Opening "${prompt.headline}" in Generator...`, 'info');
-        window.location.href = page;
-    };
-
-    // ── Favorites ──
-    window.toggleFavorite = async function(id) {
-        if (!window.AUTH || !AUTH.isLoggedIn()) {
-            showToast('Log in to save favorites.', 'info');
-            return;
-        }
-        try {
-            const res = await fetch(`/api/modules/prompt-library/favorites/${id}`, {
-                method: 'POST',
-                headers: AUTH.getAuthHeader()
-            });
-            const data = await res.json();
-            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to update favorite');
-
-            if (data.favorited) {
-                favoriteIds.add(id);
-                showToast('Added to favorites', 'success');
-            } else {
-                favoriteIds.delete(id);
-                showToast('Removed from favorites', 'info');
-            }
-            renderPromptList();
-            if (selectedPromptId === id) renderPreview(id);
-        } catch (err) {
-            showToast(err.message || 'Failed to update favorite', 'error');
-        }
-    };
-
-    // ── Filter event listeners ──
-    subCategoryFilter.addEventListener('change', () => {
-        currentSubCategory = subCategoryFilter.value;
-        applyFilters();
+  window.copyPrompt = function(id) {
+    const p = prompts.find(p => p.id === id);
+    if (!p) return;
+    navigator.clipboard.writeText(p.full_prompt).then(() => showToast('Copied!','success')).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = p.full_prompt;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('Copied!','success');
     });
+  };
 
-    searchFilter.addEventListener('input', debounce(() => {
-        currentSearch = searchFilter.value;
-        applyFilters();
-    }, 400));
+  window.usePrompt = function(id) {
+    const p = prompts.find(p => p.id === id);
+    if (!p) return;
+    const page = window.MODULES?.pages?.[p.module_key];
+    if (!page) { showToast('Generator not wired yet. Copy the prompt.','info'); return; }
+    localStorage.setItem('prefill_prompt', JSON.stringify({ prompt: p.full_prompt, module_key: p.module_key, from_prompt_id: p.id }));
+    showToast(`Opening "${p.headline}"...`,'info');
+    window.location.href = page;
+  };
 
-    sortFilter.addEventListener('change', () => {
-        currentSort = sortFilter.value;
-        applyFilters();
-    });
+  window.toggleFavorite = async function(id) {
+    if (!window.AUTH || !AUTH.isLoggedIn()) { showToast('Log in to favorite.','info'); return; }
+    try {
+      const res = await fetch(`/api/modules/prompt-library/favorites/${id}`, { method:'POST', headers: AUTH.getAuthHeader() });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message);
+      if (data.favorited) { favoriteIds.add(id); showToast('Added','success'); }
+      else { favoriteIds.delete(id); showToast('Removed','info'); }
+      renderList();
+      if (selectedPromptId === id) renderPreview(id);
+    } catch(err) { showToast(err.message,'error'); }
+  };
 
-    // ── Debounce helper ──
-    function debounce(func, wait) {
-        let timeout;
-        return function(...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), wait);
-        };
+  subCategoryFilter.addEventListener('change', () => { currentSubCategory = subCategoryFilter.value; applyFilters(); });
+  searchFilter.addEventListener('input', debounce(() => { currentSearch = searchFilter.value; applyFilters(); }, 300));
+  sortFilter.addEventListener('change', () => { currentSort = sortFilter.value; applyFilters(); });
+
+  function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+  // ── init ──
+  loadPrompts();
+  // if resize to desktop, remove fullscreen class
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 821) {
+      promptPreview.classList.remove('fullscreen-mobile');
+      const close = promptPreview.querySelector('.preview-close');
+      if (close) close.remove();
     }
-
-    // ── Escape HTML ──
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    // ── Init ──
-    function init() {
-        loadPrompts(); // applyFilters() (called inside) selects the first prompt automatically
-    }
-
-    init();
-
+  });
 })();
 </script>
 </body>
