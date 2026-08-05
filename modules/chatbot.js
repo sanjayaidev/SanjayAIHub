@@ -1,6 +1,7 @@
 const pool = require('../db');
 const AlibabaProvider = require('../providers/alibaba');
 const NvidiaProvider = require('../providers/nvidia');
+const { getChatModels } = require('../providers/alibaba-models');
 
 // ── NVIDIA ──────────────────────────────────────────────
 const NVIDIA_TEXT_MODELS = [
@@ -39,44 +40,10 @@ const MULTILINGUAL_MODELS = new Set([
 ]);
 
 // ── ALIBABA ──────────────────────────────────────────────
-const ALIBABA_TEXT_MODELS = [
-  'qwen3-max',
-  'qwen-max',
-  'qwen3.7-max',
-  'qwen3.7-max-preview',
-  'qwen3.6-max-preview',
-  'qwen3.5-plus',
-  'qwen-plus-latest',
-  'qwen3-235b-a22b',
-  'qwen3-235b-a22b-instruct-2507',
-  'qwen3-235b-a22b-thinking-2507',
-  'qwen3.6-flash',
-  'qwen3.5-flash',
-  'qwen-flash',
-  'qwen3-coder-plus',
-  'qwen3-coder-480b-a35b-instruct',
-  'qwen3-coder-next',
-  'qwen3-coder-flash',
-  'deepseek-v3.2',
-  'deepseek-v4-pro',
-  'deepseek-v4-flash',
-  'glm-5.1',
-  'qwq-plus',
-  'qwen3-32b',
-  'qwen3-14b',
-  'qwen3-8b',
-];
-const ALIBABA_VISION_MODELS = [
-  'qwen3-vl-plus',
-  'qwen3-vl-flash',
-  'qwen-vl-max',
-  'qwen-vl-plus',
-  'qwen3-vl-235b-a22b-instruct',
-  'qwen3-vl-30b-a3b-instruct',
-  'qwen3-vl-8b-instruct',
-  'qwen3-vl-30b-a3b-thinking',
-  'qwen3-vl-8b-thinking',
-];
+// Full model catalog (llm + multimodal, ~90 chat-capable models), pulled
+// from providers/alibaba-models.js and split into text-only vs
+// vision/audio-capable (based on which models accept file uploads).
+const { text: ALIBABA_TEXT_MODELS, vision: ALIBABA_VISION_MODELS } = getChatModels();
 const ALIBABA_DEFAULT_MODEL = 'qwen3.5-plus';
 
 const PAID_TIERS = new Set(['basic', 'pro', 'enterprise']);
