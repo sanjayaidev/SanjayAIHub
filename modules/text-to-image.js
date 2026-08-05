@@ -21,11 +21,47 @@ const PIXAZO_IMAGE_MODEL = 'flux-1-schnell';
 
 const CLOUDFLARE_IMAGE_MODEL = '@cf/black-forest-labs/flux-1-schnell';
 
+// Valid sizes for Alibaba image generation (from API error message)
+const ALIBABA_VALID_SIZES = ['1664*928', '1472*1104', '1328*1328', '1104*1472', '928*1664'];
+
+// Map common aspect ratios to Alibaba sizes
+function getAlibabaSize(width, height) {
+  const ratio = width / height;
+  
+  // Square or close to square
+  if (ratio >= 0.9 && ratio <= 1.1) return '1328*1328';
+  
+  // Landscape (width > height)
+  if (ratio > 1.1) {
+    if (ratio >= 1.7) return '1664*928'; // Ultra wide
+    return '1472*1104'; // Standard landscape
+  }
+  
+  // Portrait (height > width)
+  if (ratio < 0.9) {
+    if (ratio <= 0.6) return '928*1664'; // Ultra portrait
+    return '1104*1472'; // Standard portrait
+  }
+  
+  // Default to square
+  return '1328*1328';
+}
+
 // Parameters supported by each provider's models
 const MODEL_PARAMETERS = {
   'alibaba': {
-    width: { type: 'select', options: [512, 768, 1024, 1280, 1536], default: 1024, label: 'Width' },
-    height: { type: 'select', options: [512, 768, 1024, 1280, 1536], default: 1024, label: 'Height' },
+    size: { 
+      type: 'select', 
+      options: [
+        { value: '1664*928', label: 'Landscape (1664×928)' },
+        { value: '1472*1104', label: 'Landscape (1472×1104)' },
+        { value: '1328*1328', label: 'Square (1328×1328)' },
+        { value: '1104*1472', label: 'Portrait (1104×1472)' },
+        { value: '928*1664', label: 'Portrait (928×1664)' }
+      ], 
+      default: '1328*1328', 
+      label: 'Size' 
+    },
     num_steps: { type: 'range', min: 1, max: 50, default: 30, step: 1, label: 'Steps' },
     seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
     style: { type: 'select', options: ['realistic', 'artistic', 'anime', 'digital-art', 'photography'], default: 'realistic', label: 'Style' },
@@ -51,6 +87,7 @@ async function textToImageHandler(requestBody, apiKeys, userId) {
     model: requestedModel,
     width = 1024,
     height = 1024,
+    size: requestedSize,
     num_steps,
     seed,
     style = 'realistic',
@@ -108,10 +145,18 @@ async function textToImageHandler(requestBody, apiKeys, userId) {
       enhancedPrompt = `${prompt}, ${stylePrompts[style] || ''}`;
     }
     
+    // Determine size - use requested size if valid, otherwise map from width/height
+    let sizeParam;
+    if (requestedSize && ALIBABA_VALID_SIZES.includes(requestedSize)) {
+      sizeParam = requestedSize;
+    } else {
+      sizeParam = getAlibabaSize(parseInt(width) || 1024, parseInt(height) || 1024);
+    }
+    
     try {
       const result = await alibaba.imageGeneration(enhancedPrompt, {
         model,
-        size: `${parseInt(width) || 1024}*${parseInt(height) || 1024}`,
+        size: sizeParam,
         seed: seed ? parseInt(seed) : undefined,
       });
 
@@ -174,7 +219,12 @@ async function textToImageHandler(requestBody, apiKeys, userId) {
     imageUrl,
     provider: selectedProvider,
     model,
-    parameters: { width, height, num_steps, seed, style }
+    parameters: { 
+      size: selectedProvider === 'alibaba' ? sizeParam : { width, height },
+      num_steps, 
+      seed, 
+      style 
+    }
   };
 }
 

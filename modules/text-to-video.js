@@ -142,26 +142,56 @@ async function textToVideoHandler(requestBody, apiKeys, userId) {
   };
 }
 
-async function checkVideoStatus(requestId, apiKeys) {
+async function checkVideoStatus(requestId, apiKeys, provider = 'pixazo') {
   if (!requestId) {
     throw new Error('Request ID is required');
   }
   
-  if (!apiKeys.pixazo?.api_key) {
-    throw new Error('Pixazo API key not configured');
-  }
-  
-  const pixazo = new PixazoProvider(apiKeys.pixazo.api_key);
-  
-  try {
-    const result = await pixazo.checkStatus(requestId);
-    return {
-      status: result.status,
-      videoUrl: result.output?.media_url?.[0] || null,
-      progress: result.progress || 0
-    };
-  } catch (err) {
-    throw new Error(`Pixazo status check error: ${err.message}`);
+  if (provider === 'alibaba') {
+    if (!apiKeys.alibaba?.api_key || !apiKeys.alibaba?.workspace_id) {
+      throw new Error('Alibaba Cloud API key + Workspace ID not configured');
+    }
+    
+    const alibaba = new AlibabaProvider(
+      apiKeys.alibaba.api_key,
+      apiKeys.alibaba.workspace_id
+    );
+    
+    try {
+      const result = await alibaba.checkVideoTask(requestId);
+      const taskStatus = result?.output?.task_status;
+      let status = 'pending';
+      
+      if (taskStatus === 'SUCCEEDED') status = 'completed';
+      else if (taskStatus === 'FAILED') status = 'failed';
+      else if (taskStatus === 'RUNNING') status = 'processing';
+      else status = 'pending';
+      
+      return {
+        status,
+        videoUrl: result?.output?.video_url || null,
+        progress: status === 'completed' ? 100 : (status === 'processing' ? 50 : 0)
+      };
+    } catch (err) {
+      throw new Error(`Alibaba status check error: ${err.message}`);
+    }
+  } else {
+    if (!apiKeys.pixazo?.api_key) {
+      throw new Error('Pixazo API key not configured');
+    }
+    
+    const pixazo = new PixazoProvider(apiKeys.pixazo.api_key);
+    
+    try {
+      const result = await pixazo.checkStatus(requestId);
+      return {
+        status: result.status,
+        videoUrl: result.output?.media_url?.[0] || null,
+        progress: result.progress || 0
+      };
+    } catch (err) {
+      throw new Error(`Pixazo status check error: ${err.message}`);
+    }
   }
 }
 
