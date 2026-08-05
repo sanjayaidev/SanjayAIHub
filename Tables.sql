@@ -132,6 +132,7 @@ CREATE TABLE prompt_library (
     tags TEXT[] DEFAULT '{}',
     media_type VARCHAR(20), -- 'image', 'video'
     demo_url TEXT,
+    img TEXT, -- thumbnail/preview image URL for the prompt
     max_images_allowed INT DEFAULT 4,
     views INT DEFAULT 0,
     popularity_score FLOAT DEFAULT 0,
