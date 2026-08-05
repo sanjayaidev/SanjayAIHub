@@ -242,9 +242,7 @@
         <div>
           <label>Model</label>
           <select id="model">
-            <option value="wan2.7-i2v">Wan 2.7 I2V</option>
-            <option value="wan2.6-i2v">Wan 2.6 I2V</option>
-            <option value="wan2.6-i2v-flash">Wan 2.6 I2V Flash</option>
+            <option value="">Loading models...</option>
           </select>
         </div>
         <div>
@@ -335,11 +333,54 @@
     url_pane: document.getElementById("url_pane"),
   };
 
+  // Load model catalog dynamically from API
+  fetch("/api/modules/image-to-video/models", { headers: AUTH.getAuthHeader() })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) throw new Error('Failed to load models');
+      const modelSelect = els.model;
+      modelSelect.innerHTML = '';
+      
+      const providers = data.providers || [];
+      const modelsByProvider = data.models || {};
+      const defaults = data.defaults || {};
+      
+      if (providers.includes('pixazo') && modelsByProvider.pixazo?.length > 0) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = 'Pixazo';
+        modelsByProvider.pixazo.forEach(model => {
+          const opt = document.createElement('option');
+          opt.value = model;
+          opt.textContent = model.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          if (model === defaults.pixazo) opt.selected = true;
+          optgroup.appendChild(opt);
+        });
+        modelSelect.appendChild(optgroup);
+      }
+      
+      if (modelSelect.options.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No models available';
+        modelSelect.appendChild(opt);
+      }
+    })
+    .catch(err => {
+      console.error('Error loading models:', err);
+      els.model.innerHTML = '<option value="">Error loading models</option>';
+    });
+
   fetch("/api/keys", { headers: AUTH.getAuthHeader() }).then(r=>r.json()).then(d=>{
-    const pixazo = d.keys?.find(k => k.provider === 'pixazo');
-    const configured = !!pixazo?.configured;
-    els.keyStatus.textContent = configured ? "✅ Pixazo key: configured" : "⚠️ Pixazo key missing — add it in Profile";
-    els.keyStatus.className = "key-status " + (configured ? "ok" : "bad");
+    const configuredProviders = [];
+    if (d.keys?.some(k => k.provider === 'pixazo' && k.configured)) configuredProviders.push('Pixazo');
+    
+    if (configuredProviders.length === 0) {
+      els.keyStatus.textContent = "⚠️ Pixazo key missing — add it in Profile";
+      els.keyStatus.className = "key-status bad";
+    } else {
+      els.keyStatus.textContent = "✅ Keys configured: " + configuredProviders.join(', ');
+      els.keyStatus.className = "key-status ok";
+    }
   }).catch(()=>{ els.keyStatus.textContent="server unreachable"; els.keyStatus.className="key-status bad"; });
 
   document.querySelectorAll(".src-btn").forEach(btn => {

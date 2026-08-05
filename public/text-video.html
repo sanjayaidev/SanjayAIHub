@@ -245,9 +245,7 @@
           <div>
             <label>Model</label>
             <select id="model">
-              <option value="wan2.7-t2v">Wan 2.7 T2V</option>
-              <option value="wan2.6-t2v">Wan 2.6 T2V</option>
-              <option value="wan2.5-t2v-preview">Wan 2.5 Preview</option>
+              <option value="">Loading models...</option>
             </select>
           </div>
           <div>
@@ -278,6 +276,7 @@
   </section>
 </main>
 <footer>SanjayAIHub · Text to Video · powered by Alibaba Cloud Model Studio</footer>
+<script src="/js/auth.js"></script>
 <script>
   const els = {
     form: document.getElementById("genForm"),
@@ -305,9 +304,68 @@
     keyStatus: document.getElementById("keyStatus"),
   };
 
-  fetch("/api/health").then(r=>r.json()).then(d=>{
-    els.keyStatus.textContent = d.keyConfigured ? "✅ API key: configured" : "⚠️ API key missing";
-    els.keyStatus.className = "key-status " + (d.keyConfigured ? "ok" : "bad");
+  // Load model catalog dynamically from API
+  fetch("/api/modules/text-to-video/models", { headers: AUTH.getAuthHeader() })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) throw new Error('Failed to load models');
+      const modelSelect = els.model;
+      modelSelect.innerHTML = '';
+      
+      const providers = data.providers || [];
+      const modelsByProvider = data.models || {};
+      const defaults = data.defaults || {};
+      
+      if (providers.includes('alibaba') && modelsByProvider.alibaba?.length > 0) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = 'Alibaba Cloud';
+        modelsByProvider.alibaba.forEach(model => {
+          const opt = document.createElement('option');
+          opt.value = model;
+          opt.textContent = model.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          if (model === defaults.alibaba) opt.selected = true;
+          optgroup.appendChild(opt);
+        });
+        modelSelect.appendChild(optgroup);
+      }
+      
+      if (providers.includes('pixazo') && modelsByProvider.pixazo?.length > 0) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = 'Pixazo';
+        modelsByProvider.pixazo.forEach(model => {
+          const opt = document.createElement('option');
+          opt.value = model;
+          opt.textContent = model.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          if (model === defaults.pixazo) opt.selected = true;
+          optgroup.appendChild(opt);
+        });
+        modelSelect.appendChild(optgroup);
+      }
+      
+      if (modelSelect.options.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No models available';
+        modelSelect.appendChild(opt);
+      }
+    })
+    .catch(err => {
+      console.error('Error loading models:', err);
+      els.model.innerHTML = '<option value="">Error loading models</option>';
+    });
+
+  fetch("/api/keys", { headers: AUTH.getAuthHeader() }).then(r=>r.json()).then(d=>{
+    const configuredProviders = [];
+    if (d.keys?.some(k => k.provider === 'alibaba' && k.configured)) configuredProviders.push('Alibaba');
+    if (d.keys?.some(k => k.provider === 'pixazo' && k.configured)) configuredProviders.push('Pixazo');
+    
+    if (configuredProviders.length === 0) {
+      els.keyStatus.textContent = "⚠️ No API keys configured — add Alibaba or Pixazo keys in Profile";
+      els.keyStatus.className = "key-status bad";
+    } else {
+      els.keyStatus.textContent = "✅ Keys configured: " + configuredProviders.join(', ');
+      els.keyStatus.className = "key-status ok";
+    }
   }).catch(()=>{ els.keyStatus.textContent="server unreachable"; els.keyStatus.className="key-status bad"; });
 
   function setTally(kind){ els.tally.className = "tally" + (kind ? " " + kind : ""); }
