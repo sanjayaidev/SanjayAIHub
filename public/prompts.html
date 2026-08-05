@@ -954,9 +954,9 @@
         const isFav = favoriteIds.has(prompt.id);
 
         let mediaHtml;
-        if (isVideo && prompt.instagram_shortcode) {
-            // Real Instagram reel, rendered in-place via our own proxy —
-            // no redirect off-site.
+        if (prompt.instagram_shortcode) {
+            // Real Instagram reel/post, rendered in-place via our own proxy —
+            // no redirect off-site. Works for any Instagram URL with a shortcode.
             mediaHtml = `
                 <div style="width:100%;max-width:340px;margin:0 auto;aspect-ratio:9/16;border-radius:12px;overflow:hidden;background:#000;">
                     <iframe src="/api/reels/proxy?shortcode=${encodeURIComponent(prompt.instagram_shortcode)}"
