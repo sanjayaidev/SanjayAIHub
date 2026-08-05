@@ -115,6 +115,64 @@ class AlibabaProvider {
 
     return response.json();
   }
+
+  // Async video generation (Wan T2V/I2V models). DashScope-style: submit a
+  // task, then poll it with checkVideoTask(). Mirrors the async pattern the
+  // rest of this app already uses for Pixazo video jobs.
+  // Returns { output: { task_id, task_status } }.
+  async videoGeneration(prompt, options = {}) {
+    const { model, image_url, size, duration, seed, negative_prompt } = options;
+    if (!model) throw new Error('Alibaba videoGeneration requires a model');
+    if (!prompt || !prompt.trim()) throw new Error('prompt is required');
+
+    const input = { prompt };
+    if (image_url) input.img_url = image_url;
+    if (negative_prompt) input.negative_prompt = negative_prompt;
+
+    const parameters = {};
+    if (size) parameters.size = size;
+    if (duration) parameters.duration = duration;
+    if (seed !== undefined && seed !== null) parameters.seed = seed;
+
+    const response = await fetch(`${this.baseUrl}/services/aigc/video-generation/video-synthesis`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+        'X-DashScope-Async': 'enable',
+      },
+      body: JSON.stringify({ model, input, parameters }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let detail = errorText;
+      try {
+        detail = JSON.parse(errorText).error?.message || errorText;
+      } catch (_) {}
+      throw new Error(`Alibaba video generation error (${response.status}): ${detail}`);
+    }
+
+    return response.json();
+  }
+
+  // Poll an async video task submitted via videoGeneration().
+  // Returns { output: { task_status, video_url, ... } }.
+  // task_status: PENDING | RUNNING | SUCCEEDED | FAILED
+  async checkVideoTask(taskId) {
+    if (!taskId) throw new Error('taskId is required');
+
+    const response = await fetch(`${this.baseUrl}/tasks/${encodeURIComponent(taskId)}`, {
+      headers: { Authorization: `Bearer ${this.apiKey}` },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Alibaba video task status error (${response.status}): ${errorText}`);
+    }
+
+    return response.json();
+  }
 }
 
 module.exports = AlibabaProvider;
