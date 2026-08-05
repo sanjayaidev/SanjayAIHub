@@ -111,11 +111,12 @@ async function textToImageHandler(requestBody, apiKeys, userId) {
     try {
       const result = await alibaba.imageGeneration(enhancedPrompt, {
         model,
-        size: `${parseInt(width) || 1024}x${parseInt(height) || 1024}`,
+        size: `${parseInt(width) || 1024}*${parseInt(height) || 1024}`,
         seed: seed ? parseInt(seed) : undefined,
       });
 
-      const generated = result?.data?.[0];
+      // DashScope returns: { output: { results: [{ url }] } }
+      const generated = result?.output?.results?.[0];
       if (!generated?.url) {
         throw new Error('No image returned');
       }
