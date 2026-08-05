@@ -11,6 +11,8 @@ const { contentCreatorHandler, getModelCatalog: getContentModelCatalog } = requi
 const { ttsHandler, getModelCatalog: getTTSModelCatalog } = require('../modules/text-to-speech');
 const { textToImageHandler, getModelCatalog: getImageModelCatalog } = require('../modules/text-to-image');
 const { textToVideoHandler, getModelCatalog: getVideoModelCatalog } = require('../modules/text-to-video');
+const { imageToVideoHandler, checkVideoStatus: checkI2VStatus, getModelCatalog: getImageToVideoModelCatalog } = require('../modules/image-to-video');
+const { textToMusicHandler, checkAudioStatus, getModelCatalog: getMusicModelCatalog } = require('../modules/text-to-music');
 
 // ──────────────────────────────────────────────
 // GET /api/modules - List all modules with access
@@ -118,6 +120,12 @@ router.get('/:moduleKey/models', authenticateToken, async (req, res) => {
         break;
       case 'text-to-video':
         catalog = getVideoModelCatalog(userTier);
+        break;
+      case 'image-to-video':
+        catalog = getImageToVideoModelCatalog(userTier);
+        break;
+      case 'text-to-music':
+        catalog = getMusicModelCatalog(userTier);
         break;
       default:
         return res.status(404).json({ 
@@ -246,14 +254,14 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
       'coding-agent': ['nvidia'],
       'social-content': ['nvidia'],
       'message-writer': ['nvidia'],
-      'text-to-image': ['alibaba'],
+      'text-to-image': ['alibaba', 'pixazo'],
       'image-edit': ['alibaba', 'pixazo'],
-      'text-to-video': ['alibaba'],
-      'image-to-video': ['alibaba'],
+      'text-to-video': ['alibaba', 'pixazo'],
+      'image-to-video': ['pixazo'],
       'video-to-video': ['alibaba'],
       'text-to-speech': ['cloudflare', 'elevenlabs'],
       'voice-clone': ['elevenlabs', 'alibaba'],
-      'text-to-music': ['alibaba'],
+      'text-to-music': ['pixazo'],
       'design-studio': ['pixazo'],
       'chatbot-maker': ['alibaba'],
       'mcp-integrator': [],
@@ -314,6 +322,12 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
         break;
       case 'text-to-video':
         result = await textToVideoHandler(req.body, apiKeys, userId);
+        break;
+      case 'image-to-video':
+        result = await imageToVideoHandler(req.body, apiKeys, userId);
+        break;
+      case 'text-to-music':
+        result = await textToMusicHandler(req.body, apiKeys, userId);
         break;
       // Note: 'prompt-library' is a browse/favorite experience, not a
       // generation action, so it doesn't go through this generic execute
@@ -507,6 +521,70 @@ router.post('/prompt-library/:promptId/view', async (req, res) => {
   } catch (error) {
     console.error('Increment view error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// POST /api/modules/image-to-video/status - Check image-to-video status
+// ──────────────────────────────────────────────
+router.post('/image-to-video/status', authenticateToken, async (req, res) => {
+  const { requestId } = req.body;
+  
+  if (!requestId) {
+    return res.status(400).json({ success: false, message: 'Request ID is required' });
+  }
+  
+  try {
+    // Get user's API keys
+    const result = await pool.query(
+      `SELECT provider, api_key FROM user_api_keys 
+       WHERE user_id = $1 AND provider = 'pixazo' AND is_active = true`,
+      [req.user.id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'Pixazo API key not configured' });
+    }
+    
+    const apiKeys = { pixazo: { api_key: result.rows[0].api_key } };
+    const statusResult = await checkI2VStatus(requestId, apiKeys);
+    
+    res.json({ success: true, ...statusResult });
+  } catch (error) {
+    console.error('Image-to-video status check error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Status check failed' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// POST /api/modules/text-to-music/status - Check text-to-music status
+// ──────────────────────────────────────────────
+router.post('/text-to-music/status', authenticateToken, async (req, res) => {
+  const { requestId } = req.body;
+  
+  if (!requestId) {
+    return res.status(400).json({ success: false, message: 'Request ID is required' });
+  }
+  
+  try {
+    // Get user's API keys
+    const result = await pool.query(
+      `SELECT provider, api_key FROM user_api_keys 
+       WHERE user_id = $1 AND provider = 'pixazo' AND is_active = true`,
+      [req.user.id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'Pixazo API key not configured' });
+    }
+    
+    const apiKeys = { pixazo: { api_key: result.rows[0].api_key } };
+    const statusResult = await checkAudioStatus(requestId, apiKeys);
+    
+    res.json({ success: true, ...statusResult });
+  } catch (error) {
+    console.error('Text-to-music status check error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Status check failed' });
   }
 });
 
