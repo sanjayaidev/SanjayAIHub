@@ -1,20 +1,32 @@
 // modules/image-to-image.js
-// Image-to-Image module supporting Pixazo provider
-// with model-specific parameters
+// Image-to-Image (edit) module — implemented via Alibaba's qwen-image-edit
+// model family (see providers/alibaba-models.js "Image Edit models").
+// Pixazo has no image-to-image endpoint yet, so it stays unsupported there
+// and callers are pointed at the Alibaba provider instead.
 
-const pool = require('../db');
-const PixazoProvider = require('../providers/pixazo');
+const AlibabaProvider = require('../providers/alibaba');
 
-// Note: Pixazo currently supports Flux 1 Schnell for text-to-image
-// For image-to-image, we'll use Alibaba's qwen-image-edit models
-// This module is a placeholder for future Pixazo image-to-image support
+const ALIBABA_EDIT_MODELS = [
+  'qwen-image-edit-plus',
+  'qwen-image-edit-plus-2025-10-30',
+  'qwen-image-edit',
+  'qwen-image-edit-max-2026-01-16',
+  'qwen-image-edit-max',
+  'qwen-image-edit-plus-2025-12-15',
+];
 
-const PIXAZO_I2I_MODEL = null; // Not yet available in Pixazo
+const DEFAULT_ALIBABA_EDIT_MODEL = 'qwen-image-edit-plus';
 
 // Parameters supported by each provider's models
 const MODEL_PARAMETERS = {
+  'alibaba': {
+    width: { type: 'select', options: [512, 768, 1024, 1280, 1536], default: 1024, label: 'Width' },
+    height: { type: 'select', options: [512, 768, 1024, 1280, 1536], default: 1024, label: 'Height' },
+    seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
+  },
   'pixazo': {
-    // Placeholder - will be updated when Pixazo adds image-to-image
+    // Pixazo has no image-to-image endpoint yet — kept here only so the UI
+    // can show a disabled option with an explanatory note.
     prompt: { type: 'text', default: '', label: 'Edit Instruction' },
     strength: { type: 'range', min: 0, max: 1, default: 0.75, step: 0.05, label: 'Strength' },
   }
@@ -24,9 +36,11 @@ async function imageToImageHandler(requestBody, apiKeys, userId) {
   const {
     prompt,
     image_url,
-    provider = 'pixazo',
+    provider = 'alibaba',
     model: requestedModel,
-    strength,
+    width,
+    height,
+    seed,
   } = requestBody;
 
   if (!prompt || !prompt.trim()) {
@@ -37,47 +51,67 @@ async function imageToImageHandler(requestBody, apiKeys, userId) {
     throw new Error('Source image URL is required for image editing');
   }
 
-  // Pixazo doesn't currently support image-to-image
-  // Return error with helpful message
+  // Pixazo doesn't currently support image-to-image.
   if (provider === 'pixazo') {
-    throw new Error('Pixazo does not currently support image-to-image editing. Please use Alibaba provider for this feature.');
+    throw new Error('Pixazo does not currently support image-to-image editing. Please use the Alibaba provider for this feature.');
   }
 
-  let imageUrl, imageDataUrl, model;
+  if (!apiKeys.alibaba?.api_key || !apiKeys.alibaba?.workspace_id) {
+    throw new Error('Alibaba Cloud API key + Workspace ID not configured. Add them in Profile > API Keys.');
+  }
 
-  if (provider === 'pixazo') {
-    const pixazo = new PixazoProvider(apiKeys.pixazo.api_key);
-    
-    model = PIXAZO_I2I_MODEL;
-    
-    try {
-      // Placeholder - will be implemented when Pixazo adds I2I
-      throw new Error('Image-to-image not yet available with Pixazo');
-    } catch (err) {
-      throw new Error(`Pixazo I2I error: ${err.message}`);
+  const model = ALIBABA_EDIT_MODELS.includes(requestedModel) ? requestedModel : DEFAULT_ALIBABA_EDIT_MODEL;
+
+  const alibaba = new AlibabaProvider(
+    apiKeys.alibaba.api_key,
+    apiKeys.alibaba.workspace_id
+  );
+
+  let imageUrl, imageDataUrl;
+
+  try {
+    const size = (width && height) ? `${parseInt(width)}x${parseInt(height)}` : undefined;
+    const result = await alibaba.imageEdit(prompt, image_url, {
+      model,
+      size,
+      seed: seed ? parseInt(seed) : undefined,
+    });
+
+    const edited = result?.data?.[0];
+    if (!edited?.url) {
+      throw new Error('No edited image returned');
     }
+
+    imageUrl = edited.url;
+    imageDataUrl = null;
+  } catch (err) {
+    throw new Error(`Alibaba Image Edit error: ${err.message}`);
   }
 
   return {
     imageUrl,
     imageDataUrl,
-    provider,
+    provider: 'alibaba',
     model,
-    parameters: { prompt, strength }
+    parameters: { prompt, width, height, seed }
   };
 }
 
 function getModelCatalog(userTier) {
+  const isPaid = ['basic', 'pro', 'enterprise'].includes(userTier);
+
   return {
-    providers: ['pixazo'],
+    providers: ['alibaba', 'pixazo'],
     models: {
-      pixazo: PIXAZO_I2I_MODEL ? [PIXAZO_I2I_MODEL] : []
+      alibaba: isPaid ? ALIBABA_EDIT_MODELS : [],
+      pixazo: []
     },
     defaults: {
-      pixazo: PIXAZO_I2I_MODEL
+      alibaba: DEFAULT_ALIBABA_EDIT_MODEL,
+      pixazo: null
     },
     parameters: MODEL_PARAMETERS,
-    note: 'Image-to-image is not yet available with Pixazo. Please check back later or use Alibaba provider.'
+    note: 'Image-to-image editing runs on Alibaba (qwen-image-edit). Pixazo does not offer this yet.'
   };
 }
 
@@ -85,5 +119,6 @@ module.exports = {
   imageToImageHandler,
   getModelCatalog,
   MODEL_PARAMETERS,
-  PIXAZO_I2I_MODEL
+  ALIBABA_EDIT_MODELS,
+  DEFAULT_ALIBABA_EDIT_MODEL
 };
