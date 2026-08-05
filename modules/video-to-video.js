@@ -1,14 +1,32 @@
 // modules/video-to-video.js
-// Video-to-Video module — Pixazo (LTX 2.3) already exposes a video-to-video
-// mode alongside text-to-video and image-to-video (see providers/pixazo.js
-// FREE_VIDEO_MODES), so this mirrors modules/image-to-video.js.
+// Video-to-Video module — Alibaba (Wan I2V/R2V) and Pixazo (LTX 2.3)
+// with model-specific parameters based on https://github.com/sanjayaidev/AlibabaCloud
 
+const pool = require('../db');
+const AlibabaProvider = require('../providers/alibaba');
 const PixazoProvider = require('../providers/pixazo');
+const alibabaModels = require('../providers/alibaba-models');
+
+// Provider configurations - R2V models from alibaba-models.js vision category
+const ALIBABA_R2V_MODELS = alibabaModels.getModelsByCategory('vision').filter(m => 
+  m.includes('-r2v')
+);
 
 const PIXAZO_VIDEO_MODEL = 'ltx-2.3';
 
-// Parameters supported by Pixazo's video-to-video
+// Parameters supported by each provider's models
+// Based on https://github.com/sanjayaidev/AlibabaCloud - video generation uses prompt + optional reference_video_urls
 const MODEL_PARAMETERS = {
+  'alibaba': {
+    size: {
+      type: 'select',
+      options: ['480x480', '720x720', '1080x1080', '1280x720', '720x1280', '1920x1080', '1080x1920'],
+      default: '720x720',
+      label: 'Resolution'
+    },
+    duration: { type: 'select', options: [5, 10], default: 5, label: 'Duration (seconds)' },
+    seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
+  },
   'pixazo': {
     strength: { type: 'range', min: 0, max: 1, default: 0.6, step: 0.05, label: 'Transform Strength' },
     frame_rate: { type: 'select', options: [24, 30], default: 24, label: 'Frame Rate' },
