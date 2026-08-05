@@ -286,7 +286,12 @@
   </section>
 </main>
 <footer>SanjayAIHub · Text to Music · powered by Alibaba Cloud Model Studio</footer>
+<script src="/js/auth.js"></script>
 <script>
+  if (!window.AUTH || !AUTH.isLoggedIn()) {
+    window.location.href = '/login.html';
+  }
+
   const els = {
     form: document.getElementById("genForm"),
     prompt: document.getElementById("prompt"),
@@ -313,9 +318,11 @@
     keyStatus: document.getElementById("keyStatus"),
   };
 
-  fetch("/api/health").then(r=>r.json()).then(d=>{
-    els.keyStatus.textContent = d.keyConfigured ? "✅ API key: configured" : "⚠️ API key missing";
-    els.keyStatus.className = "key-status " + (d.keyConfigured ? "ok" : "bad");
+  fetch("/api/keys", { headers: AUTH.getAuthHeader() }).then(r=>r.json()).then(d=>{
+    const pixazo = d.keys?.find(k => k.provider === 'pixazo');
+    const configured = !!pixazo?.configured;
+    els.keyStatus.textContent = configured ? "✅ Pixazo key: configured" : "⚠️ Pixazo key missing — add it in Profile";
+    els.keyStatus.className = "key-status " + (configured ? "ok" : "bad");
   }).catch(()=>{ els.keyStatus.textContent="server unreachable"; els.keyStatus.className="key-status bad"; });
 
   function setTally(kind){ els.tally.className = "tally" + (kind ? " " + kind : ""); }
@@ -341,13 +348,13 @@
     const timer = setInterval(() => { els.timecode.textContent = fmtElapsed(Date.now() - start) + " — COMPOSING"; }, 1000);
 
     try {
-      const res = await fetch("/api/generate/text-to-music", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const res = await fetch("/api/modules/text-to-music", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...AUTH.getAuthHeader() },
         body: JSON.stringify({
           prompt,
           duration: els.duration.value ? Number(els.duration.value) : undefined,
           bpm: els.bpm.value ? Number(els.bpm.value) : undefined,
-          genre: els.genre.value || undefined,
           instrumental: els.instrumental.checked,
           infer_steps: els.infer_steps.value ? Number(els.infer_steps.value) : undefined,
           guidance_scale: els.guidance_scale.value ? Number(els.guidance_scale.value) : undefined,
@@ -356,10 +363,10 @@
         }),
       });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.message || data.error || "Submission failed.");
+      if (!res.ok || !data.success) throw new Error(data.message || "Submission failed.");
       if (myToken !== genToken) return;
       setProgress(30); els.statusText.textContent = "processing…";
-      pollStatus(data.request_id, myToken, start, timer);
+      pollStatus(data.data.requestId, myToken, start, timer);
     } catch (err) {
       if (myToken !== genToken) return;
       setTally("err"); els.statusDot.className = "dot err"; els.statusText.textContent = "failed";
@@ -372,9 +379,14 @@
   async function pollStatus(requestId, myToken, start, timer){
     if (myToken !== genToken) { clearInterval(timer); return; }
     try {
-      const res = await fetch(`/api/status/${requestId}`);
+      const res = await fetch(`/api/modules/text-to-music/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...AUTH.getAuthHeader() },
+        body: JSON.stringify({ requestId }),
+      });
       const data = await res.json();
       if (myToken !== genToken) { clearInterval(timer); return; }
+      if (!res.ok || !data.success) throw new Error(data.message || "Status check failed.");
       if (data.status === "QUEUED" || data.status === "PROCESSING") {
         setProgress(data.status === "QUEUED" ? 40 : 65);
         els.statusText.textContent = data.status.toLowerCase() + "…";
@@ -384,7 +396,7 @@
         setProgress(100); setTally("done"); els.statusDot.className = "dot done";
         els.statusText.textContent = "complete"; clearInterval(timer);
         els.timecode.textContent = fmtElapsed(Date.now() - start) + " — COMPLETE";
-        const url = data.output && data.output.media_url && data.output.media_url[0];
+        const url = data.audioUrl;
         if (url) {
           els.outputArea.innerHTML = `<audio src="${url}" controls autoplay></audio>`;
           els.downloadLink.href = url; els.downloadLink.download = `music-${Date.now()}.mp3`;
@@ -393,7 +405,7 @@
         } else { showError("No audio URL returned."); }
         els.genBtn.disabled = false; els.genBtn.textContent = "🎵 Generate Music";
       } else {
-        throw new Error(data.error || "Generation failed.");
+        throw new Error("Generation failed.");
       }
     } catch (err) {
       if (myToken !== genToken) { clearInterval(timer); return; }
