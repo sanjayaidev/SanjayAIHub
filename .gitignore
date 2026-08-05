@@ -1,43 +1,42 @@
-```
-# Dependencies
-node_modules/
-
-# Build artifacts
+# Compiled and build artifacts
+*.pyc
+__pycache__/
+*.o
+*.obj
 dist/
 build/
+*.class
+*.exe
+*.dll
+*.so
+*.a
+*.out
+
+# Dependencies
+.venv/
+venv/
+node_modules/
+.mypy_cache/
+.pytest_cache/
 target/
+.gradle/
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-.venv/
-.ENV
-.env
-.env.local
-.env.*
-.venv/
-venv/
-ENV/
-.env.dSYM/
-
-# Logs
+# Logs and temp files
 *.log
-
-# Environment specific
-.env.local
-.env.*
-
-# IDE
-.vscode/
-.idea/
+*.tmp
 *.swp
 *.swo
-*~
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# System files
 .DS_Store
 Thumbs.db
 
@@ -45,11 +44,6 @@ Thumbs.db
 coverage/
 htmlcov/
 .coverage
-
-# Temporary files
-*.tmp
-*.temp
-*.bak
 
 # Compressed files
 *.zip
@@ -74,9 +68,3 @@ htmlcov/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
-
-# Cache directories
-.mypy_cache/
-.pytest_cache/
-.gradle/
-```

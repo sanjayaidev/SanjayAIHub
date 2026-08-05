@@ -24,6 +24,12 @@ router.post('/run', async (req, res) => {
   if (!task) {
     return res.status(400).json({ error: 'task is required' });
   }
+  
+  // Get user ID from session (requires authentication)
+  if (!req.session.user || !req.session.user.id) {
+    return res.status(401).json({ error: 'Authentication required. Please log in first.' });
+  }
+  const userId = req.session.user.id;
 
   // If no model specified, use recommended
   let model = modelId;
@@ -45,6 +51,7 @@ router.post('/run', async (req, res) => {
       modelId: model,
       task,
       files,
+      userId, // Pass user ID for per-user credentials
     });
 
     let diff = { diff: '', files: [] };
@@ -78,6 +85,12 @@ router.post('/run/stream', async (req, res) => {
   if (!repoPath || !task) {
     return res.status(400).json({ error: 'repoPath and task are required' });
   }
+  
+  // Get user ID from session (requires authentication)
+  if (!req.session.user || !req.session.user.id) {
+    return res.status(401).json({ error: 'Authentication required. Please log in first.' });
+  }
+  const userId = req.session.user.id;
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -95,6 +108,7 @@ router.post('/run/stream', async (req, res) => {
       modelId: modelId || getRecommendedModel(task).id,
       task,
       files,
+      userId, // Pass user ID for per-user credentials
     });
 
     if (result.success) {

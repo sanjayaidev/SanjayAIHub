@@ -4,13 +4,27 @@ import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import { getModelById, WORKING_MODELS } from './models.js';
+import pool from '../../db/index.js';
 
 const execFileAsync = promisify(execFile);
 
-// Alibaba DashScope configuration
-const ALIBABA_BASE = process.env.ALIBABA_BASE_URL ||
-  `https://${process.env.ALIBABA_WORKSPACE_ID}.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1`;
-const ALIBABA_API_KEY = process.env.ALIBABA_API_KEY;
+// Get Alibaba credentials for a specific user from the database
+async function getUserAlibabaCredentials(userId) {
+  const result = await pool.query(
+    `SELECT api_key, workspace_id FROM user_api_keys 
+     WHERE user_id = $1 AND provider = 'alibaba' AND is_active = true`,
+    [userId]
+  );
+  
+  if (result.rows.length === 0) {
+    throw new Error('No Alibaba credentials found for this user. Please add your API key in Profile > API Keys.');
+  }
+  
+  return {
+    apiKey: result.rows[0].api_key,
+    workspaceId: result.rows[0].workspace_id
+  };
+}
 
 export async function runAider({
   workDir,
@@ -18,7 +32,19 @@ export async function runAider({
   task,
   files = [],
   options = {},
+  userId, // Required: the user's ID to fetch their credentials
 }) {
+  // Validate user ID is provided
+  if (!userId) {
+    throw new Error('userId is required to fetch per-user Alibaba credentials');
+  }
+  
+  // Fetch user-specific Alibaba credentials from database
+  const { apiKey, workspaceId } = await getUserAlibabaCredentials(userId);
+  
+  // Build Alibaba base URL from user's workspace ID
+  const ALIBABA_BASE = `https://${workspaceId}.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1`;
+
   // Validate model
   const model = getModelById(modelId);
   if (!model) {
@@ -39,7 +65,7 @@ export async function runAider({
   const aiderEnv = {
     ...process.env,
     OPENAI_API_BASE: ALIBABA_BASE,
-    OPENAI_API_KEY: ALIBABA_API_KEY,
+    OPENAI_API_KEY: apiKey,
   };
 
   const aiderArgs = [
