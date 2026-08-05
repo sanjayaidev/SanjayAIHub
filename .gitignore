@@ -1,9 +1,15 @@
+```
+# Dependencies
 node_modules/
-modules/coding-agent/node_modules/
+# Environment
 .env
-modules/coding-agent/.env
+.env.local
+.env.*
+# Logs and temp files
 *.log
-modules/coding-agent/logs/
-public/uploads/*
-!public/uploads/.gitkeep
-.DS_Store
+*.tmp
+*.swp
+# Editors
+.vscode/
+.idea/
+```
