@@ -88,11 +88,21 @@ async function textToVideoHandler(requestBody, apiKeys, userId) {
     model = requestedModel || 'wan2.6-t2v';
     
     try {
-      // Note: This is a placeholder - actual Alibaba video gen uses different endpoint
-      // For now, return a message indicating the limitation
-      videoUrl = null;
-      requestId = null;
-      status = 'pending';
+      // Build size from width/height or use default
+      const size = (width && height) ? `${parseInt(width)}x${parseInt(height)}` : '720x720';
+      
+      // Submit async video generation task
+      const result = await alibaba.videoGeneration(prompt, {
+        model,
+        size,
+        duration: parseInt(duration) || 5,
+        seed: seed ? parseInt(seed) : undefined,
+      });
+
+      // DashScope returns: { output: { task_id, task_status } }
+      requestId = result?.output?.task_id;
+      status = result?.output?.task_status || 'PENDING';
+      videoUrl = null; // Will be available after polling via checkVideoTask
     } catch (err) {
       throw new Error(`Alibaba Video error: ${err.message}`);
     }
