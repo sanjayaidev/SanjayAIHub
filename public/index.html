@@ -1,125 +1,913 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sanjay's Reels</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #121212;
-            color: white;
-            padding: 2rem 1rem;
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .header { text-align: center; margin-bottom: 3rem; }
-        .header h1 {
-            font-size: 2.2rem;
-            background: linear-gradient(135deg, #405de6, #833ab4, #e1306c);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .reels-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 2rem;
-            justify-items: center;
-        }
-        .reel-card {
-            background: #1e1e1e;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-            padding: 1rem;
-            width: 100%;
-            max-width: 400px;
-            transition: transform 0.2s;
-        }
-        .reel-card:hover { transform: translateY(-4px); }
-        
-        .video-wrapper {
-            width: 100%;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #000;
-            position: relative;
-            aspect-ratio: 9/16;
-        }
-        .video-wrapper iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-        .footer { text-align: center; margin-top: 3rem; color: #666; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SanjayAIHub · unified AI modules</title>
+  <!-- Font Awesome 6 (free) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #080a0e;
+      color: #eef0f7;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      padding: 1.8rem 1.5rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hub-wrapper {
+      max-width: 1300px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ── Header ── */
+    .hub-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid #1f2433;
+      padding-bottom: 1.2rem;
+      gap: 12px;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      background: linear-gradient(135deg, #00e8a2, #00b37a);
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      box-shadow: 0 0 20px rgba(0, 232, 162, 0.2);
+    }
+
+    .logo-text {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #eef0f7 60%, #8b92a8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-text span {
+      color: #00e8a2;
+      -webkit-text-fill-color: #00e8a2;
+    }
+
+    /* ── Header Auth Buttons ── */
+    .auth-buttons {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .auth-btn-login,
+    .auth-btn-register {
+      padding: 8px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .auth-btn-login {
+      background: rgba(255,255,255,0.06);
+      color: #eef2f9;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .auth-btn-login:hover {
+      background: rgba(255,255,255,0.12);
+    }
+
+    .auth-btn-register {
+      background: #00e8a2;
+      color: #060d0b;
+      box-shadow: 0 4px 16px -4px rgba(0,232,162,0.3);
+    }
+
+    .auth-btn-register:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    /* ── User Info ── */
+    .user-info {
+      display: flex;
+      align-items: center;
+    }
+
+    .user-info-inner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.04);
+      padding: 6px 16px 6px 20px;
+      border-radius: 30px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .user-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: #eef2f9;
+    }
+
+    .user-name i {
+      color: #00e8a2;
+      margin-right: 6px;
+    }
+
+    .user-tier {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 12px;
+      border-radius: 12px;
+      background: rgba(0,232,162,0.08);
+      color: #00e8a2;
+      border: 1px solid rgba(0,232,162,0.1);
+    }
+
+    .user-tier .tier-emoji {
+      margin-right: 4px;
+    }
+
+    .user-profile-btn,
+    .user-logout-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: #8896b0;
+      padding: 4px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .user-profile-btn:hover {
+      background: rgba(255,255,255,0.1);
+      color: #eef2f9;
+    }
+
+    .user-logout-btn:hover {
+      background: rgba(255,90,90,0.15);
+      color: #ff6b6b;
+      border-color: rgba(255,90,90,0.15);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      background: #0e1016;
+      border: 1px solid #1f2433;
+      border-radius: 16px;
+      padding: 2.5rem 2.5rem;
+      margin-bottom: 2.8rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      background-image: radial-gradient(ellipse at 80% 30%, rgba(0,232,162,.05), transparent 60%);
+    }
+
+    .hero-text h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .hero-text h1 i {
+      color: #00e8a2;
+    }
+
+    .hero-text p {
+      color: #8b92a8;
+      font-size: 15px;
+      max-width: 620px;
+      line-height: 1.6;
+    }
+
+    .hero-badge {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .hero-badge .pill {
+      background: #13161e;
+      border: 1px solid #1f2433;
+      border-radius: 30px;
+      padding: 8px 22px;
+      font-size: 14px;
+      color: #c8cedb;
+    }
+
+    .hero-badge .pill i {
+      color: #00e8a2;
+      margin-right: 8px;
+    }
+
+    /* ── Grid ── */
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-title i {
+      color: #00e8a2;
+      font-size: 18px;
+    }
+
+    .section-sub {
+      color: #8b92a8;
+      font-size: 14px;
+      margin-bottom: 1.8rem;
+      border-left: 2px solid #1f2433;
+      padding-left: 16px;
+    }
+
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 18px;
+      margin-bottom: 2.5rem;
+    }
+
+    .module-card {
+      background: #0e1016;
+      border: 1px solid #1f2433;
+      border-radius: 14px;
+      padding: 1.5rem 1.2rem 1.2rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .module-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 0% 0%, var(--glow, rgba(0,232,162,.04)), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.25s;
+      pointer-events: none;
+    }
+
+    .module-card:hover:not(.locked) {
+      border-color: var(--border-hover, #2b3345);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+    }
+
+    .module-card:hover:not(.locked)::after {
+      opacity: 1;
+    }
+
+    .module-card.locked {
+      opacity: 0.5;
+      cursor: not-allowed;
+      filter: grayscale(0.8);
+    }
+
+    .module-card.locked:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    .module-card.locked .lock-badge {
+      display: flex;
+    }
+
+    .lock-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      color: #ff6b6b;
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 14px;
+      border: 1px solid rgba(255,90,90,0.2);
+      z-index: 2;
+      display: none;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .lock-badge span {
+      font-size: 10px;
+      font-weight: 600;
+      color: #ff9b9b;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .card-icon {
+      font-size: 26px;
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--icon-bg, #13161e);
+      border: 1px solid var(--border2, #1f2433);
+      flex-shrink: 0;
+    }
+
+    .card-badge {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--badge-bg, #13161e);
+      color: var(--badge-color, #8b92a8);
+      padding: 4px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border2, #1f2433);
+      white-space: nowrap;
+    }
+
+    .module-card h3 {
+      font-size: 17px;
+      font-weight: 600;
+      margin: 4px 0 6px;
+      letter-spacing: -0.01em;
+    }
+
+    .module-card p {
+      font-size: 13px;
+      color: #8b92a8;
+      line-height: 1.5;
+      flex: 1;
+      margin-bottom: 12px;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid #1a1f2b;
+      padding-top: 12px;
+      margin-top: 4px;
+      font-size: 12px;
+      color: #4f566b;
+    }
+
+    .card-footer .arrow {
+      color: var(--arrow-color, #4f566b);
+      transition: transform 0.2s;
+      font-size: 14px;
+    }
+
+    .module-card:not(.locked):hover .arrow {
+      transform: translateX(4px);
+      color: #00e8a2;
+    }
+
+    .card-footer .tag {
+      background: #13161e;
+      padding: 2px 10px;
+      border-radius: 12px;
+      border: 1px solid #1f2433;
+      font-size: 10px;
+      color: #8b92a8;
+    }
+
+    /* ── Card Styles ── */
+    .card-chat { --glow: rgba(0,232,162,.08); --border-hover: #00e8a2; --icon-bg: rgba(0,232,162,.08); --badge-color: #00e8a2; --badge-bg: rgba(0,232,162,.08); --arrow-color: #00e8a2; }
+    .card-social { --glow: rgba(77,142,255,.08); --border-hover: #4d8eff; --icon-bg: rgba(77,142,255,.08); --badge-color: #4d8eff; --badge-bg: rgba(77,142,255,.08); --arrow-color: #4d8eff; }
+    .card-wish { --glow: rgba(251,191,36,.08); --border-hover: #fbbf24; --icon-bg: rgba(251,191,36,.08); --badge-color: #fbbf24; --badge-bg: rgba(251,191,36,.08); --arrow-color: #fbbf24; }
+    .card-prompt { --glow: rgba(167,139,250,.08); --border-hover: #a78bfa; --icon-bg: rgba(167,139,250,.08); --badge-color: #a78bfa; --badge-bg: rgba(167,139,250,.08); --arrow-color: #a78bfa; }
+    .card-t2i { --glow: rgba(244,114,182,.08); --border-hover: #f472b6; --icon-bg: rgba(244,114,182,.08); --badge-color: #f472b6; --badge-bg: rgba(244,114,182,.08); --arrow-color: #f472b6; }
+    .card-i2i { --glow: rgba(244,114,182,.08); --border-hover: #f472b6; --icon-bg: rgba(244,114,182,.08); --badge-color: #f472b6; --badge-bg: rgba(244,114,182,.08); --arrow-color: #f472b6; }
+    .card-t2v { --glow: rgba(167,139,250,.08); --border-hover: #a78bfa; --icon-bg: rgba(167,139,250,.08); --badge-color: #a78bfa; --badge-bg: rgba(167,139,250,.08); --arrow-color: #a78bfa; }
+    .card-i2v { --glow: rgba(167,139,250,.08); --border-hover: #a78bfa; --icon-bg: rgba(167,139,250,.08); --badge-color: #a78bfa; --badge-bg: rgba(167,139,250,.08); --arrow-color: #a78bfa; }
+    .card-v2v { --glow: rgba(167,139,250,.08); --border-hover: #a78bfa; --icon-bg: rgba(167,139,250,.08); --badge-color: #a78bfa; --badge-bg: rgba(167,139,250,.08); --arrow-color: #a78bfa; }
+    .card-tts { --glow: rgba(34,211,238,.08); --border-hover: #22d3ee; --icon-bg: rgba(34,211,238,.08); --badge-color: #22d3ee; --badge-bg: rgba(34,211,238,.08); --arrow-color: #22d3ee; }
+    .card-song { --glow: rgba(34,211,238,.08); --border-hover: #22d3ee; --icon-bg: rgba(34,211,238,.08); --badge-color: #22d3ee; --badge-bg: rgba(34,211,238,.08); --arrow-color: #22d3ee; }
+    .card-coding { --glow: rgba(251,146,60,.08); --border-hover: #fb923c; --icon-bg: rgba(251,146,60,.08); --badge-color: #fb923c; --badge-bg: rgba(251,146,60,.08); --arrow-color: #fb923c; }
+    .card-voice { --glow: rgba(244,114,182,.08); --border-hover: #f472b6; --icon-bg: rgba(244,114,182,.08); --badge-color: #f472b6; --badge-bg: rgba(244,114,182,.08); --arrow-color: #f472b6; }
+    .card-design { --glow: rgba(251,191,36,.08); --border-hover: #fbbf24; --icon-bg: rgba(251,191,36,.08); --badge-color: #fbbf24; --badge-bg: rgba(251,191,36,.08); --arrow-color: #fbbf24; }
+    .card-chatbot { --glow: rgba(77,142,255,.08); --border-hover: #4d8eff; --icon-bg: rgba(77,142,255,.08); --badge-color: #4d8eff; --badge-bg: rgba(77,142,255,.08); --arrow-color: #4d8eff; }
+    .card-mcp { --glow: rgba(167,139,250,.08); --border-hover: #a78bfa; --icon-bg: rgba(167,139,250,.08); --badge-color: #a78bfa; --badge-bg: rgba(167,139,250,.08); --arrow-color: #a78bfa; }
+
+    /* ── Auth Modal ── */
+    .auth-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+
+    .auth-modal-overlay.active {
+      display: flex;
+    }
+
+    .auth-modal {
+      background: #0e1016;
+      border: 1px solid #1f2433;
+      border-radius: 20px;
+      padding: 36px 40px;
+      max-width: 420px;
+      width: 100%;
+      position: relative;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+      animation: modalSlideIn 0.3s ease;
+    }
+
+    @keyframes modalSlideIn {
+      0% { opacity: 0; transform: scale(0.95) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .auth-modal-close {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: #4f566b;
+      font-size: 24px;
+      cursor: pointer;
+      transition: 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .auth-modal-close:hover {
+      color: #eef2f9;
+    }
+
+    .auth-modal h2 {
+      font-size: 20px;
+      color: #f0f4fe;
+      margin-bottom: 8px;
+    }
+
+    .auth-modal h2 i {
+      color: #00e8a2;
+      margin-right: 10px;
+    }
+
+    .auth-modal p {
+      color: #8896b0;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .auth-modal p strong {
+      color: #eef2f9;
+    }
+
+    .auth-modal-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .auth-modal-buttons .btn-primary,
+    .auth-modal-buttons .btn-secondary {
+      padding: 10px 24px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: 0.2s;
+      border: none;
+      font-family: 'Inter', sans-serif;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .auth-modal-buttons .btn-primary {
+      background: #00e8a2;
+      color: #060d0b;
+      box-shadow: 0 4px 16px -4px rgba(0,232,162,0.3);
+    }
+
+    .auth-modal-buttons .btn-primary:hover {
+      filter: brightness(1.08);
+    }
+
+    .auth-modal-buttons .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: #8896b0;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .auth-modal-buttons .btn-secondary:hover {
+      background: rgba(255,255,255,0.1);
+      color: #eef2f9;
+    }
+
+    .auth-modal-hint {
+      font-size: 12px !important;
+      color: #4f566b !important;
+      margin-top: 16px !important;
+      margin-bottom: 0 !important;
+      border-top: 1px solid #1a1f2b;
+      padding-top: 12px;
+    }
+
+    .free-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: rgba(0,232,162,0.12);
+      color: #00e8a2;
+      padding: 2px 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,232,162,0.15);
+      margin-left: 6px;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      border-top: 1px solid #1a1f2b;
+      padding-top: 1.5rem;
+      margin-top: 1rem;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: #4f566b;
+    }
+
+    .footer a {
+      color: #8b92a8;
+      text-decoration: none;
+      margin: 0 6px;
+    }
+
+    .footer a:hover {
+      color: #00e8a2;
+    }
+
+    .footer .dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: #00e8a2;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .hero { flex-direction: column; align-items: flex-start; gap: 16px; }
+      .hero-text h1 { font-size: 22px; }
+      .modules-grid { grid-template-columns: 1fr 1fr; }
+      .auth-modal { padding: 24px 20px; }
+      .auth-modal h2 { font-size: 18px; }
+      .footer { flex-direction: column; gap: 10px; }
+    }
+
+    @media (max-width: 480px) {
+      .modules-grid { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>✨ AI Video Reels</h1>
-            <p>by <strong>@freelance.sanjay</strong></p>
-        </div>
+  <div class="hub-wrapper">
+    <!-- Header -->
+    <header class="hub-header">
+      <div class="logo-area">
+        <div class="logo-icon">S</div>
+        <div class="logo-text">Sanjay<span>AI</span>Hub</div>
+      </div>
 
-        <div class="reels-grid" id="reelsGrid"></div>
+      <div class="auth-buttons" id="authButtons">
+        <a href="login.html" class="auth-btn-login"><i class="fas fa-sign-in-alt"></i> Login</a>
+        <a href="login.html?register=true" class="auth-btn-register"><i class="fas fa-user-plus"></i> Register</a>
+      </div>
 
-        <div class="footer">
-            <a href="https://www.instagram.com/freelance.sanjay/" target="_blank" style="color:#e1306c;">
-                Follow @freelance.sanjay on Instagram
-            </a>
+      <div class="user-info" id="userInfo" style="display:none;">
+        <div class="user-info-inner">
+          <div class="user-name"><i class="fas fa-user-circle"></i><span id="userName">User</span></div>
+          <div class="user-tier"><span class="tier-emoji">🌟</span><span id="userTierName">Free</span></div>
+          <button class="user-profile-btn" onclick="window.location.href='profile.html'"><i class="fas fa-cog"></i></button>
+          <button class="user-logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
         </div>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-text">
+        <h1><i class="fas fa-sparkles"></i> All-in-One AI Platform</h1>
+        <p>Access powerful AI tools for content creation, coding assistance, image generation, video editing, voice cloning, and more. Everything you need in one place.</p>
+        <div class="hero-badge">
+          <div class="pill"><i class="fas fa-bolt"></i> Instant Access</div>
+          <div class="pill"><i class="fas fa-shield-alt"></i> Secure & Private</div>
+          <div class="pill"><i class="fas fa-headset"></i> 24/7 Support</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Modules Section -->
+    <div class="section-title"><i class="fas fa-th-large"></i> AI Modules</div>
+    <div class="section-sub">Explore our collection of powerful AI-powered tools</div>
+
+    <div class="modules-grid">
+      <!-- Chat -->
+      <a href="chatbot.html" class="module-card card-chat">
+        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
+        <div class="card-top">
+          <div class="card-icon"><i class="fas fa-comments"></i></div>
+          <div class="card-badge"><i class="fas fa-star"></i> Popular</div>
+        </div>
+        <h3>AI Chat Assistant</h3>
+        <p>Intelligent conversational AI for questions, tasks, and creative discussions</p>
+        <div class="card-footer">
+          <span class="tag"><i class="fas fa-bolt"></i> Real-time</span>
+          <i class="fas fa-arrow-right arrow"></i>
+        </div>
+      </a>
+
+      <!-- Content Creator -->
+      <a href="content.html" class="module-card card-social">
+        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
+        <div class="card-top">
+          <div class="card-icon"><i class="fas fa-pen-fancy"></i></div>
+          <div class="card-badge"><i class="fas fa-fire"></i> Trending</div>
+        </div>
+        <h3>Content Creator</h3>
+        <p>Generate engaging social media posts, captions, and marketing copy</p>
+        <div class="card-footer">
+          <span class="tag"><i class="fas fa-hashtag"></i> Social</span>
+          <i class="fas fa-arrow-right arrow"></i>
+        </div>
+      </a>
+
+      <!-- Text to Image -->
+      <a href="text-image.html" class="module-card card-t2i">
+        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
+        <div class="card-top">
+          <div class="card-icon"><i class="fas fa-image"></i></div>
+          <div class="card-badge"><i class="fas fa-star"></i> Popular</div>
+        </div>
+        <h3>Text to Image</h3>
+        <p>Transform your ideas into stunning visuals with AI-powered generation</p>
+        <div class="card-footer">
+          <span class="tag"><i class="fas fa-palette"></i> Art</span>
+          <i class="fas fa-arrow-right arrow"></i>
+        </div>
+      </a>
+
+      <!-- Image to Image -->
+      <a href="imageedit.html" class="module-card card-i2i">
+        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
+        <div class="card-top">
+          <div class="card-icon"><i class="fas fa-magic"></i></div>
+          <div class="card-badge">New</div>
+        </div>
+        <h3>Image to Image</h3>
+        <p>Edit and transform existing images with AI-powered enhancements</p>
+        <div class="card-footer">
+          <span class="tag"><i class="fas fa-edit"></i> Edit</span>
+          <i class="fas fa-arrow-right arrow"></i>
+        </div>
+      </a>
+
+      <!-- Text to Video -->
+      <a href="text-video.html" class="module-card card-t2v">
+        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
+        <div class="card-top">
+          <div class="card-icon"><i class="fas fa-video"></i></div>
+          <div class="card-badge"><i class="fas fa-fire"></i> Hot</div>
+        </div>
+        <h3>Text to Video</h3>
+        <p>Create amazing videos from text descriptions using advanced AI</p>
+        <div class="card-footer">
+          <span class="tag"><i class="fas fa-film"></i> Video</span>
+          <i class="fas fa-arrow-right arrow"></i>
+        </div>
+      </a>
+
+      <!-- Image to Video -->
+      <a href="image-video.html" class="module-card card-i2v">
+        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
+        <div class="card-top">
+          <div class="card-icon"><i class="fas fa-photo-video"></i></div>
+          <div class="card-badge">New</div>
+        </div>
+        <h3>Image to Video</h3>
+        <p>Bring your images to life by converting them into dynamic videos</p>
+        <div class="card-footer">
+          <span class="tag"><i class="fas fa-play"></i> Motion</span>
+          <i class="fas fa-arrow-right arrow"></i>
+        </div>
+      </a>
+
+      <!-- Video to Video -->
+      <a href="video-edit.html" class="module-card card-v2v">
+        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
+        <div class="card-top">
+          <div class="card-icon"><i class="fas fa-film"></i></div>
+          <div class="card-badge">Advanced</div>
+        </div>
+        <h3>Video to Video</h3>
+        <p>Transform and enhance videos with AI-powered style transfer</p>
+        <div class="card-footer">
+          <span class="tag"><i class="fas fa-sliders-h"></i> VFX</span>
+          <i class="fas fa-arrow-right arrow"></i>
+        </div>
+      </a>
+
+      <!-- Text to Speech -->
+      <a href="tts.html" class="module-card card-tts">
+        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
+        <div class="card-top">
+          <div class="card-icon"><i class="fas fa-volume-up"></i></div>
+          <div class="card-badge"><i class="fas fa-star"></i> Popular</div>
+        </div>
+        <h3>Text to Speech</h3>
+        <p>Convert written text into natural-sounding speech with multiple voices</p>
+        <div class="card-footer">
+          <span class="tag"><i class="fas fa-microphone"></i> Audio</span>
+          <i class="fas fa-arrow-right arrow"></i>
+        </div>
+      </a>
+
+      <!-- Text to Music -->
+      <a href="ttmusic.html" class="module-card card-song">
+        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
+        <div class="card-top">
+          <div class="card-icon"><i class="fas fa-music"></i></div>
+          <div class="card-badge">Creative</div>
+        </div>
+        <h3>Text to Music</h3>
+        <p>Generate original music tracks from text descriptions and moods</p>
+        <div class="card-footer">
+          <span class="tag"><i class="fas fa-headphones"></i> Music</span>
+          <i class="fas fa-arrow-right arrow"></i>
+        </div>
+      </a>
+
+      <!-- Voice Clone -->
+      <a href="voiceclone.html" class="module-card card-voice">
+        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
+        <div class="card-top">
+          <div class="card-icon"><i class="fas fa-microphone-alt"></i></div>
+          <div class="card-badge">Advanced</div>
+        </div>
+        <h3>Voice Cloning</h3>
+        <p>Clone any voice with just a few seconds of audio sample</p>
+        <div class="card-footer">
+          <span class="tag"><i class="fas fa-user"></i> Clone</span>
+          <i class="fas fa-arrow-right arrow"></i>
+        </div>
+      </a>
+
+      <!-- Prompt Library -->
+      <a href="prompts.html" class="module-card card-prompt">
+        <div class="card-top">
+          <div class="card-icon"><i class="fas fa-book-open"></i></div>
+          <div class="card-badge"><span class="free-badge">FREE</span></div>
+        </div>
+        <h3>Prompt Library</h3>
+        <p>Discover and share effective prompts for all AI models</p>
+        <div class="card-footer">
+          <span class="tag"><i class="fas fa-library"></i> Resource</span>
+          <i class="fas fa-arrow-right arrow"></i>
+        </div>
+      </a>
+
+      <!-- Coding Agent -->
+      <a href="/agent" class="module-card card-coding">
+        <div class="lock-badge"><i class="fas fa-lock"></i><span>PRO</span></div>
+        <div class="card-top">
+          <div class="card-icon"><i class="fas fa-code"></i></div>
+          <div class="card-badge"><i class="fas fa-rocket"></i> Beta</div>
+        </div>
+        <h3>Coding Agent</h3>
+        <p>AI-powered coding assistant for development and debugging</p>
+        <div class="card-footer">
+          <span class="tag"><i class="fas fa-terminal"></i> Dev</span>
+          <i class="fas fa-arrow-right arrow"></i>
+        </div>
+      </a>
+
+      <!-- Message Writer -->
+      <a href="message.html" class="module-card card-wish">
+        <div class="card-top">
+          <div class="card-icon"><i class="fas fa-envelope-open-text"></i></div>
+          <div class="card-badge"><span class="free-badge">FREE</span></div>
+        </div>
+        <h3>Message Writer</h3>
+        <p>Craft perfect messages for any occasion with AI assistance</p>
+        <div class="card-footer">
+          <span class="tag"><i class="fas fa-pen"></i> Writing</span>
+          <i class="fas fa-arrow-right arrow"></i>
+        </div>
+      </a>
     </div>
 
-    <script>
-        const reelUrls = [
-            'https://www.instagram.com/freelance.sanjay/reel/Dbe3bXls-Vm/',
-            'https://www.instagram.com/freelance.sanjay/reel/DbZvbOsMomW/',
-            'https://www.instagram.com/freelance.sanjay/reel/DbcistBMBdb/',
-            'https://www.instagram.com/freelance.sanjay/reel/DbWJc4bS9hI/',
-            'https://www.instagram.com/freelance.sanjay/reel/DbSAdbtsSXD/',
-            'https://www.instagram.com/freelance.sanjay/reel/DbLZL7is2Sc/',
-            'https://www.instagram.com/freelance.sanjay/reel/DbBluUpygxa/',
-            'https://www.instagram.com/freelance.sanjay/reel/DbIz3o2ML7M/',
-            'https://www.instagram.com/freelance.sanjay/reel/DaDQVOasR8i/',
-            'https://www.instagram.com/freelance.sanjay/reel/DaF8eUoPhe4/',
-            'https://www.instagram.com/freelance.sanjay/reel/DaIU0uEMpW3/',
-            'https://www.instagram.com/freelance.sanjay/reel/DbFOJ5jSRlL/',
-            'https://www.instagram.com/freelance.sanjay/reel/DbkNnGKMfqs/'
-        ];
+    <!-- Footer -->
+    <footer class="footer">
+      <div><span class="dot"></span>© 2024 SanjayAIHub. All rights reserved.</div>
+      <div>
+        <a href="#"><i class="fab fa-github"></i> GitHub</a> ·
+        <a href="#"><i class="fab fa-twitter"></i> Twitter</a> ·
+        <a href="#"><i class="fab fa-instagram"></i> Instagram</a>
+      </div>
+    </footer>
+  </div>
 
-        function loadReels() {
-            const grid = document.getElementById('reelsGrid');
-            grid.innerHTML = '';
+  <!-- Auth Modal -->
+  <div class="auth-modal-overlay" id="authModal">
+    <div class="auth-modal">
+      <button class="auth-modal-close" onclick="closeAuthModal()">×</button>
+      <h2><i class="fas fa-user-circle"></i> Welcome Back!</h2>
+      <p>Sign in to access all AI modules and features. <strong>Free tier available!</strong></p>
+      <div class="auth-modal-buttons">
+        <a href="login.html" class="btn-primary"><i class="fas fa-sign-in-alt"></i> Sign In</a>
+        <a href="login.html?register=true" class="btn-secondary"><i class="fas fa-user-plus"></i> Create Account</a>
+      </div>
+      <p class="auth-modal-hint">Already have an account? Just sign in and continue creating!</p>
+    </div>
+  </div>
 
-            for (const url of reelUrls) {
-                // Extract shortcode (e.g., 'Dbe3bXls-Vm' from the URL)
-                const match = url.match(/\/reel\/([^\/?]+)/) || url.match(/\/p\/([^\/?]+)/);
-                const shortcode = match ? match[1] : '';
-
-                if (!shortcode) continue;
-
-                const card = document.createElement('div');
-                card.className = 'reel-card';
-                
-                const wrapper = document.createElement('div');
-                wrapper.className = 'video-wrapper';
-                
-                // Load the proxied embed page directly into the iframe
-                wrapper.innerHTML = `
-                    <iframe 
-                        src="/api/proxy?shortcode=${shortcode}" 
-                        allowfullscreen 
-                        allowtransparency="true" 
-                        scrolling="no"
-                        loading="lazy"
-                    ></iframe>
-                `;
-                
-                card.appendChild(wrapper);
-                grid.appendChild(card);
-            }
+  <script>
+    // Check authentication status
+    function checkAuth() {
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      
+      if (token && user) {
+        try {
+          const userData = JSON.parse(user);
+          document.getElementById('authButtons').style.display = 'none';
+          document.getElementById('userInfo').style.display = 'flex';
+          document.getElementById('userName').textContent = userData.username || userData.email || 'User';
+          document.getElementById('userTierName').textContent = userData.tier || 'Free';
+        } catch (e) {
+          console.error('Error parsing user data:', e);
         }
+      }
+    }
 
-        document.addEventListener('DOMContentLoaded', loadReels);
-    </script>
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.reload();
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.remove('active');
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', checkAuth);
+  </script>
 </body>
 </html>
