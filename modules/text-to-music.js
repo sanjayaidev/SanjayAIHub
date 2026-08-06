@@ -15,10 +15,12 @@ const MODEL_PARAMETERS = {
     lyrics: { type: 'text', default: '', label: 'Lyrics (optional)', optional: true },
     instrumental: { type: 'boolean', default: false, label: 'Instrumental Only' },
     duration: { type: 'select', options: [15, 30, 60], default: 30, label: 'Duration (seconds)' },
-    bpm: { type: 'number', min: 60, max: 200, default: 120, label: 'BPM (optional)' },
+    bpm_mode: { type: 'checkbox', default: false, label: 'Set BPM' },
+    bpm: { type: 'range', min: 60, max: 200, step: 1, default: 120, dependsOn: 'bpm_mode', label: 'BPM' },
     infer_steps: { type: 'range', min: 10, max: 100, default: 50, step: 5, label: 'Inference Steps' },
     guidance_scale: { type: 'range', min: 1, max: 10, default: 5, step: 0.5, label: 'Guidance Scale' },
-    seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
+    seed_mode: { type: 'checkbox', default: false, label: 'Use fixed seed' },
+    seed: { type: 'range', min: 0, max: 999999999, step: 1, default: 0, dependsOn: 'seed_mode', label: 'Seed' },
   }
 };
 

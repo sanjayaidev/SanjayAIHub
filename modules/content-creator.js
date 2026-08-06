@@ -27,15 +27,15 @@ const DEFAULT_ALIBABA_MODEL = 'qwen3.5-plus';
 // Parameters supported by each provider's models
 const MODEL_PARAMETERS = {
   'nvidia': {
-    temperature: { min: 0, max: 2, default: 0.7, step: 0.1 },
-    max_tokens: { min: 1, max: 4096, default: 2048, step: 1 },
-    top_p: { min: 0, max: 1, default: 1, step: 0.1 },
+    temperature: { type: 'range', min: 0, max: 2, default: 0.7, step: 0.1, label: 'Temperature' },
+    max_tokens: { type: 'range', min: 1, max: 4096, default: 2048, step: 1, label: 'Max Tokens' },
+    top_p: { type: 'range', min: 0, max: 1, default: 1, step: 0.1, label: 'Top P' },
   },
   'alibaba': {
-    temperature: { min: 0, max: 2, default: 0.7, step: 0.1 },
-    max_tokens: { min: 1, max: 8192, default: 2048, step: 1 },
-    top_p: { min: 0, max: 1, default: 1, step: 0.1 },
-    repetition_penalty: { min: 0, max: 2, default: 1, step: 0.1 },
+    temperature: { type: 'range', min: 0, max: 2, default: 0.7, step: 0.1, label: 'Temperature' },
+    max_tokens: { type: 'range', min: 1, max: 8192, default: 2048, step: 1, label: 'Max Tokens' },
+    top_p: { type: 'range', min: 0, max: 1, default: 1, step: 0.1, label: 'Top P' },
+    repetition_penalty: { type: 'range', min: 0, max: 2, default: 1, step: 0.1, label: 'Repetition Penalty' },
   }
 };
 

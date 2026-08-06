@@ -31,7 +31,8 @@ const MODEL_PARAMETERS = {
       label: 'Aspect Ratio'
     },
     duration: { type: 'select', options: [5, 10], default: 5, label: 'Duration (seconds)' },
-    seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
+    seed_mode: { type: 'checkbox', default: false, label: 'Use fixed seed' },
+    seed: { type: 'range', min: 0, max: 999999999, step: 1, default: 0, dependsOn: 'seed_mode', label: 'Seed' },
     negative_prompt: { type: 'text', default: '', label: 'Negative prompt (optional)' },
     prompt_extend: { type: 'boolean', default: true, label: 'Smart prompt rewriting' },
     watermark: { type: 'boolean', default: true, label: 'Add watermark' },
@@ -42,7 +43,8 @@ const MODEL_PARAMETERS = {
     width: { type: 'select', options: [768, 1024, 1280], default: 1024, label: 'Width' },
     height: { type: 'select', options: [768, 1024, 1280], default: 768, label: 'Height' },
     num_frames: { type: 'range', min: 24, max: 120, default: 48, step: 24, label: 'Frames' },
-    seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
+    seed_mode: { type: 'checkbox', default: false, label: 'Use fixed seed' },
+    seed: { type: 'range', min: 0, max: 999999999, step: 1, default: 0, dependsOn: 'seed_mode', label: 'Seed' },
     enhance_prompt: { type: 'boolean', default: true, label: 'Enhance Prompt' },
   }
 };

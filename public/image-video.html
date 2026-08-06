@@ -19,6 +19,14 @@
     --muted:#8B9A91;
     --danger:#D96A5A;
   }
+  .params-panel {
+    --ap-muted: var(--muted);
+    --ap-border: var(--line);
+    --ap-bg: var(--panel-2);
+    --ap-text: var(--text);
+    --ap-accent: var(--amber);
+    margin: 16px 0;
+  }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
@@ -238,43 +246,16 @@
         <div class="hint">Public https URL</div>
       </div>
 
-      <div class="row2">
-        <div>
-          <label>Model</label>
-          <select id="model">
-            <option value="">Loading models...</option>
-          </select>
-        </div>
-        <div>
-          <label>Strength</label>
-          <input type="number" id="strength" min="0" max="1" step="0.05" placeholder="1.0" />
-          <div class="hint">Lower = closer to original</div>
-        </div>
+      <div>
+        <label>Model</label>
+        <select id="model">
+          <option value="">Loading models...</option>
+        </select>
       </div>
-
-      <details class="advanced">
-        <summary>Advanced settings</summary>
-        <div class="row2">
-          <div>
-            <label>Width (÷32, ≤1920)</label>
-            <input type="number" id="width" step="32" max="1920" placeholder="1280" />
-          </div>
-          <div>
-            <label>Height (÷32, ≤1088)</label>
-            <input type="number" id="height" step="32" max="1088" placeholder="704" />
-          </div>
-        </div>
-        <div class="row2">
-          <div>
-            <label>Num frames (8k+1, max 241)</label>
-            <input type="number" id="num_frames" placeholder="121" />
-          </div>
-          <div>
-            <label>Seed</label>
-            <input type="number" id="seed" placeholder="42" />
-          </div>
-        </div>
-      </details>
+      <!-- Adaptive parameter panel: fields are generated entirely from the
+           selected model's schema (select / range / checkbox only — see
+           /js/adaptive-params.js). Swaps automatically when the model changes. -->
+      <div id="paramsPanel" class="params-panel"></div>
 
       <button type="submit" class="generate" id="genBtn">🎬 Generate Video</button>
       <div class="error-box" id="errorBox"></div>
@@ -299,6 +280,7 @@
 </main>
 <footer>SanjayAIHub · Image to Video · powered by Alibaba Cloud Model Studio</footer>
 <script src="/js/auth.js"></script>
+<script src="/js/adaptive-params.js"></script>
 <script>
   if (!window.AUTH || !AUTH.isLoggedIn()) {
     window.location.href = '/login.html';
@@ -311,11 +293,7 @@
     image_url: document.getElementById("image_url"),
     image_preview: document.getElementById("image_preview"),
     model: document.getElementById("model"),
-    strength: document.getElementById("strength"),
-    width: document.getElementById("width"),
-    height: document.getElementById("height"),
-    num_frames: document.getElementById("num_frames"),
-    seed: document.getElementById("seed"),
+    paramsPanel: document.getElementById("paramsPanel"),
     genBtn: document.getElementById("genBtn"),
     errorBox: document.getElementById("errorBox"),
     outputArea: document.getElementById("outputArea"),
@@ -333,17 +311,43 @@
     url_pane: document.getElementById("url_pane"),
   };
 
+  // Adaptive parameter panel — mounted once, its schema is swapped every
+  // time the selected model changes (see refreshParamsForSelectedModel below).
+  const paramsPanel = AdaptiveParams.mount(els.paramsPanel, {});
+  let modelToProvider = {};
+  let providerParameters = {};
+
+  function refreshParamsForSelectedModel() {
+    const provider = modelToProvider[els.model.value] || 'alibaba';
+    paramsPanel.setSchema(providerParameters[provider] || {});
+  }
+
   // Load model catalog dynamically from API
   fetch("/api/modules/image-to-video/models", { headers: AUTH.getAuthHeader() })
     .then(r => r.json())
     .then(data => {
       if (!data.success) throw new Error('Failed to load models');
+      providerParameters = data.parameters || {};
       const modelSelect = els.model;
       modelSelect.innerHTML = '';
       
       const providers = data.providers || [];
       const modelsByProvider = data.models || {};
       const defaults = data.defaults || {};
+
+      if (providers.includes('alibaba') && modelsByProvider.alibaba?.length > 0) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = 'Alibaba Cloud';
+        modelsByProvider.alibaba.forEach(model => {
+          const opt = document.createElement('option');
+          opt.value = model;
+          opt.textContent = model.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          if (model === defaults.alibaba) opt.selected = true;
+          modelToProvider[model] = 'alibaba';
+          optgroup.appendChild(opt);
+        });
+        modelSelect.appendChild(optgroup);
+      }
       
       if (providers.includes('pixazo') && modelsByProvider.pixazo?.length > 0) {
         const optgroup = document.createElement('optgroup');
@@ -353,6 +357,7 @@
           opt.value = model;
           opt.textContent = model.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
           if (model === defaults.pixazo) opt.selected = true;
+          modelToProvider[model] = 'pixazo';
           optgroup.appendChild(opt);
         });
         modelSelect.appendChild(optgroup);
@@ -364,6 +369,9 @@
         opt.textContent = 'No models available';
         modelSelect.appendChild(opt);
       }
+
+      refreshParamsForSelectedModel();
+      modelSelect.addEventListener('change', refreshParamsForSelectedModel);
     })
     .catch(err => {
       console.error('Error loading models:', err);
@@ -444,10 +452,7 @@
         headers: { "Content-Type": "application/json", ...AUTH.getAuthHeader() },
         body: JSON.stringify({
           prompt, image_url: imageUrl, model: els.model.value,
-          width: els.width.value ? Number(els.width.value) : undefined,
-          height: els.height.value ? Number(els.height.value) : undefined,
-          num_frames: els.num_frames.value ? Number(els.num_frames.value) : undefined,
-          seed: els.seed.value ? Number(els.seed.value) : undefined,
+          ...paramsPanel.getValues(),
         }),
       });
       const data = await res.json();

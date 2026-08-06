@@ -19,6 +19,14 @@
     --muted:#8B9A91;
     --danger:#D96A5A;
   }
+  .params-panel {
+    --ap-muted: var(--muted);
+    --ap-border: var(--line);
+    --ap-bg: var(--panel-2);
+    --ap-text: var(--text);
+    --ap-accent: var(--amber);
+    margin: 16px 0;
+  }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
@@ -207,53 +215,16 @@
     <form id="genForm">
       <label class="required">Text to speak</label>
       <textarea id="prompt" placeholder="Welcome to SanjayAIHub. This is a text-to-speech demonstration." maxlength="4000" required></textarea>
-      <div class="row2">
-        <div>
-          <label>Voice</label>
-          <select id="voice">
-            <option value="anna">Anna (Female)</option>
-            <option value="bella">Bella (Female)</option>
-            <option value="clara">Clara (Female)</option>
-            <option value="daniel">Daniel (Male)</option>
-            <option value="ethan">Ethan (Male)</option>
-            <option value="jasmine">Jasmine (Female)</option>
-          </select>
-        </div>
-        <div>
-          <label>Speed</label>
-          <select id="speed">
-            <option value="0.75">0.75x</option>
-            <option value="1.0" selected>1.0x</option>
-            <option value="1.25">1.25x</option>
-            <option value="1.5">1.5x</option>
-          </select>
-        </div>
+      <div>
+        <label>Model</label>
+        <select id="model">
+          <option value="">Loading models...</option>
+        </select>
       </div>
-      <div class="row2">
-        <div>
-          <label>Language</label>
-          <select id="language">
-            <option value="en">English</option>
-            <option value="hi">Hindi</option>
-            <option value="bn">Bengali</option>
-            <option value="te">Telugu</option>
-            <option value="mr">Marathi</option>
-            <option value="ta">Tamil</option>
-            <option value="ur">Urdu</option>
-            <option value="gu">Gujarati</option>
-            <option value="kn">Kannada</option>
-            <option value="ml">Malayalam</option>
-          </select>
-        </div>
-        <div>
-          <label>Model</label>
-          <select id="model">
-            <option value="@cf/myshell-ai/melotts">Cloudflare MeloTTS</option>
-            <option value="eleven_flash_v2_5">ElevenLabs Flash v2.5</option>
-            <option value="eleven_multilingual_v2">ElevenLabs Multilingual v2</option>
-          </select>
-        </div>
-      </div>
+      <!-- Adaptive parameter panel: fields are generated entirely from the
+           selected provider's schema (select / range / checkbox only — see
+           /js/adaptive-params.js). Swaps automatically when the model changes. -->
+      <div id="paramsPanel" class="params-panel"></div>
       <button type="submit" class="generate" id="genBtn">🔊 Generate Speech</button>
       <div class="error-box" id="errorBox"></div>
     </form>
@@ -277,6 +248,7 @@
 </main>
 <footer>SanjayAIHub · Text to Speech · powered by Cloudflare Workers AI</footer>
 <script src="/js/auth.js"></script>
+<script src="/js/adaptive-params.js"></script>
 <script>
   if (!window.AUTH || !AUTH.isLoggedIn()) {
     window.location.href = '/login.html';
@@ -285,10 +257,8 @@
   const els = {
     form: document.getElementById("genForm"),
     prompt: document.getElementById("prompt"),
-    voice: document.getElementById("voice"),
-    speed: document.getElementById("speed"),
-    language: document.getElementById("language"),
     model: document.getElementById("model"),
+    paramsPanel: document.getElementById("paramsPanel"),
     genBtn: document.getElementById("genBtn"),
     errorBox: document.getElementById("errorBox"),
     outputArea: document.getElementById("outputArea"),
@@ -303,6 +273,73 @@
     tally: document.getElementById("tally"),
     keyStatus: document.getElementById("keyStatus"),
   };
+
+  // Adaptive parameter panel — mounted once, its schema is swapped every
+  // time the selected model changes (see refreshParamsForSelectedModel below).
+  const paramsPanel = AdaptiveParams.mount(els.paramsPanel, {});
+  let modelToProvider = {};
+  let providerParameters = {};
+
+  function refreshParamsForSelectedModel() {
+    const provider = modelToProvider[els.model.value] || 'cloudflare';
+    paramsPanel.setSchema(providerParameters[provider] || {});
+  }
+
+  // Load model catalog dynamically from API
+  fetch("/api/modules/text-to-speech/models", { headers: AUTH.getAuthHeader() })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) throw new Error('Failed to load models');
+      providerParameters = data.parameters || {};
+      const modelSelect = els.model;
+      modelSelect.innerHTML = '';
+
+      const providers = data.providers || [];
+      const modelsByProvider = data.models || {};
+      const defaults = data.defaults || {};
+
+      if (providers.includes('cloudflare') && modelsByProvider.cloudflare?.length > 0) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = 'Cloudflare';
+        modelsByProvider.cloudflare.forEach(model => {
+          const opt = document.createElement('option');
+          opt.value = model;
+          opt.textContent = model.split('/').pop().replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          if (model === defaults.cloudflare) opt.selected = true;
+          modelToProvider[model] = 'cloudflare';
+          optgroup.appendChild(opt);
+        });
+        modelSelect.appendChild(optgroup);
+      }
+
+      if (providers.includes('elevenlabs') && modelsByProvider.elevenlabs?.length > 0) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = 'ElevenLabs';
+        modelsByProvider.elevenlabs.forEach(model => {
+          const opt = document.createElement('option');
+          opt.value = model;
+          opt.textContent = model.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          if (model === defaults.elevenlabs) opt.selected = true;
+          modelToProvider[model] = 'elevenlabs';
+          optgroup.appendChild(opt);
+        });
+        modelSelect.appendChild(optgroup);
+      }
+
+      if (modelSelect.options.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No models available';
+        modelSelect.appendChild(opt);
+      }
+
+      refreshParamsForSelectedModel();
+      modelSelect.addEventListener('change', refreshParamsForSelectedModel);
+    })
+    .catch(err => {
+      console.error('Error loading models:', err);
+      els.model.innerHTML = '<option value="">Error loading models</option>';
+    });
 
   fetch("/api/keys", { headers: AUTH.getAuthHeader() }).then(r=>r.json()).then(d=>{
     const configured = d.keys?.some(k => (k.provider === 'cloudflare' || k.provider === 'elevenlabs') && k.configured);
@@ -334,8 +371,8 @@
         headers: { "Content-Type": "application/json", ...AUTH.getAuthHeader() },
         body: JSON.stringify({
           text,
-          language: els.language.value,
           model: els.model.value,
+          ...paramsPanel.getValues(),
         }),
       });
       const data = await res.json();

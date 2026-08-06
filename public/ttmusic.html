@@ -19,6 +19,14 @@
     --muted:#8B9A91;
     --danger:#D96A5A;
   }
+  .params-panel {
+    --ap-muted: var(--muted);
+    --ap-border: var(--line);
+    --ap-bg: var(--panel-2);
+    --ap-text: var(--text);
+    --ap-accent: var(--amber);
+    margin: 16px 0;
+  }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
@@ -209,61 +217,12 @@
     <form id="genForm">
       <label class="required">Prompt / Description</label>
       <textarea id="prompt" placeholder="A calm, meditative piano piece with gentle strings, peaceful and uplifting" maxlength="4000" required></textarea>
-      <div class="row2">
-        <div>
-          <label>Duration (seconds)</label>
-          <input type="number" id="duration" min="10" max="600" placeholder="30" />
-        </div>
-        <div>
-          <label>BPM (30-300)</label>
-          <input type="number" id="bpm" min="30" max="300" placeholder="auto" />
-        </div>
-      </div>
-      <div class="row2">
-        <div>
-          <label>Genre</label>
-          <select id="genre">
-            <option value="">Auto</option>
-            <option>Classical</option>
-            <option>Jazz</option>
-            <option>Electronic</option>
-            <option>Ambient</option>
-            <option>Lo-fi</option>
-            <option>Cinematic</option>
-            <option>Pop</option>
-            <option>Rock</option>
-            <option>Hip Hop</option>
-            <option>Indian Classical</option>
-            <option>Bollywood</option>
-          </select>
-        </div>
-        <div>
-          <label>Instrumental</label>
-          <input type="checkbox" id="instrumental" style="width:auto;margin-top:10px;" />
-          <label for="instrumental" style="display:inline;font-size:11px;color:var(--muted);margin-left:6px;">No vocals</label>
-        </div>
-      </div>
-      <details class="advanced">
-        <summary>Advanced settings</summary>
-        <div class="row2">
-          <div>
-            <label>Inference steps</label>
-            <input type="number" id="infer_steps" placeholder="25" />
-          </div>
-          <div>
-            <label>Guidance scale</label>
-            <input type="number" id="guidance_scale" step="0.1" placeholder="7.5" />
-          </div>
-        </div>
-        <div>
-          <label>Seed</label>
-          <input type="number" id="seed" placeholder="-1 (random)" />
-        </div>
-        <div>
-          <label>Lyrics (optional)</label>
-          <textarea id="lyrics" placeholder="[verse]&#10;The sun is rising over the hills&#10;[chorus]&#10;And everything feels alive again" style="min-height:60px;"></textarea>
-        </div>
-      </details>
+      <label>Lyrics (optional)</label>
+      <textarea id="lyrics" placeholder="[verse]&#10;The sun is rising over the hills&#10;[chorus]&#10;And everything feels alive again" style="min-height:60px;"></textarea>
+      <!-- Adaptive parameter panel: fields are generated entirely from the
+           text-to-music schema (select / range / checkbox only — see
+           /js/adaptive-params.js). -->
+      <div id="paramsPanel" class="params-panel"></div>
       <button type="submit" class="generate" id="genBtn">🎵 Generate Music</button>
       <div class="error-box" id="errorBox"></div>
     </form>
@@ -287,6 +246,7 @@
 </main>
 <footer>SanjayAIHub · Text to Music · powered by Alibaba Cloud Model Studio</footer>
 <script src="/js/auth.js"></script>
+<script src="/js/adaptive-params.js"></script>
 <script>
   if (!window.AUTH || !AUTH.isLoggedIn()) {
     window.location.href = '/login.html';
@@ -295,14 +255,8 @@
   const els = {
     form: document.getElementById("genForm"),
     prompt: document.getElementById("prompt"),
-    duration: document.getElementById("duration"),
-    bpm: document.getElementById("bpm"),
-    genre: document.getElementById("genre"),
-    instrumental: document.getElementById("instrumental"),
-    infer_steps: document.getElementById("infer_steps"),
-    guidance_scale: document.getElementById("guidance_scale"),
-    seed: document.getElementById("seed"),
     lyrics: document.getElementById("lyrics"),
+    paramsPanel: document.getElementById("paramsPanel"),
     genBtn: document.getElementById("genBtn"),
     errorBox: document.getElementById("errorBox"),
     outputArea: document.getElementById("outputArea"),
@@ -317,6 +271,18 @@
     tally: document.getElementById("tally"),
     keyStatus: document.getElementById("keyStatus"),
   };
+
+  // Adaptive parameter panel — text-to-music has a single Pixazo model, so
+  // there's no model dropdown; just load that model's schema once.
+  const paramsPanel = AdaptiveParams.mount(els.paramsPanel, {});
+
+  fetch("/api/modules/text-to-music/models", { headers: AUTH.getAuthHeader() })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) throw new Error('Failed to load model schema');
+      paramsPanel.setSchema((data.parameters && data.parameters.pixazo) || {});
+    })
+    .catch(err => console.error('Error loading music model schema:', err));
 
   fetch("/api/keys", { headers: AUTH.getAuthHeader() }).then(r=>r.json()).then(d=>{
     const pixazo = d.keys?.find(k => k.provider === 'pixazo');
@@ -353,13 +319,8 @@
         headers: { "Content-Type": "application/json", ...AUTH.getAuthHeader() },
         body: JSON.stringify({
           prompt,
-          duration: els.duration.value ? Number(els.duration.value) : undefined,
-          bpm: els.bpm.value ? Number(els.bpm.value) : undefined,
-          instrumental: els.instrumental.checked,
-          infer_steps: els.infer_steps.value ? Number(els.infer_steps.value) : undefined,
-          guidance_scale: els.guidance_scale.value ? Number(els.guidance_scale.value) : undefined,
-          seed: els.seed.value ? Number(els.seed.value) : undefined,
           lyrics: els.lyrics.value || undefined,
+          ...paramsPanel.getValues(),
         }),
       });
       const data = await res.json();

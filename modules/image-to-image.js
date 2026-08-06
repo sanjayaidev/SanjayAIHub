@@ -24,7 +24,8 @@ const MODEL_PARAMETERS = {
       default: '1024*1024',
       label: 'Size'
     },
-    seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
+    seed_mode: { type: 'checkbox', default: false, label: 'Use fixed seed' },
+    seed: { type: 'range', min: 0, max: 999999999, step: 1, default: 0, dependsOn: 'seed_mode', label: 'Seed' },
   },
   'pixazo': {
     // Pixazo has no image-to-image endpoint yet — kept here only so the UI
