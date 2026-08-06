@@ -700,6 +700,7 @@ function App() {
 
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [githubConnection, setGithubConnection] = useState(null);
   const [repos, setRepos] = useState([]);
   const [selectedRepo, setSelectedRepo] = useState(null);
   const [repoPath, setRepoPath] = useState('');
@@ -740,10 +741,34 @@ function App() {
 
   useEffect(() => {
     fetchJSON('/api/auth/me')
-      .then(data => setUser(data.user))
+      .then(data => {
+        setUser(data.user);
+        if (data.connected && data.connection) {
+          setGithubConnection(data.connection);
+        }
+      })
       .catch(() => setUser(null))
       .finally(() => setAuthChecked(true));
   }, []);
+
+  // Fetch GitHub connection details when user is authenticated
+  useEffect(() => {
+    if (!user) return;
+    fetchJSON('/api/auth/github/token')
+      .then(data => {
+        if (data.connected) {
+          setGithubConnection({
+            username: data.username,
+            scope: data.scope,
+            lastSyncedAt: data.lastSyncedAt,
+            tokenPreview: data.tokenPreview
+          });
+        } else {
+          setGithubConnection(null);
+        }
+      })
+      .catch(() => setGithubConnection(null));
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -829,11 +854,32 @@ function App() {
   const logout = useCallback(async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
     setUser(null);
+    setGithubConnection(null);
     setRepos([]);
     setSelectedRepo(null);
     setRepoPath('');
     setFileTree([]);
     setSelectedFile(null);
+  }, []);
+
+  const disconnectGithub = useCallback(async () => {
+    try {
+      await fetch('/api/auth/github/disconnect', { 
+        method: 'POST', 
+        credentials: 'same-origin' 
+      });
+      setGithubConnection(null);
+      setRepos([]);
+      setSelectedRepo(null);
+      setRepoPath('');
+      setFileTree([]);
+      setSelectedFile(null);
+      // Reload page to reset auth state
+      window.location.reload();
+    } catch (err) {
+      console.error('Failed to disconnect GitHub:', err);
+      alert('Failed to disconnect GitHub: ' + err.message);
+    }
   }, []);
 
   useEffect(() => {
@@ -948,6 +994,23 @@ function App() {
               </a>
             )
           )}
+          {githubConnection && (
+            <span className="badge" style={{ display: 'flex', alignItems: 'center', gap: 8, borderColor: 'var(--green)' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" style={{ color: 'var(--text-dim)' }}>
+                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-4.22 0-.93.33-1.59.87-2.14-.35-.87-1.52-4.42 1.13-6.41 0 0 .9-.29 2.95 1.09.85-.24 1.77-.36 2.69-.36.92 0 1.84.12 2.69.36 2.05-1.38 2.95-1.09 2.95-1.09 2.65 1.99 1.48 5.54 1.13 6.41.54.55.87 1.21.87 2.14 0 3.34-1.86 4.02-3.64 4.22.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                </svg>
+                {githubConnection.username}
+              </span>
+              <button
+                onClick={disconnectGithub}
+                title="Disconnect GitHub"
+                style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 11, padding: 0 }}
+              >
+                ✕
+              </button>
+            </span>
+          )}
         </div>
       </header>
 
@@ -1018,30 +1081,52 @@ function App() {
           {user && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
               <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>📁 Repo:</span>
-              <select
-                value={selectedRepo?.fullName || ''}
-                onChange={e => {
-                  const r = repos.find(rr => rr.fullName === e.target.value);
-                  setSelectedRepo(r || null);
-                }}
-                style={{ padding: '4px 8px', borderRadius: 6, background: 'var(--panel-2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--mono)', fontSize: 12 }}
-              >
-                <option value="">Select a repo…</option>
-                {repos.map(r => (
-                  <option key={r.fullName} value={r.fullName}>
-                    {r.fullName}{r.private ? ' 🔒' : ''}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={loadRepo}
-                disabled={!selectedRepo || repoLoading}
-                style={{ padding: '4px 12px', borderRadius: 6, border: '1px solid var(--border)', background: repoPath && selectedRepo?.fullName ? 'var(--green-dim)' : 'var(--panel-2)', color: 'var(--text)', fontSize: 12, cursor: 'pointer' }}
-              >
-                {repoLoading ? 'Loading…' : 'Load repo'}
-              </button>
-              {repoPath && (
-                <span style={{ fontSize: 11, color: 'var(--text-faint)', fontFamily: 'var(--mono)' }}>{repoPath}</span>
+              {!githubConnection ? (
+                <a 
+                  href="/agent/api/auth/github" 
+                  style={{ 
+                    fontSize: 11, 
+                    color: 'var(--green)', 
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    background: 'var(--panel-2)',
+                    border: '1px solid var(--border)'
+                  }}
+                >
+                  🔗 Connect GitHub to load repos
+                </a>
+              ) : (
+                <>
+                  <select
+                    value={selectedRepo?.fullName || ''}
+                    onChange={e => {
+                      const r = repos.find(rr => rr.fullName === e.target.value);
+                      setSelectedRepo(r || null);
+                    }}
+                    style={{ padding: '4px 8px', borderRadius: 6, background: 'var(--panel-2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--mono)', fontSize: 12 }}
+                  >
+                    <option value="">Select a repo…</option>
+                    {repos.map(r => (
+                      <option key={r.fullName} value={r.fullName}>
+                        {r.fullName}{r.private ? ' 🔒' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={loadRepo}
+                    disabled={!selectedRepo || repoLoading}
+                    style={{ padding: '4px 12px', borderRadius: 6, border: '1px solid var(--border)', background: repoPath && selectedRepo?.fullName ? 'var(--green-dim)' : 'var(--panel-2)', color: 'var(--text)', fontSize: 12, cursor: 'pointer' }}
+                  >
+                    {repoLoading ? 'Loading…' : 'Load repo'}
+                  </button>
+                  {repoPath && (
+                    <span style={{ fontSize: 11, color: 'var(--text-faint)', fontFamily: 'var(--mono)' }}>{repoPath}</span>
+                  )}
+                </>
               )}
               {repoError && <span style={{ fontSize: 11, color: 'var(--red)' }}>{repoError}</span>}
             </div>
