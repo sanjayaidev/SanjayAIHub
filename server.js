@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const session = require('express-session');
 const path = require('path');
 const { createServer } = require('http');
 require('dotenv').config();
@@ -130,6 +131,20 @@ app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 // ── Static Files ──
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── Session Middleware (for coding-agent OAuth) ──
+app.use(session({
+  name: 'sanjaihub.sid',
+  secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  },
+}));
+
 // ── Routes ──
 app.use('/api/auth', authRoutes);
 app.use('/api/modules', moduleRoutes);
@@ -164,6 +179,18 @@ app.get('/api/config', (req, res) => {
 
 // ── Start Server & Initialize Coding Agent ──
 const httpServer = createServer(app);
+
+// Middleware to pass main app user info to coding-agent
+app.use('/agent', (req, res, next) => {
+  // Pass the authenticated user's ID from JWT to the coding-agent session
+  if (req.user && req.user.id) {
+    if (!req.session.mainUserId) {
+      req.session.mainUserId = req.user.id;
+      console.log('[Middleware] Set mainUserId for coding-agent:', req.user.id);
+    }
+  }
+  next();
+});
 
 // Initialize coding agent and mount it under /agent path
 initCodingAgent().then(() => {
