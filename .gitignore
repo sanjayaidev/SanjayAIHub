@@ -1,11 +1,22 @@
 ```
+# Compiled and build artifacts
+*.pyc
+__pycache__/
+
 # Dependencies
 node_modules/
+venv/
+.venv/
+pip-log.txt
+.tox/
+.coverage
+htmlcov/
 
-# Build artifacts
-dist/
-build/
-*.js.map
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+*.swo
 
 # Environment
 .env
@@ -15,39 +26,11 @@ build/
 # Editors
 .vscode/
 .idea/
-
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Compiled files
-*.o
-*.obj
-*.so
-*.a
-*.dll
-*.exe
-*.out
-
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# Cache
-.mypy_cache/
-.pytest_cache/
-.nyc_output/
-coverage/
-
-# System
+*.sublime-project
+*.sublime-workspace
 .DS_Store
 Thumbs.db
+
+# Database migrations
+migrations/*.sql
 ```
