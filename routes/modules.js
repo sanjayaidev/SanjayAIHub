@@ -17,6 +17,14 @@ const { videoToVideoHandler, checkVideoStatus: checkV2VStatus, getModelCatalog: 
 const { textToMusicHandler, checkAudioStatus, getModelCatalog: getMusicModelCatalog } = require('../modules/text-to-music');
 const { voiceCloneHandler, synthesizeHandler: voiceSynthesizeHandler, listVoicesHandler, getModelCatalog: getVoiceCloneModelCatalog } = require('../modules/voice-clone');
 
+// ── Temporary shared key (free-tier text models only) ──
+// Optional shared NVIDIA key so trial users without their own key can still
+// try the text modules a few times (gated by their existing per-module
+// usage_limit) before being asked to add their own. Leave unset in .env to
+// disable this entirely — the app behaves exactly as before.
+const TEMP_NVIDIA_API_KEY = process.env.NVIDIA_FREE_TIER_API_KEY || '';
+const TEMPORARY_KEY_MODULES = new Set(['chatbot', 'message-writer', 'social-content']);
+
 // ──────────────────────────────────────────────
 // GET /api/modules - List all modules with access
 // ──────────────────────────────────────────────
@@ -47,9 +55,28 @@ router.get('/', authenticateToken, async (req, res) => {
     const userTier = req.user.subscription_tier || 'trial';
     const userTierLevel = tierOrder[userTier] || 0;
 
+    // Does this user already have their own NVIDIA key? Only relevant for
+    // deciding whether to offer the shared temporary key on text modules.
+    let hasOwnNvidiaKey = false;
+    if (TEMP_NVIDIA_API_KEY && userTierLevel === 0) {
+      const nvidiaKeyResult = await pool.query(
+        `SELECT 1 FROM user_api_keys WHERE user_id = $1 AND provider = 'nvidia' AND is_active = true LIMIT 1`,
+        [req.user.id]
+      );
+      hasOwnNvidiaKey = nvidiaKeyResult.rows.length > 0;
+    }
+
     const modules = result.rows.map(mod => {
       const requiredLevel = tierOrder[mod.required_tier] || 0;
       const hasAccessByTier = userTierLevel >= requiredLevel;
+
+      // Free/trial users without their own NVIDIA key can borrow the app's
+      // shared key for a limited number of messages on text modules — see
+      // TEMPORARY_KEY_MODULES / NVIDIA_FREE_TIER_API_KEY above.
+      const supportsTemporaryKey = TEMPORARY_KEY_MODULES.has(mod.module_key)
+        && !!TEMP_NVIDIA_API_KEY
+        && userTierLevel === 0
+        && !hasOwnNvidiaKey;
 
       if (mod.is_allowed === null) {
         const isFree = mod.module_key === 'chatbot' || mod.module_key === 'prompt-library';
@@ -60,14 +87,16 @@ router.get('/', authenticateToken, async (req, res) => {
           usage_limit: allowed ? (mod.required_tier === 'trial' ? 5 : 50) : 0,
           used_count: 0,
           remaining: allowed ? (mod.required_tier === 'trial' ? 5 : 50) : 0,
-          requires_api_key: mod.module_key !== 'prompt-library'
+          requires_api_key: mod.module_key !== 'prompt-library',
+          supports_temporary_key: supportsTemporaryKey
         };
       }
 
       return {
         ...mod,
         is_allowed: mod.is_allowed && hasAccessByTier,
-        requires_api_key: mod.module_key !== 'prompt-library'
+        requires_api_key: mod.module_key !== 'prompt-library',
+        supports_temporary_key: supportsTemporaryKey
       };
     });
 
@@ -299,6 +328,43 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
         };
       });
 
+      // ── Temporary shared key for free-tier text models ──
+      // Trial users who haven't added their own NVIDIA key yet can opt in
+      // (by sending useTemporaryKey: true) to borrow the app's shared
+      // NVIDIA_FREE_TIER_API_KEY instead of being blocked outright. This is
+      // only offered for the text-generation modules, only on the free/trial
+      // tier, and only when the user has no personal NVIDIA key configured.
+      // The existing per-module usage_limit (5 uses/module for trial
+      // accounts, set at signup) still applies on top of this, so it
+      // naturally caps how many times the shared key can be used before the
+      // person is asked to add their own.
+      if (TEMPORARY_KEY_MODULES.has(moduleKey) && !apiKeys.nvidia?.api_key) {
+        if (req.body.useTemporaryKey) {
+          if (userTierLevel > 0) {
+            return res.status(403).json({
+              success: false,
+              message: 'Temporary access is only available on the free/trial tier. Add your own NVIDIA API key in Profile > API Keys.'
+            });
+          }
+          if (!TEMP_NVIDIA_API_KEY) {
+            return res.status(503).json({
+              success: false,
+              message: 'Temporary access isn\'t available right now. Please add your own NVIDIA API key in Profile > API Keys.'
+            });
+          }
+          apiKeys.nvidia = { api_key: TEMP_NVIDIA_API_KEY, temporary: true };
+        } else if (userTierLevel === 0 && TEMP_NVIDIA_API_KEY) {
+          // Let the frontend offer the "Use temporary key" option instead of
+          // just showing a dead-end missing-key error.
+          return res.status(400).json({
+            success: false,
+            message: 'NVIDIA API key not configured. Add your own key in Profile > API Keys, or use a temporary key for a few free messages.',
+            missing: ['nvidia'],
+            canUseTemporaryKey: true
+          });
+        }
+      }
+
       // Chatbot resolves its own required provider by tier inside the
       // handler, so it gives a precise "add your X key" error itself
       // instead of a generic missing-key 400 here.
@@ -370,6 +436,10 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
           success: false,
           message: `Module '${moduleKey}' not implemented yet`
         });
+    }
+
+    if (apiKeys.nvidia?.temporary && result && typeof result === 'object') {
+      result.usedTemporaryKey = true;
     }
 
     if (moduleKey !== 'prompt-library') {

@@ -36,9 +36,12 @@ const MODEL_PARAMETERS = {
   'pixazo': {
     aspect: { type: 'select', options: ['16:9', '9:16', '1:1', '4:3'], default: '16:9', label: 'Aspect Ratio' },
     frame_rate: { type: 'select', options: [24, 30], default: 24, label: 'Frame Rate' },
-    width: { type: 'select', options: [768, 1024, 1280], default: 1024, label: 'Width' },
-    height: { type: 'select', options: [768, 1024, 1280], default: 768, label: 'Height' },
-    num_frames: { type: 'range', min: 24, max: 120, default: 48, step: 24, label: 'Frames' },
+    // Overridden by `aspect` when set; kept for the custom/no-aspect case.
+    // Must stay <= 1920 / <= 1088 and divisible by 32 (LTX 2.3 hard limits).
+    width: { type: 'select', options: [768, 1024, 1280, 1536, 1920], default: 1280, label: 'Width' },
+    height: { type: 'select', options: [576, 704, 832, 1088], default: 704, label: 'Height' },
+    // LTX 2.3 requires the "8k+1" frame-count form (max 241).
+    num_frames: { type: 'select', options: [41, 81, 121, 161, 201, 241], default: 121, label: 'Frames' },
     seed_mode: { type: 'checkbox', default: false, label: 'Use fixed seed' },
     seed: { type: 'range', min: 0, max: 999999999, step: 1, default: 0, dependsOn: 'seed_mode', label: 'Seed' },
     enhance_prompt: { type: 'boolean', default: true, label: 'Enhance Prompt' },
@@ -136,11 +139,13 @@ async function imageToVideoHandler(requestBody, apiKeys, userId) {
       const params = {
         prompt,
         image_url, // Required for image-to-video
-        aspect_ratio: aspect,
+        // Pixazo's LTX API field is `aspect`, not `aspect_ratio` — sending
+        // the wrong key meant the user's chosen ratio was silently dropped.
+        aspect,
         frame_rate: parseInt(frame_rate) || 24,
-        width: parseInt(width) || 1024,
-        height: parseInt(height) || 768,
-        num_frames: parseInt(num_frames) || 48,
+        width: parseInt(width) || 1280,
+        height: parseInt(height) || 704,
+        num_frames: parseInt(num_frames) || 121,
         enhance_prompt,
       };
       if (seed) params.seed = parseInt(seed);

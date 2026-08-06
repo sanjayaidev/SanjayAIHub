@@ -31,8 +31,9 @@ const MODEL_PARAMETERS = {
   'pixazo': {
     strength: { type: 'range', min: 0, max: 1, default: 0.6, step: 0.05, label: 'Transform Strength' },
     frame_rate: { type: 'select', options: [24, 30], default: 24, label: 'Frame Rate' },
-    width: { type: 'select', options: [768, 1024, 1280], default: 1024, label: 'Width' },
-    height: { type: 'select', options: [768, 1024, 1280], default: 768, label: 'Height' },
+    // Must stay <= 1920 / <= 1088 and divisible by 32 (LTX 2.3 hard limits).
+    width: { type: 'select', options: [768, 1024, 1280, 1536, 1920], default: 1280, label: 'Width' },
+    height: { type: 'select', options: [576, 704, 832, 1088], default: 704, label: 'Height' },
     seed_mode: { type: 'checkbox', default: false, label: 'Use fixed seed' },
     seed: { type: 'range', min: 0, max: 999999999, step: 1, default: 0, dependsOn: 'seed_mode', label: 'Seed' },
     enhance_prompt: { type: 'boolean', default: true, label: 'Enhance Prompt' },

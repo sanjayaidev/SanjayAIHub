@@ -51,6 +51,46 @@ class PixazoProvider {
     return out;
   }
 
+  // Round down to the nearest multiple of `step`, capped at `max`.
+  _roundDownTo(value, step, max) {
+    const n = Number(value);
+    if (!n || Number.isNaN(n)) return undefined;
+    let v = Math.floor(n / step) * step;
+    if (max) v = Math.min(v, Math.floor(max / step) * step);
+    return v > 0 ? v : step;
+  }
+
+  // LTX 2.3 requires num_frames in "8k + 1" form (9, 17, 25, ... up to 241).
+  // Sending an arbitrary value (e.g. the old 24/48/72 UI presets) is
+  // rejected/ignored by the gateway, so snap to the nearest valid frame count.
+  _normalizeNumFrames(value) {
+    const n = Number(value);
+    if (!n || Number.isNaN(n)) return undefined;
+    const k = Math.max(1, Math.round((n - 1) / 8));
+    return Math.min(k * 8 + 1, 241);
+  }
+
+  // Normalize video-generation params to what the LTX gateway actually
+  // accepts, and repair a couple of known bad-caller shapes:
+  //  - `aspect_ratio` (not a real field — the API expects `aspect`) was
+  //    being sent by text-to-video.js / image-to-video.js, so the user's
+  //    chosen aspect ratio was silently dropped and defaults were used.
+  //  - width/height/num_frames need to respect the API's hard limits
+  //    (width <= 1920, height <= 1088, both /32; num_frames in 8k+1 form,
+  //    max 241) or the request fails/produces unexpected output.
+  _normalizeVideoParams(params) {
+    const out = { ...params };
+
+    if (out.aspect_ratio && !out.aspect) out.aspect = out.aspect_ratio;
+    delete out.aspect_ratio;
+
+    if (out.width !== undefined) out.width = this._roundDownTo(out.width, 32, 1920);
+    if (out.height !== undefined) out.height = this._roundDownTo(out.height, 32, 1088);
+    if (out.num_frames !== undefined) out.num_frames = this._normalizeNumFrames(out.num_frames);
+
+    return out;
+  }
+
   // mode: 'text-to-video' | 'image-to-video' | 'video-to-video'
   // params: { prompt, aspect, frame_rate, width, height, num_frames, seed,
   //           enhance_prompt, image_url (i2v), video_url + strength (v2v) }
@@ -67,7 +107,7 @@ class PixazoProvider {
     const response = await fetch(`${GATEWAY}${config.path}`, {
       method: 'POST',
       headers: this._headers(),
-      body: JSON.stringify(this._clean(params)),
+      body: JSON.stringify(this._clean(this._normalizeVideoParams(params))),
     });
 
     const data = await response.json().catch(() => ({}));
