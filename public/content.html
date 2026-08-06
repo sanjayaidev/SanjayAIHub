@@ -987,7 +987,7 @@
                 <div class="generator-output" id="generatorOutput">
                     <div class="empty-state">
                         <i class="fas fa-lightbulb"></i>
-                        <p>Enter a topic above and click Generate to create 5 content options</p>
+                        <p>Enter a topic above and click Generate to create content options</p>
                     </div>
                 </div>
             </div>
@@ -1135,13 +1135,29 @@
 
 <script>
 (function() {
+    // ── Tier-aware option counts ──
+    // How many options the "options"-style generators (caption, story, reel, etc.)
+    // produce per generation. Higher tiers get more options per click.
+    const OPTION_COUNTS = { trial: 5, basic: 6, pro: 8, enterprise: 10 };
+    function getOptionCount() {
+        const tier = (window.MODULES ? MODULES.getUserTier() : (AUTH.getUser()?.subscription_tier || 'trial'));
+        return OPTION_COUNTS[tier] || OPTION_COUNTS.trial;
+    }
+    // Builds a JSON array placeholder like "caption1", "caption2", ... "captionN"
+    function jsonOptionsSample(n, word) {
+        return Array.from({ length: n }, (_, i) => `"${word}${i + 1}"`).join(', ');
+    }
+    function jsonOptionsShape(n) {
+        return Array.from({ length: n }, () => '"..."').join(', ');
+    }
+
     // ── Configuration ──
     const CONFIGS = {
         caption: {
             label: 'Caption Generator',
             subtitle: 'Engaging social media captions',
-            systemPrompt: 'You are a social media expert. Respond with ONLY valid JSON, no markdown, no commentary. Shape: {"options": ["...", "...", "...", "...", "..."]} with exactly 5 entries.',
-            prompt: (topic, lang) => `Generate 5 engaging social media captions for: "${topic}" in ${lang}. Each caption under 200 characters, include emojis, a CTA, and vary tone (professional, funny, inspirational). Return ONLY JSON: {"options": ["caption1", "caption2", "caption3", "caption4", "caption5"]}`
+            systemPrompt: (n) => `You are a social media expert. Respond with ONLY valid JSON, no markdown, no commentary. Shape: {"options": [${jsonOptionsShape(n)}]} with exactly ${n} entries.`,
+            prompt: (topic, lang, n) => `Generate ${n} engaging social media captions for: "${topic}" in ${lang}. Each caption under 200 characters, include emojis, a CTA, and vary tone (professional, funny, inspirational). Return ONLY JSON: {"options": [${jsonOptionsSample(n, 'caption')}]}`
         },
         hashtags: {
             label: 'Hashtag Generator',
@@ -1152,14 +1168,14 @@
         story: {
             label: 'Story Ideas',
             subtitle: 'Interactive story concepts',
-            systemPrompt: 'You are a social media story creator. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
-            prompt: (topic, lang) => `Generate 5 story ideas for: "${topic}" in ${lang}. Each: text overlay + sticker suggestion + CTA. Keep under 100 chars. Return ONLY JSON: {"options": ["story1", "story2", "story3", "story4", "story5"]}`
+            systemPrompt: (n) => `You are a social media story creator. Respond with ONLY valid JSON, no markdown. Shape: {"options": [${jsonOptionsShape(n)}]} with exactly ${n} entries.`,
+            prompt: (topic, lang, n) => `Generate ${n} story ideas for: "${topic}" in ${lang}. Each: text overlay + sticker suggestion + CTA. Keep under 100 chars. Return ONLY JSON: {"options": [${jsonOptionsSample(n, 'story')}]}`
         },
         reel: {
             label: 'Reel Script',
             subtitle: 'Voiceover and hooks for Reels',
-            systemPrompt: 'You are a video content creator. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
-            prompt: (topic, lang) => `Generate 5 Instagram Reel scripts for: "${topic}" in ${lang}. Each: hook (under 60 chars) + 15-30 sec voiceover with CTA. Return ONLY JSON: {"options": ["script1", "script2", "script3", "script4", "script5"]}`
+            systemPrompt: (n) => `You are a video content creator. Respond with ONLY valid JSON, no markdown. Shape: {"options": [${jsonOptionsShape(n)}]} with exactly ${n} entries.`,
+            prompt: (topic, lang, n) => `Generate ${n} Instagram Reel scripts for: "${topic}" in ${lang}. Each: hook (under 60 chars) + 15-30 sec voiceover with CTA. Return ONLY JSON: {"options": [${jsonOptionsSample(n, 'script')}]}`
         },
         carousel: {
             label: 'Carousel Generator',
@@ -1170,26 +1186,26 @@
         singleimage: {
             label: 'Single Image Post',
             subtitle: 'Caption + hashtags for photos',
-            systemPrompt: 'You are a photography and social media expert. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
-            prompt: (topic, lang) => `Generate 5 single-image post captions for: "${topic}" in ${lang}. Each: 150-200 characters, includes 1 question, 1 CTA, 5-8 hashtags. Return ONLY JSON: {"options": ["caption1", "caption2", "caption3", "caption4", "caption5"]}`
+            systemPrompt: (n) => `You are a photography and social media expert. Respond with ONLY valid JSON, no markdown. Shape: {"options": [${jsonOptionsShape(n)}]} with exactly ${n} entries.`,
+            prompt: (topic, lang, n) => `Generate ${n} single-image post captions for: "${topic}" in ${lang}. Each: 150-200 characters, includes 1 question, 1 CTA, 5-8 hashtags. Return ONLY JSON: {"options": [${jsonOptionsSample(n, 'caption')}]}`
         },
         collab: {
             label: 'Collab Message',
             subtitle: 'DM templates for partnerships',
-            systemPrompt: 'You are a partnership outreach specialist. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
-            prompt: (topic, lang) => `Generate 5 DM templates for collaboration or partnership requests related to: "${topic}" in ${lang}. Each should be professional, friendly, and include a clear value proposition. Return ONLY JSON: {"options": ["message1", "message2", "message3", "message4", "message5"]}`
+            systemPrompt: (n) => `You are a partnership outreach specialist. Respond with ONLY valid JSON, no markdown. Shape: {"options": [${jsonOptionsShape(n)}]} with exactly ${n} entries.`,
+            prompt: (topic, lang, n) => `Generate ${n} DM templates for collaboration or partnership requests related to: "${topic}" in ${lang}. Each should be professional, friendly, and include a clear value proposition. Return ONLY JSON: {"options": [${jsonOptionsSample(n, 'message')}]}`
         },
         bio: {
             label: 'Bio Generator',
             subtitle: 'Profile bios for social media',
-            systemPrompt: 'You are a personal branding expert. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
-            prompt: (topic, lang) => `Generate 5 social media bios for: "${topic}" in ${lang}. Offer 3 styles: professional, playful, keyword-rich. Under 150 chars each. Return ONLY JSON: {"options": ["bio1", "bio2", "bio3", "bio4", "bio5"]}`
+            systemPrompt: (n) => `You are a personal branding expert. Respond with ONLY valid JSON, no markdown. Shape: {"options": [${jsonOptionsShape(n)}]} with exactly ${n} entries.`,
+            prompt: (topic, lang, n) => `Generate ${n} social media bios for: "${topic}" in ${lang}. Offer a mix of styles (professional, playful, keyword-rich). Under 150 chars each. Return ONLY JSON: {"options": [${jsonOptionsSample(n, 'bio')}]}`
         },
         'linkedin-post': {
             label: 'LinkedIn Post',
             subtitle: 'Professional posts for LinkedIn',
-            systemPrompt: 'You are a LinkedIn content strategist. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
-            prompt: (topic, lang) => `Generate 5 LinkedIn posts for: "${topic}" in ${lang}. Each: hook + 2-3 insights + question. Under 300 words. Return ONLY JSON: {"options": ["post1", "post2", "post3", "post4", "post5"]}`
+            systemPrompt: (n) => `You are a LinkedIn content strategist. Respond with ONLY valid JSON, no markdown. Shape: {"options": [${jsonOptionsShape(n)}]} with exactly ${n} entries.`,
+            prompt: (topic, lang, n) => `Generate ${n} LinkedIn posts for: "${topic}" in ${lang}. Each: hook + 2-3 insights + question. Under 300 words. Return ONLY JSON: {"options": [${jsonOptionsSample(n, 'post')}]}`
         },
         'linkedin-article': {
             label: 'LinkedIn Article',
@@ -1200,14 +1216,14 @@
         'linkedin-connection': {
             label: 'Connection Message',
             subtitle: 'Personalized connection requests',
-            systemPrompt: 'You are a networking specialist. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
-            prompt: (topic, lang) => `Generate 5 LinkedIn connection request messages for: "${topic}" in ${lang}. Each: mention mutual interest, reason for connecting, next step. Under 200 chars. Return ONLY JSON: {"options": ["message1", "message2", "message3", "message4", "message5"]}`
+            systemPrompt: (n) => `You are a networking specialist. Respond with ONLY valid JSON, no markdown. Shape: {"options": [${jsonOptionsShape(n)}]} with exactly ${n} entries.`,
+            prompt: (topic, lang, n) => `Generate ${n} LinkedIn connection request messages for: "${topic}" in ${lang}. Each: mention mutual interest, reason for connecting, next step. Under 200 chars. Return ONLY JSON: {"options": [${jsonOptionsSample(n, 'message')}]}`
         },
         'linkedin-headline': {
             label: 'Headline Generator',
             subtitle: 'Professional headlines for profiles',
-            systemPrompt: 'You are a LinkedIn profile optimization expert. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
-            prompt: (topic, lang) => `Generate 5 LinkedIn headlines for: "${topic}" in ${lang}. Each under 120 characters, include keywords for discoverability, highlight value proposition. Return ONLY JSON: {"options": ["headline1", "headline2", "headline3", "headline4", "headline5"]}`
+            systemPrompt: (n) => `You are a LinkedIn profile optimization expert. Respond with ONLY valid JSON, no markdown. Shape: {"options": [${jsonOptionsShape(n)}]} with exactly ${n} entries.`,
+            prompt: (topic, lang, n) => `Generate ${n} LinkedIn headlines for: "${topic}" in ${lang}. Each under 120 characters, include keywords for discoverability, highlight value proposition. Return ONLY JSON: {"options": [${jsonOptionsSample(n, 'headline')}]}`
         },
         'linkedin-about': {
             label: 'About Section',
@@ -1224,8 +1240,8 @@
         'youtube-title': {
             label: 'YouTube Title Generator',
             subtitle: 'Click-worthy video titles',
-            systemPrompt: 'You are a YouTube SEO and CTR optimization expert. Respond with ONLY valid JSON, no markdown. Shape: {"options": ["...", "...", "...", "...", "..."]}.',
-            prompt: (topic, lang) => `Generate 5 YouTube video titles for: "${topic}" in ${lang}. Each title under 60 characters, include keywords, create curiosity, promise value. Return ONLY JSON: {"options": ["title1", "title2", "title3", "title4", "title5"]}`
+            systemPrompt: (n) => `You are a YouTube SEO and CTR optimization expert. Respond with ONLY valid JSON, no markdown. Shape: {"options": [${jsonOptionsShape(n)}]} with exactly ${n} entries.`,
+            prompt: (topic, lang, n) => `Generate ${n} YouTube video titles for: "${topic}" in ${lang}. Each title under 60 characters, include keywords, create curiosity, promise value. Return ONLY JSON: {"options": [${jsonOptionsSample(n, 'title')}]}`
         },
         'youtube-description': {
             label: 'YouTube Description',
@@ -1354,7 +1370,7 @@
             generatorOutput.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-lightbulb"></i>
-                    <p>Enter a topic above and click Generate to create 5 content options</p>
+                    <p>Enter a topic above and click Generate to create content options</p>
                 </div>
             `;
             generatorInput.placeholder = 'Enter a topic, product, or idea…';
@@ -1569,7 +1585,13 @@
                 selectedModel = 'qwen-plus';
             }
 
-            let userPrompt = config.prompt(topic, langName);
+            // Number of options to request/display, based on the user's subscription tier.
+            const optionCount = getOptionCount();
+
+            const systemPrompt = typeof config.systemPrompt === 'function'
+                ? config.systemPrompt(optionCount) : config.systemPrompt;
+            let userPrompt = typeof config.prompt === 'function'
+                ? config.prompt(topic, langName, optionCount) : config.prompt;
             
             // If there's an attachment, include it in the context
             if (currentAttachment) {
@@ -1588,13 +1610,13 @@
                 headers: { 'Content-Type': 'application/json', ...AUTH.getAuthHeader() },
                 body: JSON.stringify({
                     messages: [
-                        { role: 'system', content: config.systemPrompt },
+                        { role: 'system', content: systemPrompt },
                         { role: 'user', content: userPrompt }
                     ],
                     model: selectedModel,
                     stream: false,
                     temperature: 0.7,
-                    max_tokens: isLong ? 4096 : 1024,
+                    max_tokens: isLong ? 4096 : Math.max(1024, optionCount * 220),
                 }),
             });
 
@@ -1620,14 +1642,14 @@
                 if (!options || options.length === 0) {
                     options = [rawContent.trim()].filter(o => o.length > 0);
                 }
-                const displayOptions = options.slice(0, 5);
+                const displayOptions = options.slice(0, optionCount);
                 displayOptions.forEach((opt, i) => {
                     generatorOutput.appendChild(createOptionBox(opt, i + 1));
                 });
-                if (options.length > 5) {
+                if (options.length > optionCount) {
                     const more = document.createElement('div');
                     more.style.cssText = 'color:#5b6a84;font-size:11px;padding:4px 0;text-align:center;';
-                    more.textContent = `+ ${options.length - 5} more options generated`;
+                    more.textContent = `+ ${options.length - optionCount} more options generated`;
                     generatorOutput.appendChild(more);
                 }
             }
@@ -1867,15 +1889,18 @@
                 `<button class="copy-email-btn" onclick="copyEmailBody()"><i class="fas fa-copy"></i> Copy</button>`;
 
         } catch (e) {
-            subjectOutput.innerHTML = 'Error generating subject';
-            bodyOutput.innerHTML = 'Error generating body. Please try again.';
+            console.error('Email generation error:', e);
+            const errMsg = escapeHtml(e.message || 'Please try again.');
+            subjectOutput.innerHTML = `<span style="color:#ff9b9b;"><i class="fas fa-exclamation-circle"></i> ${errMsg}</span>`;
+            bodyOutput.innerHTML = `<span style="color:#ff9b9b;"><i class="fas fa-exclamation-circle"></i> ${errMsg}</span>`;
         }
     }
 
     window.copyEmailSubject = function() {
         const el = document.getElementById('emailSubjectOutput');
+        if (el.querySelector('.fa-exclamation-circle')) return;
         const text = el.textContent.replace('Copy', '').trim();
-        if (text && text !== 'Generating...' && text !== 'Error generating subject') {
+        if (text && text !== 'Generating...') {
             navigator.clipboard.writeText(text);
             showToast('Subject copied!', 'success');
         }
@@ -1883,8 +1908,9 @@
 
     window.copyEmailBody = function() {
         const el = document.getElementById('emailBodyOutput');
+        if (el.querySelector('.fa-exclamation-circle')) return;
         const text = el.textContent.replace('Copy', '').trim();
-        if (text && text !== 'Generating...' && text !== 'Error generating body. Please try again.') {
+        if (text && text !== 'Generating...') {
             navigator.clipboard.writeText(text);
             showToast('Email body copied!', 'success');
         }
