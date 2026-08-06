@@ -142,7 +142,18 @@ const MODULES = {
       if (!data.success || !data.codingAgentUrl) {
         throw new Error('Coding agent URL not configured');
       }
-      window.open(data.codingAgentUrl, '_blank', 'noopener');
+
+      // A plain window.open() navigation can't carry an Authorization
+      // header, so the coding-agent server has no way to know which main
+      // app user is opening it (and therefore can't associate a GitHub
+      // connection with them in the DB). Pass the JWT once as a query
+      // param instead; the server verifies it, stores the user id in the
+      // session, then immediately redirects to strip it from the URL.
+      const token = AUTH.getToken();
+      const url = token
+        ? `${data.codingAgentUrl}?token=${encodeURIComponent(token)}`
+        : data.codingAgentUrl;
+      window.open(url, '_blank', 'noopener');
     } catch (err) {
       console.error('Failed to launch Coding Agent:', err);
       alert('Coding Agent is currently unavailable. Please try again shortly.');

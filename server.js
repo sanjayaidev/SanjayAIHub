@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const session = require('express-session');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 const { createServer } = require('http');
 require('dotenv').config();
 
@@ -181,13 +182,49 @@ app.get('/api/config', (req, res) => {
 const httpServer = createServer(app);
 
 // Middleware to pass main app user info to coding-agent
+//
+// The coding-agent is opened via window.open() as a plain browser
+// navigation (see public/js/modules.js -> launchCodingAgent), not a
+// fetch/XHR call. That means it can NEVER carry an `Authorization: Bearer`
+// header, so `authenticateToken` (and therefore req.user) is never
+// populated here — this middleware's old `req.user` check was always
+// false, which is why mainUserId never made it into the session and the
+// GitHub OAuth callback always logged "No mainUserId in session - skipping
+// DB storage".
+//
+// Fix: launchCodingAgent() now appends the user's JWT as a one-time
+// `?token=` query param on the coding-agent URL. We verify it here, stash
+// the resulting mainUserId in the (cookie-backed) session, and then
+// redirect to the same URL with the token stripped so it doesn't linger
+// in the browser's history/URL bar. Once mainUserId is in the session,
+// every later request in this tab (including the GitHub OAuth flow) picks
+// it up automatically because the session cookie persists.
 app.use('/agent', (req, res, next) => {
-  // Pass the authenticated user's ID from JWT to the coding-agent session
-  if (req.user && req.user.id) {
-    if (!req.session.mainUserId) {
-      req.session.mainUserId = req.user.id;
-      console.log('[Middleware] Set mainUserId for coding-agent:', req.user.id);
+  if (req.query.token) {
+    try {
+      const decoded = jwt.verify(req.query.token, process.env.JWT_SECRET);
+      req.session.mainUserId = decoded.id;
+      console.log('[Middleware] Set mainUserId for coding-agent:', decoded.id);
+
+      // Strip the token from the URL before continuing so it isn't left
+      // sitting in the address bar/history. Save the session first so the
+      // redirected request is guaranteed to see mainUserId.
+      const cleanUrl = req.originalUrl.replace(/([?&])token=[^&]*&?/, '$1').replace(/[?&]$/, '');
+      return req.session.save((err) => {
+        if (err) console.error('[Middleware] Session save failed:', err);
+        res.redirect(cleanUrl);
+      });
+    } catch (err) {
+      console.warn('[Middleware] Invalid or expired token on /agent:', err.message);
+      // Fall through without mainUserId rather than blocking access —
+      // the coding agent still works standalone, it just won't persist
+      // the GitHub connection to the DB for this session.
     }
+  } else if (req.user && req.user.id && !req.session.mainUserId) {
+    // Kept for any caller that does manage to hit this behind
+    // authenticateToken (e.g. a future API-based integration).
+    req.session.mainUserId = req.user.id;
+    console.log('[Middleware] Set mainUserId for coding-agent:', req.user.id);
   }
   next();
 });
