@@ -1,0 +1,616 @@
+diff --git a/modules/coding-agent/public/index.html b/modules/coding-agent/public/index.html
+index eb8a9ab..eb183f6 100644
+--- a/modules/coding-agent/public/index.html
++++ b/modules/coding-agent/public/index.html
+@@ -701,6 +701,9 @@ function App() {
+   const [user, setUser] = useState(null);
+   const [authChecked, setAuthChecked] = useState(false);
+   const [githubConnection, setGithubConnection] = useState(null);
++  const [sessionDebug, setSessionDebug] = useState(null);
++  const [localUser, setLocalUser] = useState(null);
++  const [debugExpanded, setDebugExpanded] = useState(true);
+   const [repos, setRepos] = useState([]);
+   const [selectedRepo, setSelectedRepo] = useState(null);
+   const [repoPath, setRepoPath] = useState('');
+@@ -739,43 +742,59 @@ function App() {
+       .catch(() => setStatus({ online: false, modelCount: 0 }));
+   }, []);
+ 
+-  useEffect(() => {
+-    fetchJSON('/api/auth/me')
+-      .then(data => {
+-        setUser(data.user);
+-        if (data.connected && data.connection) {
+-          setGithubConnection(data.connection);
+-        }
++  // Single source of truth for "am I connected to GitHub". /api/auth/me
++  // now independently resolves this from the DB (via mainUserId) whenever
++  // this browser session doesn't already have a live token cached — so it
++  // reflects reality even right after a server restart, instead of only
++  // ever being true immediately after the OAuth callback ran. See
++  // server/lib/githubAuth.js for the resolution logic.
++  //
++  // Uses a raw fetch (not fetchJSON) so the `debug` block always comes
++  // through, even on a non-200 response — fetchJSON discards the body on
++  // error and just throws a message string, which would hide exactly the
++  // info this is for.
++  const refreshAuth = useCallback(() => {
++    return fetch('/api/auth/me', { credentials: 'same-origin' })
++      .then(res => res.json().then(data => ({ status: res.status, data })))
++      .then(({ data }) => {
++        setUser(data.connected ? data.user : null);
++        setGithubConnection(data.connected ? data.connection : null);
++        setSessionDebug(data.debug || null);
++      })
++      .catch(() => {
++        setUser(null);
++        setGithubConnection(null);
++        setSessionDebug(null);
+       })
+-      .catch(() => setUser(null))
+       .finally(() => setAuthChecked(true));
+   }, []);
+ 
+-  // Fetch GitHub connection details when user is authenticated
+   useEffect(() => {
+-    if (!user) return;
+-    fetchJSON('/api/auth/github/token')
+-      .then(data => {
+-        if (data.connected) {
+-          setGithubConnection({
+-            username: data.username,
+-            scope: data.scope,
+-            lastSyncedAt: data.lastSyncedAt,
+-            tokenPreview: data.tokenPreview
+-          });
+-        } else {
+-          setGithubConnection(null);
+-        }
+-      })
+-      .catch(() => setGithubConnection(null));
+-  }, [user]);
++    refreshAuth();
++  }, [refreshAuth]);
++
++  // Read the main app's OWN session straight out of localStorage. This is
++  // the main app's browser-side identity (set by public/js/auth.js at
++  // login) and is completely independent of the coding-agent's server
++  // session/cookie — /agent is same-origin, so localStorage is shared.
++  // If this is empty, the browser itself doesn't think anyone is logged
++  // into the main app at all, which is worth knowing before even looking
++  // at server-side session state.
++  useEffect(() => {
++    try {
++      const raw = localStorage.getItem('user');
++      setLocalUser(raw ? JSON.parse(raw) : null);
++    } catch {
++      setLocalUser(null);
++    }
++  }, []);
+ 
+   useEffect(() => {
+-    if (!user) return;
++    if (!githubConnection) return;
+     fetchJSON('/api/repos')
+       .then(data => setRepos(data.repos || []))
+       .catch(err => setRepoError(err.message));
+-  }, [user]);
++  }, [githubConnection]);
+ 
+   const loadRepo = useCallback(async () => {
+     if (!selectedRepo) return;
+@@ -977,15 +996,34 @@ function App() {
+           </span>
+           <span className="badge">Alibaba · SG</span>
+           {authChecked && (
+-            user ? (
+-              <span className="badge" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+-                <img src={user.avatarUrl} alt="" style={{ width: 16, height: 16, borderRadius: '50%' }} />
+-                {user.login}
++            githubConnection ? (
++              // Single unified "connected as" indicator — avatar + GitHub
++              // login + last-synced time, sourced entirely from
++              // /api/auth/me so it's always in sync with what the backend
++              // (session or DB) actually considers connected.
++              <span
++                className="badge"
++                title={githubConnection.lastSyncedAt ? `Synced ${new Date(githubConnection.lastSyncedAt).toLocaleString()}` : undefined}
++                style={{ display: 'flex', alignItems: 'center', gap: 8, borderColor: 'var(--green)' }}
++              >
++                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
++                  <span className="status-dot green"></span>
++                  {user?.avatarUrl ? (
++                    <img src={user.avatarUrl} alt="" style={{ width: 16, height: 16, borderRadius: '50%' }} />
++                  ) : (
++                    <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" style={{ color: 'var(--text-dim)' }}>
++                      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-4.22 0-.93.33-1.59.87-2.14-.35-.87-1.52-4.42 1.13-6.41 0 0 .9-.29 2.95 1.09.85-.24 1.77-.36 2.69-.36.92 0 1.84.12 2.69.36 2.05-1.38 2.95-1.09 2.95-1.09 2.65 1.99 1.48 5.54 1.13 6.41.54.55.87 1.21.87 2.14 0 3.34-1.86 4.02-3.64 4.22.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
++                    </svg>
++                  )}
++                  <span style={{ color: 'var(--text)' }}>{githubConnection.username}</span>
++                  <span style={{ color: 'var(--text-faint)' }}>connected</span>
++                </span>
+                 <button
+-                  onClick={logout}
+-                  style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', fontSize: 11, padding: 0, marginLeft: 4 }}
++                  onClick={disconnectGithub}
++                  title="Disconnect GitHub"
++                  style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 11, padding: 0 }}
+                 >
+-                  log out
++                  ✕
+                 </button>
+               </span>
+             ) : (
+@@ -994,25 +1032,71 @@ function App() {
+               </a>
+             )
+           )}
+-          {githubConnection && (
+-            <span className="badge" style={{ display: 'flex', alignItems: 'center', gap: 8, borderColor: 'var(--green)' }}>
+-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+-                <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" style={{ color: 'var(--text-dim)' }}>
+-                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-4.22 0-.93.33-1.59.87-2.14-.35-.87-1.52-4.42 1.13-6.41 0 0 .9-.29 2.95 1.09.85-.24 1.77-.36 2.69-.36.92 0 1.84.12 2.69.36 2.05-1.38 2.95-1.09 2.95-1.09 2.65 1.99 1.48 5.54 1.13 6.41.54.55.87 1.21.87 2.14 0 3.34-1.86 4.02-3.64 4.22.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+-                </svg>
+-                {githubConnection.username}
++        </div>
++      </header>
++
++      {/* Session debug strip — shows exactly what the browser and server
++          each think about who's logged in, so "is the session even being
++          recognized" is something you can read instead of guess.
++            Browser  = localStorage['user'] on this origin (set by the
++                       main app's login flow, public/js/auth.js). Empty
++                       means the browser itself has no main-app login at
++                       all — nothing server-side can fix that.
++            Server   = req.session.mainUserId on THIS request, as seen by
++                       the coding-agent. Set by server.js's /agent
++                       middleware from your JWT. If Browser has a user but
++                       this is empty, the session bridge isn't running for
++                       this request (e.g. you navigated to /agent directly
++                       without the launcher's ?token=, or the session
++                       cookie didn't come back).
++            GitHub   = where /api/auth/me actually found a usable token:
++                       "session" (already on this request's session),
++                       "db" (fell back to user_github_connections), or
++                       "none". */}
++      {authChecked && (
++        <div style={{
++          fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-dim)',
++          background: 'var(--panel-2)', borderBottom: '1px solid var(--border)',
++          padding: '6px 24px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
++        }}>
++          <span
++            onClick={() => setDebugExpanded(v => !v)}
++            style={{ cursor: 'pointer', color: 'var(--text-faint)', userSelect: 'none' }}
++          >
++            {debugExpanded ? '▾' : '▸'} session debug
++          </span>
++          {debugExpanded && (
++            <>
++              <span>
++                browser: {localUser ? (
++                  <span style={{ color: 'var(--green)' }}>{localUser.full_name || localUser.username || localUser.email || 'logged in'}</span>
++                ) : (
++                  <span style={{ color: 'var(--red)' }}>no localStorage user — not logged into main app in this browser</span>
++                )}
+               </span>
+-              <button
+-                onClick={disconnectGithub}
+-                title="Disconnect GitHub"
+-                style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 11, padding: 0 }}
+-              >
+-                ✕
+-              </button>
+-            </span>
++              <span>
++                server mainUserId: {sessionDebug?.hasMainUserId ? (
++                  <span style={{ color: 'var(--green)' }} title={sessionDebug.mainUserId}>{sessionDebug.mainUserId.slice(0, 8)}…</span>
++                ) : (
++                  <span style={{ color: 'var(--red)' }}>none</span>
++                )}
++              </span>
++              <span>
++                github token: {githubConnection ? (
++                  <span style={{ color: 'var(--green)' }}>found via {sessionDebug?.resolvedFrom || '?'}</span>
++                ) : (
++                  <span style={{ color: 'var(--amber)' }}>not found (session or db)</span>
++                )}
++              </span>
++              {sessionDebug?.sessionId && (
++                <span style={{ color: 'var(--text-faint)' }} title="express-session cookie id for this request">
++                  sid: {sessionDebug.sessionId.slice(0, 10)}…
++                </span>
++              )}
++            </>
+           )}
+         </div>
+-      </header>
++      )}
+ 
+       <div className="main">
+         {/* Left Sidebar - Files */}
+diff --git a/modules/coding-agent/server/lib/githubAuth.js b/modules/coding-agent/server/lib/githubAuth.js
+new file mode 100644
+index 0000000..010265e
+--- /dev/null
++++ b/modules/coding-agent/server/lib/githubAuth.js
+@@ -0,0 +1,114 @@
++// server/lib/githubAuth.js
++//
++// Single source of truth for "is this user connected to GitHub, and what's
++// their token?" for the coding-agent.
++//
++// Why this exists
++// ----------------
++// req.session.githubToken / req.session.user used to be the ONLY place the
++// rest of the app looked for GitHub auth (see routes/auth.js `/me`,
++// routes/repos.js `requireAuth`, etc). Those two keys are written exactly
++// once, inside the OAuth callback. That's a problem because:
++//
++//   1. express-session here uses the default in-memory MemoryStore, so a
++//      server restart/redeploy (Railway does this on every deploy) wipes
++//      every session's githubToken/user, even though the token is safely
++//      sitting in the `user_github_connections` table.
++//   2. Any other tab/device/browser session for the same logged-in main
++//      app user never had those keys set in the first place, even though
++//      the DB row exists.
++//
++// In both cases `req.session.mainUserId` still gets re-established on the
++// next visit to /agent (server.js verifies the main app's JWT and stashes
++// mainUserId in the shared session — see the `/agent` middleware in
++// server.js), so we always have an independent way to identify *who* is
++// asking, even when the GitHub-specific session keys are gone. This module
++// uses that identity to fetch the persisted token from the DB and re-
++// hydrates the session with it, so the UI stops asking the user to
++// "Connect GitHub" when they're already connected.
++import pool from '../../../../db/index.js';
++
++/**
++ * Resolve the current request's GitHub auth (access token + profile).
++ *
++ * Resolution order:
++ *   1. Already-hydrated session (fast path, no DB hit).
++ *   2. mainUserId (independently identifies the logged-in main-app user
++ *      for *this* session/request) -> look up the active row in
++ *      user_github_connections -> hydrate the session for next time.
++ *
++ * Returns null if neither source has an active connection.
++ */
++export async function resolveGithubAuth(req) {
++  // 1. Fast path — this session already has a live token.
++  if (req.session.githubToken && req.session.user) {
++    return { token: req.session.githubToken, user: req.session.user, source: 'session' };
++  }
++
++  // 2. Independently identify the main-app user for this request. This is
++  //    NOT read from anything cached on this module — it comes from the
++  //    shared session, set by server.js after verifying the main app's
++  //    JWT, so it reflects who is actually logged in right now.
++  const mainUserId = req.session.mainUserId;
++  if (!mainUserId) {
++    return null;
++  }
++
++  try {
++    const result = await pool.query(
++      `SELECT github_user_id, github_username, github_name, github_email,
++              github_avatar_url, access_token, scope, last_synced_at
++       FROM user_github_connections
++       WHERE user_id = $1 AND is_active = true
++       ORDER BY updated_at DESC
++       LIMIT 1`,
++      [mainUserId]
++    );
++
++    if (result.rows.length === 0) {
++      return null;
++    }
++
++    const row = result.rows[0];
++    const user = {
++      login: row.github_username,
++      name: row.github_name || row.github_username,
++      avatarUrl: row.github_avatar_url,
++      email: row.github_email,
++    };
++
++    // Re-hydrate the session so subsequent requests in this session hit
++    // the fast path above instead of round-tripping to the DB every time.
++    req.session.githubToken = row.access_token;
++    req.session.user = user;
++
++    return {
++      token: row.access_token,
++      user,
++      source: 'db',
++      scope: row.scope,
++      lastSyncedAt: row.last_synced_at,
++    };
++  } catch (err) {
++    console.error('[GithubAuth] Failed to resolve GitHub auth from DB:', err.message);
++    return null;
++  }
++}
++
++/**
++ * Express middleware version of resolveGithubAuth — attaches the result to
++ * req.githubAuth, or responds 401 if there's no active connection.
++ */
++export async function requireGithubAuth(req, res, next) {
++  try {
++    const auth = await resolveGithubAuth(req);
++    if (!auth) {
++      return res.status(401).json({ error: 'Not logged in. Visit /agent/api/auth/github to log in.' });
++    }
++    req.githubAuth = auth;
++    next();
++  } catch (err) {
++    console.error('[GithubAuth] requireGithubAuth failed:', err.message);
++    res.status(500).json({ error: 'Server error while checking GitHub connection' });
++  }
++}
+diff --git a/modules/coding-agent/server/routes/auth.js b/modules/coding-agent/server/routes/auth.js
+index 4ea39a5..e59d2a4 100644
+--- a/modules/coding-agent/server/routes/auth.js
++++ b/modules/coding-agent/server/routes/auth.js
+@@ -3,6 +3,7 @@ import express from 'express';
+ import crypto from 'crypto';
+ import pool from '../../../../db/index.js';
+ import { exchangeCodeForToken, getGithubUser } from '../lib/github.js';
++import { resolveGithubAuth } from '../lib/githubAuth.js';
+ 
+ const router = express.Router();
+ 
+@@ -151,58 +152,69 @@ router.get('/github/callback', async (req, res) => {
+       // Don't fail the OAuth flow if DB storage fails
+     }
+ 
+-    console.log('[Auth] Session updated, redirecting to /');
+-    res.redirect('/');
++    console.log('[Auth] Session updated, redirecting to /agent');
++    // IMPORTANT: this route is mounted at /agent/api/auth/github/callback,
++    // but a leading '/' in res.redirect() is always resolved from the
++    // origin, not from the mount path. res.redirect('/') was sending the
++    // browser to the main SanjayAIHub homepage instead of back into the
++    // coding agent, so a successful connect looked like nothing happened
++    // (you just left the agent entirely). Redirect to '/agent' explicitly.
++    res.redirect('/agent');
+   } catch (error) {
+     console.error('[Auth] OAuth callback failed:', error);
+     res.status(500).send(`Login failed: ${error.message}`);
+   }
+ });
+ 
+-// Current session's user, if any
++// Current session's user, if any.
++//
++// This used to require req.session.user to already be set BEFORE it would
++// even look at the DB — so a MemoryStore restart, or simply opening the
++// agent in a new browser session, made it report "not logged in" forever,
++// even with a perfectly good token sitting in user_github_connections.
++// It now independently resolves the main-app user for this request
++// (mainUserId, set from the main app's session — see lib/githubAuth.js)
++// and checks the DB regardless of what this particular session happened
++// to have cached, so a persisted connection is always picked up.
+ router.get('/me', async (req, res) => {
++  // Raw session facts, always included — this is what actually decides
++  // "connected" or not, so surfacing it directly means you can see it
++  // instead of inferring it from whether a badge changed color.
++  const debug = {
++    sessionId: req.sessionID,
++    hasMainUserId: !!req.session.mainUserId,
++    mainUserId: req.session.mainUserId || null,
++    hasSessionGithubToken: !!req.session.githubToken,
++  };
++
+   try {
+-    // First check session
+-    if (!req.session.user) {
+-      return res.status(401).json({ error: 'Not logged in' });
+-    }
++    const auth = await resolveGithubAuth(req);
+ 
+-    // Try to load connection status from DB
+-    const mainUserId = req.session.mainUserId;
+-    
+-    if (mainUserId) {
+-      try {
+-        const result = await pool.query(
+-          `SELECT github_username, github_name, github_avatar_url, scope, is_active, last_synced_at 
+-           FROM user_github_connections 
+-           WHERE user_id = $1 AND is_active = true`,
+-          [mainUserId]
+-        );
++    if (auth) {
++      return res.json({
++        user: auth.user,
++        connected: true,
++        connection: {
++          username: auth.user.login,
++          name: auth.user.name,
++          avatarUrl: auth.user.avatarUrl,
++          scope: auth.scope,
++          lastSyncedAt: auth.lastSyncedAt,
++        },
++        debug: { ...debug, resolvedFrom: auth.source },
++      });
++    }
+ 
+-        if (result.rows.length > 0) {
+-          const connection = result.rows[0];
+-          return res.json({ 
+-            user: req.session.user,
+-            connected: true,
+-            connection: {
+-              username: connection.github_username,
+-              name: connection.github_name,
+-              avatarUrl: connection.github_avatar_url,
+-              scope: connection.scope,
+-              lastSyncedAt: connection.last_synced_at
+-            }
+-          });
+-        }
+-      } catch (dbError) {
+-        console.error('[Auth] Failed to load GitHub connection from DB:', dbError.message);
+-      }
++    // No active GitHub connection found in session or DB. If the main app
++    // at least knows who's asking, say so (so the UI can still show e.g.
++    // "not connected" instead of a generic error) but always mark
++    // connected: false rather than a hard 401 — asking to "log in" here
++    // is really asking to connect GitHub, not sign into the main app.
++    if (req.session.mainUserId) {
++      return res.json({ user: null, connected: false, debug });
+     }
+ 
+-    // Fallback to session-only data
+-    return res.json({ 
+-      user: req.session.user,
+-      connected: !!req.session.githubToken
+-    });
++    return res.status(401).json({ error: 'Not logged in', connected: false, debug });
+   } catch (error) {
+     console.error('[Auth] /me failed:', error);
+     res.status(500).json({ error: 'Server error' });
+@@ -234,38 +246,25 @@ router.get('/github/token', async (req, res) => {
+     if (!req.session.mainUserId) {
+       return res.status(401).json({ error: 'Not logged into main app' });
+     }
+-    
+-    if (!req.session.githubToken) {
++
++    // Resolve independently of whatever this session happened to have
++    // cached — same DB fallback as /me and the repo routes.
++    const auth = await resolveGithubAuth(req);
++    if (!auth) {
+       return res.status(401).json({ error: 'GitHub not connected' });
+     }
+-    
+-    // Load connection details from DB
+-    const result = await pool.query(
+-      `SELECT github_username, scope, is_active, last_synced_at, created_at
+-       FROM user_github_connections 
+-       WHERE user_id = $1 AND is_active = true`,
+-      [req.session.mainUserId]
+-    );
+-    
+-    if (result.rows.length === 0) {
+-      return res.status(404).json({ error: 'No active GitHub connection found' });
+-    }
+-    
+-    const connection = result.rows[0];
+-    
+-    // Return token info (token itself should be used internally, not exposed)
++
+     res.json({
+       connected: true,
+-      username: connection.github_username,
+-      scope: connection.scope,
+-      isActive: connection.is_active,
+-      lastSyncedAt: connection.last_synced_at,
+-      createdAt: connection.created_at,
+-      // Note: We don't expose the full token to the frontend for security
+-      // The token is stored securely in the session and DB
+-      tokenPreview: req.session.githubToken 
+-        ? req.session.githubToken.substring(0, 8) + '...' + req.session.githubToken.substring(req.session.githubToken.length - 4)
+-        : null
++      username: auth.user.login,
++      scope: auth.scope,
++      isActive: true,
++      lastSyncedAt: auth.lastSyncedAt,
++      // Note: We don't expose the full token to the frontend for security.
++      // The token is only ever used server-side (repo listing, clone, push).
++      tokenPreview: auth.token
++        ? auth.token.substring(0, 8) + '...' + auth.token.substring(auth.token.length - 4)
++        : null,
+     });
+   } catch (error) {
+     console.error('[Auth] /github/token failed:', error);
+diff --git a/modules/coding-agent/server/routes/repos.js b/modules/coding-agent/server/routes/repos.js
+index 2346914..23bc214 100644
+--- a/modules/coding-agent/server/routes/repos.js
++++ b/modules/coding-agent/server/routes/repos.js
+@@ -4,22 +4,24 @@ import { execFile } from 'child_process';
+ import { promisify } from 'util';
+ import { listGithubRepos, createPullRequest } from '../lib/github.js';
+ import { cloneOrUpdateRepo, commitAll, pushBranch, getDiff, setupSshRemote, ensureBranch, getCurrentBranch } from '../lib/git.js';
++import { requireGithubAuth } from '../lib/githubAuth.js';
+ 
+ const execFileAsync = promisify(execFile);
+ const GIT_PATH = 'git';
+ const router = express.Router();
+ 
+-function requireAuth(req, res, next) {
+-  if (!req.session.githubToken || !req.session.user) {
+-    return res.status(401).json({ error: 'Not logged in. Visit /agent/api/auth/github to log in.' });
+-  }
+-  next();
+-}
++// requireGithubAuth independently resolves the current main-app user from
++// the shared session and, if this session doesn't already have a live
++// token, falls back to the persisted user_github_connections row for that
++// user — the token/profile end up on req.githubAuth. See lib/githubAuth.js
++// for why relying on req.session.githubToken alone used to break the
++// "already connected" case.
++const requireAuth = requireGithubAuth;
+ 
+ // List repos the logged-in user can access
+ router.get('/', requireAuth, async (req, res) => {
+   try {
+-    const repos = await listGithubRepos(req.session.githubToken);
++    const repos = await listGithubRepos(req.githubAuth.token);
+     res.json({ repos, total: repos.length });
+   } catch (error) {
+     console.error('[Repos] List failed:', error);
+@@ -37,13 +39,13 @@ router.post('/clone', requireAuth, async (req, res) => {
+ 
+   try {
+     const localPath = await cloneOrUpdateRepo({
+-      token: req.session.githubToken,
+-      githubLogin: req.session.user.login,
++      token: req.githubAuth.token,
++      githubLogin: req.githubAuth.user.login,
+       fullName,
+       cloneUrl,
+       defaultBranch,
+-      authorName: req.session.user.name,
+-      authorEmail: req.session.user.email,
++      authorName: req.githubAuth.user.name,
++      authorEmail: req.githubAuth.user.email,
+     });
+ 
+     // Task 1: Ensure we're on the main branch (or specified default branch)
+@@ -147,8 +149,10 @@ router.post('/push', requireAuth, async (req, res) => {
+     // Step 1: Commit all changes
+     const commitResult = await commitAll(repoPath, commitMessage);
+     
+-    // Step 2: Push the branch
+-    await pushBranch(repoPath, branchName, req.session.githubToken);
++    // Step 2: Push the branch. This is the persistence path back to the
++    // connected repo, so it must use the resolved token (session or DB
++    // fallback) rather than assuming req.session.githubToken was set.
++    await pushBranch(repoPath, branchName, req.githubAuth.token);
+ 
+     let prInfo = null;
+     
+@@ -167,7 +171,7 @@ router.post('/push', requireAuth, async (req, res) => {
+       const repo = pathParts[pathParts.length - 1];
+       const fullName = `${owner}/${repo}`;
+ 
+-      const prResult = await createPullRequest(req.session.githubToken, {
++      const prResult = await createPullRequest(req.githubAuth.token, {
+         fullName,
+         title: prTitle,
+         body: prBody || `Changes from branch: ${branchName}`,
+diff --git a/server.js b/server.js
+index 4fbf577..c20e508 100644
+--- a/server.js
++++ b/server.js
+@@ -68,7 +68,7 @@ if (process.env.RENDER_EXTERNAL_URL) {
+ }
+ 
+ // ── Trust Proxy (required for rate-limiting behind Render/nginx) ──
+-app.set('trust proxy', true);
++app.set('trust proxy', 1);
+ 
+ // ── Security Middleware with relaxed CSP for development ──
+ app.use(helmet({

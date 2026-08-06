@@ -152,8 +152,14 @@ router.get('/github/callback', async (req, res) => {
       // Don't fail the OAuth flow if DB storage fails
     }
 
-    console.log('[Auth] Session updated, redirecting to /');
-    res.redirect('/');
+    console.log('[Auth] Session updated, redirecting to /agent');
+    // IMPORTANT: this route is mounted at /agent/api/auth/github/callback,
+    // but a leading '/' in res.redirect() is always resolved from the
+    // origin, not from the mount path. res.redirect('/') was sending the
+    // browser to the main SanjayAIHub homepage instead of back into the
+    // coding agent, so a successful connect looked like nothing happened
+    // (you just left the agent entirely). Redirect to '/agent' explicitly.
+    res.redirect('/agent');
   } catch (error) {
     console.error('[Auth] OAuth callback failed:', error);
     res.status(500).send(`Login failed: ${error.message}`);
@@ -171,6 +177,16 @@ router.get('/github/callback', async (req, res) => {
 // and checks the DB regardless of what this particular session happened
 // to have cached, so a persisted connection is always picked up.
 router.get('/me', async (req, res) => {
+  // Raw session facts, always included — this is what actually decides
+  // "connected" or not, so surfacing it directly means you can see it
+  // instead of inferring it from whether a badge changed color.
+  const debug = {
+    sessionId: req.sessionID,
+    hasMainUserId: !!req.session.mainUserId,
+    mainUserId: req.session.mainUserId || null,
+    hasSessionGithubToken: !!req.session.githubToken,
+  };
+
   try {
     const auth = await resolveGithubAuth(req);
 
@@ -185,6 +201,7 @@ router.get('/me', async (req, res) => {
           scope: auth.scope,
           lastSyncedAt: auth.lastSyncedAt,
         },
+        debug: { ...debug, resolvedFrom: auth.source },
       });
     }
 
@@ -194,10 +211,10 @@ router.get('/me', async (req, res) => {
     // connected: false rather than a hard 401 — asking to "log in" here
     // is really asking to connect GitHub, not sign into the main app.
     if (req.session.mainUserId) {
-      return res.json({ user: null, connected: false });
+      return res.json({ user: null, connected: false, debug });
     }
 
-    return res.status(401).json({ error: 'Not logged in', connected: false });
+    return res.status(401).json({ error: 'Not logged in', connected: false, debug });
   } catch (error) {
     console.error('[Auth] /me failed:', error);
     res.status(500).json({ error: 'Server error' });

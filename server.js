@@ -68,7 +68,7 @@ if (process.env.RENDER_EXTERNAL_URL) {
 }
 
 // ── Trust Proxy (required for rate-limiting behind Render/nginx) ──
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 // ── Security Middleware with relaxed CSP for development ──
 app.use(helmet({

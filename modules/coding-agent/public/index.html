@@ -701,6 +701,9 @@ function App() {
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [githubConnection, setGithubConnection] = useState(null);
+  const [sessionDebug, setSessionDebug] = useState(null);
+  const [localUser, setLocalUser] = useState(null);
+  const [debugExpanded, setDebugExpanded] = useState(true);
   const [repos, setRepos] = useState([]);
   const [selectedRepo, setSelectedRepo] = useState(null);
   const [repoPath, setRepoPath] = useState('');
@@ -745,15 +748,23 @@ function App() {
   // reflects reality even right after a server restart, instead of only
   // ever being true immediately after the OAuth callback ran. See
   // server/lib/githubAuth.js for the resolution logic.
+  //
+  // Uses a raw fetch (not fetchJSON) so the `debug` block always comes
+  // through, even on a non-200 response — fetchJSON discards the body on
+  // error and just throws a message string, which would hide exactly the
+  // info this is for.
   const refreshAuth = useCallback(() => {
-    return fetchJSON('/api/auth/me')
-      .then(data => {
+    return fetch('/api/auth/me', { credentials: 'same-origin' })
+      .then(res => res.json().then(data => ({ status: res.status, data })))
+      .then(({ data }) => {
         setUser(data.connected ? data.user : null);
         setGithubConnection(data.connected ? data.connection : null);
+        setSessionDebug(data.debug || null);
       })
       .catch(() => {
         setUser(null);
         setGithubConnection(null);
+        setSessionDebug(null);
       })
       .finally(() => setAuthChecked(true));
   }, []);
@@ -761,6 +772,22 @@ function App() {
   useEffect(() => {
     refreshAuth();
   }, [refreshAuth]);
+
+  // Read the main app's OWN session straight out of localStorage. This is
+  // the main app's browser-side identity (set by public/js/auth.js at
+  // login) and is completely independent of the coding-agent's server
+  // session/cookie — /agent is same-origin, so localStorage is shared.
+  // If this is empty, the browser itself doesn't think anyone is logged
+  // into the main app at all, which is worth knowing before even looking
+  // at server-side session state.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('user');
+      setLocalUser(raw ? JSON.parse(raw) : null);
+    } catch {
+      setLocalUser(null);
+    }
+  }, []);
 
   useEffect(() => {
     if (!githubConnection) return;
@@ -1007,6 +1034,69 @@ function App() {
           )}
         </div>
       </header>
+
+      {/* Session debug strip — shows exactly what the browser and server
+          each think about who's logged in, so "is the session even being
+          recognized" is something you can read instead of guess.
+            Browser  = localStorage['user'] on this origin (set by the
+                       main app's login flow, public/js/auth.js). Empty
+                       means the browser itself has no main-app login at
+                       all — nothing server-side can fix that.
+            Server   = req.session.mainUserId on THIS request, as seen by
+                       the coding-agent. Set by server.js's /agent
+                       middleware from your JWT. If Browser has a user but
+                       this is empty, the session bridge isn't running for
+                       this request (e.g. you navigated to /agent directly
+                       without the launcher's ?token=, or the session
+                       cookie didn't come back).
+            GitHub   = where /api/auth/me actually found a usable token:
+                       "session" (already on this request's session),
+                       "db" (fell back to user_github_connections), or
+                       "none". */}
+      {authChecked && (
+        <div style={{
+          fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-dim)',
+          background: 'var(--panel-2)', borderBottom: '1px solid var(--border)',
+          padding: '6px 24px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+        }}>
+          <span
+            onClick={() => setDebugExpanded(v => !v)}
+            style={{ cursor: 'pointer', color: 'var(--text-faint)', userSelect: 'none' }}
+          >
+            {debugExpanded ? '▾' : '▸'} session debug
+          </span>
+          {debugExpanded && (
+            <>
+              <span>
+                browser: {localUser ? (
+                  <span style={{ color: 'var(--green)' }}>{localUser.full_name || localUser.username || localUser.email || 'logged in'}</span>
+                ) : (
+                  <span style={{ color: 'var(--red)' }}>no localStorage user — not logged into main app in this browser</span>
+                )}
+              </span>
+              <span>
+                server mainUserId: {sessionDebug?.hasMainUserId ? (
+                  <span style={{ color: 'var(--green)' }} title={sessionDebug.mainUserId}>{sessionDebug.mainUserId.slice(0, 8)}…</span>
+                ) : (
+                  <span style={{ color: 'var(--red)' }}>none</span>
+                )}
+              </span>
+              <span>
+                github token: {githubConnection ? (
+                  <span style={{ color: 'var(--green)' }}>found via {sessionDebug?.resolvedFrom || '?'}</span>
+                ) : (
+                  <span style={{ color: 'var(--amber)' }}>not found (session or db)</span>
+                )}
+              </span>
+              {sessionDebug?.sessionId && (
+                <span style={{ color: 'var(--text-faint)' }} title="express-session cookie id for this request">
+                  sid: {sessionDebug.sessionId.slice(0, 10)}…
+                </span>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="main">
         {/* Left Sidebar - Files */}
