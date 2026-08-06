@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="/js/auth.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -929,7 +930,7 @@
                     <option value="qwen3.5-plus">qwen3.5-plus</option>
                     <option value="deepseek-v4-pro">deepseek-v4-pro</option>
                     <option value="deepseek-v4-flash">deepseek-v4-flash</option>
-                    <option value="mistralai/mistral-small-4-119b-2603" selected>mistral-small-4-119b</option>
+                    <option value="qwen-plus" selected>qwen-plus</option>
                 </select>
                 <select class="lang-select" id="langSelect">
                     <option value="en">English</option>
@@ -1293,7 +1294,7 @@
     };
 
     const MULTILINGUAL_MODELS = new Set([
-        'mistralai/mistral-small-4-119b-2603',
+        'qwen-plus',
         'mistralai/mistral-large-3-675b-instruct-2512',
         'deepseek-ai/deepseek-v4-flash',
         'deepseek-ai/deepseek-v4-pro',
@@ -1565,7 +1566,7 @@
         try {
             let selectedModel = modelSelect.value;
             if (lang !== 'en' && !MULTILINGUAL_MODELS.has(selectedModel)) {
-                selectedModel = 'mistralai/mistral-small-4-119b-2603';
+                selectedModel = 'qwen-plus';
             }
 
             let userPrompt = config.prompt(topic, langName);
@@ -1582,9 +1583,9 @@
                 }
             }
 
-            const res = await fetch('/api/me/chat', {
+            const res = await fetch('/api/chat/chatbot', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...AUTH.getAuthHeader() },
                 body: JSON.stringify({
                     messages: [
                         { role: 'system', content: config.systemPrompt },
@@ -1597,10 +1598,9 @@
                 }),
             });
 
-            if (!res.ok) throw new Error('Generation failed');
-
             const data = await res.json();
-            const rawContent = data.choices?.[0]?.message?.content || data.content || '';
+            if (!res.ok || data.success === false) throw new Error(data.message || 'Generation failed');
+            const rawContent = data.data?.message || '';
             const parsed = safeParseJSON(rawContent);
 
             generatorOutput.innerHTML = '';
@@ -1834,12 +1834,12 @@
         try {
             let selectedModel = modelSelect.value;
             if (lang !== 'en' && !MULTILINGUAL_MODELS.has(selectedModel)) {
-                selectedModel = 'mistralai/mistral-small-4-119b-2603';
+                selectedModel = 'qwen-plus';
             }
 
-            const res = await fetch('/api/me/chat', {
+            const res = await fetch('/api/chat/chatbot', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...AUTH.getAuthHeader() },
                 body: JSON.stringify({
                     messages: [
                         { role: 'system', content: `You are a professional email writer. Respond with ONLY valid JSON, no markdown, no commentary. Shape: {"subject": "...", "body": "..."}. Generate in ${langName}.` },
@@ -1852,10 +1852,9 @@
                 }),
             });
 
-            if (!res.ok) throw new Error('Failed to generate email');
-
             const data = await res.json();
-            const rawContent = data.choices?.[0]?.message?.content || data.content || '';
+            if (!res.ok || data.success === false) throw new Error(data.message || 'Failed to generate email');
+            const rawContent = data.data?.message || '';
             let parsed = safeParseJSON(rawContent);
 
             if (!parsed) {

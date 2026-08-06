@@ -20,8 +20,8 @@ const MODEL_PARAMETERS = {
   'alibaba': {
     size: {
       type: 'select',
-      options: ['1024x1024', '1280x720', '720x1280', '1536x1024', '1024x1536'],
-      default: '1024x1024',
+      options: ['1024*1024', '1280*720', '720*1280', '1536*1024', '1024*1536'],
+      default: '1024*1024',
       label: 'Size'
     },
     seed: { type: 'number', min: 1, max: 999999999, default: null, label: 'Seed (optional)' },
@@ -72,19 +72,20 @@ async function imageToImageHandler(requestBody, apiKeys, userId) {
   let imageUrl, imageDataUrl;
 
   try {
-    const size = (width && height) ? `${parseInt(width)}x${parseInt(height)}` : undefined;
+    const size = (width && height) ? `${parseInt(width)}*${parseInt(height)}` : undefined;
     const result = await alibaba.imageEdit(prompt, image_url, {
       model,
       size,
       seed: seed ? parseInt(seed) : undefined,
     });
 
-    const edited = result?.data?.[0];
-    if (!edited?.url) {
-      throw new Error('No edited image returned');
+    const urls = result._imageUrls || [];
+    if (urls.length === 0) {
+      const errorMsg = result?.output?.text || result?.message || 'No edited image returned';
+      throw new Error(errorMsg);
     }
 
-    imageUrl = edited.url;
+    imageUrl = urls[0];
     imageDataUrl = null;
   } catch (err) {
     throw new Error(`Alibaba Image Edit error: ${err.message}`);
