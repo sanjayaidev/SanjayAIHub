@@ -3,6 +3,8 @@ import express from 'express';
 import { runAider } from '../lib/aider.js';
 import { WORKING_MODELS, getModelById, getRecommendedModel } from '../lib/models.js';
 import { getDiff } from '../lib/git.js';
+import { suggestFiles } from '../lib/fileContext.js';
+import fs from 'fs';
 
 const router = express.Router();
 
@@ -12,6 +14,33 @@ router.get('/models', (req, res) => {
     models: WORKING_MODELS,
     total: WORKING_MODELS.length,
   });
+});
+
+// Helper for the caller (UI, or an LLM/automation driving this API
+// directly) to see which files aider would pick for a task BEFORE
+// running it, and to fine-tune the list before submitting it as `files`
+// on /run. Read-only — doesn't touch aider or the repo, just scores the
+// existing files against the task text.
+router.post('/suggest-files', (req, res) => {
+  const { repoPath, task, limit } = req.body;
+
+  if (!repoPath) {
+    return res.status(400).json({ error: 'repoPath is required' });
+  }
+  if (!fs.existsSync(repoPath)) {
+    return res.status(404).json({ error: 'repoPath does not exist. Load the repo first.' });
+  }
+  if (!task || !task.trim()) {
+    return res.status(400).json({ error: 'task is required' });
+  }
+
+  try {
+    const suggestions = suggestFiles({ workDir: repoPath, task, limit: limit || 8 });
+    res.json({ suggestions, total: suggestions.length });
+  } catch (error) {
+    console.error('[Agent] suggest-files failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Run the agent
@@ -24,12 +53,17 @@ router.post('/run', async (req, res) => {
   if (!task) {
     return res.status(400).json({ error: 'task is required' });
   }
-  
-  // Get user ID from session (requires authentication)
-  if (!req.session.user || !req.session.user.id) {
+
+  // Get user ID from session. This must be mainUserId (the main-app
+  // user's UUID, used to look up their Alibaba credentials in
+  // user_api_keys) — req.session.user is the GitHub profile set by the
+  // OAuth flow (login/name/avatarUrl/email) and never had an `.id` field
+  // matching that table, so this previously 401'd on every single
+  // request regardless of whether GitHub was connected.
+  if (!req.session.mainUserId) {
     return res.status(401).json({ error: 'Authentication required. Please log in first.' });
   }
-  const userId = req.session.user.id;
+  const userId = req.session.mainUserId;
 
   // If no model specified, use recommended
   let model = modelId;
@@ -68,6 +102,8 @@ router.post('/run', async (req, res) => {
       error: result.stderr || result.error,
       diff: diff.diff,
       changedFiles: diff.files,
+      filesUsed: result.filesUsed || [],
+      filesSource: result.filesSource || 'manual',
     });
   } catch (error) {
     console.error('[Agent] Error:', error);
@@ -85,12 +121,12 @@ router.post('/run/stream', async (req, res) => {
   if (!repoPath || !task) {
     return res.status(400).json({ error: 'repoPath and task are required' });
   }
-  
-  // Get user ID from session (requires authentication)
-  if (!req.session.user || !req.session.user.id) {
+
+  // Same fix as /run above — mainUserId, not session.user.id.
+  if (!req.session.mainUserId) {
     return res.status(401).json({ error: 'Authentication required. Please log in first.' });
   }
-  const userId = req.session.user.id;
+  const userId = req.session.mainUserId;
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');

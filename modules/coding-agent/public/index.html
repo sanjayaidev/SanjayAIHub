@@ -338,6 +338,17 @@ function joinPath(dir, name) {
   return dir ? `${dir}/${name}` : name;
 }
 
+function flattenFileTree(tree, out = []) {
+  for (const item of tree) {
+    if (item.type === 'file') {
+      out.push(item.path);
+    } else if (item.children) {
+      flattenFileTree(item.children, out);
+    }
+  }
+  return out;
+}
+
 function dirnameOf(relPath) {
   const idx = relPath.lastIndexOf('/');
   return idx === -1 ? '' : relPath.slice(0, idx);
@@ -735,6 +746,13 @@ function App() {
   const [diffPreview, setDiffPreview] = useState('');
   const [contextMenu, setContextMenu] = useState(null);
 
+  // Files manually attached to the NEXT chat/aider run, plus the UI state
+  // for the attach popover and the "suggest files for this task" helper.
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  const [filePickerOpen, setFilePickerOpen] = useState(false);
+  const [filePickerQuery, setFilePickerQuery] = useState('');
+  const [suggestingFiles, setSuggestingFiles] = useState(false);
+
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -969,13 +987,51 @@ function App() {
     });
   }, []);
 
+  const toggleAttachedFile = useCallback((path) => {
+    setAttachedFiles(prev =>
+      prev.includes(path) ? prev.filter(p => p !== path) : [...prev, path]
+    );
+  }, []);
+
+  const removeAttachedFile = useCallback((path) => {
+    setAttachedFiles(prev => prev.filter(p => p !== path));
+  }, []);
+
+  // Calls the /api/agent/suggest-files helper — the same scoring aider.js
+  // falls back to automatically when no files are attached, exposed here
+  // so it can be previewed and adjusted BEFORE running, instead of only
+  // finding out what got picked after the fact.
+  const suggestFilesForTask = useCallback(async () => {
+    if (!chatInput.trim() || !repoPath) return;
+    setSuggestingFiles(true);
+    try {
+      const data = await fetchJSON('/api/agent/suggest-files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoPath, task: chatInput.trim(), limit: 8 }),
+      });
+      const suggestedPaths = (data.suggestions || []).map(s => s.path);
+      setAttachedFiles(prev => [...new Set([...prev, ...suggestedPaths])]);
+      setFilePickerOpen(true);
+    } catch (err) {
+      console.error('Failed to suggest files:', err);
+    } finally {
+      setSuggestingFiles(false);
+    }
+  }, [chatInput, repoPath]);
+
   const sendMessage = useCallback(async (e) => {
     e.preventDefault();
     if (!chatInput.trim() || chatLoading || !chatModel || !repoPath) return;
 
     const userMessage = chatInput.trim();
+    const filesForRun = attachedFiles;
     setChatInput('');
-    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setChatMessages(prev => [...prev, {
+      role: 'user',
+      content: userMessage,
+      attachedFiles: filesForRun,
+    }]);
     setLoading(true);
 
     setChatMessages(prev => [...prev, { role: 'assistant', content: '...', loading: true }]);
@@ -988,10 +1044,14 @@ function App() {
           repoPath,
           task: userMessage,
           modelId: chatModel.id,
+          files: filesForRun,
         }),
       });
 
       setDiffPreview(data.diff || '');
+      // Clear attachments after a successful run — next message starts
+      // fresh (auto-suggest will kick back in if nothing's attached).
+      setAttachedFiles([]);
 
       setChatMessages(prev => {
         const last = prev[prev.length - 1];
@@ -999,7 +1059,12 @@ function App() {
           const content = data.success
             ? (data.output || 'Done — no output.')
             : `⚠️ ${data.error || 'aider reported an error'}\n\n${data.output || ''}`;
-          return [...prev.slice(0, -1), { role: 'assistant', content }];
+          return [...prev.slice(0, -1), {
+            role: 'assistant',
+            content,
+            filesUsed: data.filesUsed || [],
+            filesSource: data.filesSource,
+          }];
         }
         return prev;
       });
@@ -1017,7 +1082,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [chatInput, chatLoading, chatModel, repoPath]);
+  }, [chatInput, chatLoading, chatModel, repoPath, attachedFiles]);
 
   const groupedModels = models.reduce((acc, m) => {
     if (!acc[m.category]) acc[m.category] = [];
@@ -1311,6 +1376,17 @@ function App() {
                 <div dangerouslySetInnerHTML={{
                   __html: msg.loading ? '…' : (msg.content ? marked.parse(msg.content) : '')
                 }} />
+                {msg.role === 'user' && msg.attachedFiles && msg.attachedFiles.length > 0 && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-faint)', fontFamily: 'var(--mono)' }}>
+                    📎 {msg.attachedFiles.join(', ')}
+                  </div>
+                )}
+                {msg.role === 'assistant' && msg.filesUsed && msg.filesUsed.length > 0 && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-faint)', fontFamily: 'var(--mono)' }}>
+                    {msg.filesSource === 'auto' ? '✨ auto-selected: ' : '📎 files used: '}
+                    {msg.filesUsed.join(', ')}
+                  </div>
+                )}
               </div>
             ))}
             <div ref={chatEndRef} />
@@ -1326,6 +1402,103 @@ function App() {
           )}
 
           <form className="chat-composer" onSubmit={sendMessage}>
+            {/* Attach-files toolbar. Manual attach: pick from the loaded
+                repo's file tree. Auto: /api/agent/suggest-files scores
+                repo files against the task text — same logic aider.js
+                falls back to on its own when nothing's attached, exposed
+                here so it can be reviewed/edited before running instead
+                of only discovering the pick after the fact. */}
+            {repoPath && (
+              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setFilePickerOpen(v => !v)}
+                    style={{
+                      fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--text-dim)',
+                      background: 'var(--panel-2)', border: '1px solid var(--border)',
+                      borderRadius: 6, padding: '3px 8px', cursor: 'pointer',
+                    }}
+                  >
+                    📎 Attach files{attachedFiles.length > 0 ? ` (${attachedFiles.length})` : ''}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={suggestFilesForTask}
+                    disabled={!chatInput.trim() || suggestingFiles}
+                    title="Ask the file-relevance helper which files this task probably needs"
+                    style={{
+                      fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--green)',
+                      background: 'var(--panel-2)', border: '1px solid var(--border)',
+                      borderRadius: 6, padding: '3px 8px',
+                      cursor: (!chatInput.trim() || suggestingFiles) ? 'not-allowed' : 'pointer',
+                      opacity: (!chatInput.trim() || suggestingFiles) ? 0.5 : 1,
+                    }}
+                  >
+                    {suggestingFiles ? '…' : '✨ Suggest files'}
+                  </button>
+                  {attachedFiles.map(path => (
+                    <span
+                      key={path}
+                      className="badge"
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}
+                    >
+                      {path}
+                      <button
+                        type="button"
+                        onClick={() => removeAttachedFile(path)}
+                        style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', padding: 0, fontSize: 11 }}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+
+                {filePickerOpen && (
+                  <div style={{
+                    position: 'absolute', bottom: '100%', left: 0, marginBottom: 6,
+                    width: 320, maxHeight: 280, overflowY: 'auto',
+                    background: 'var(--panel)', border: '1px solid var(--border)',
+                    borderRadius: 8, padding: 8, zIndex: 10,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                  }}>
+                    <input
+                      type="text"
+                      value={filePickerQuery}
+                      onChange={e => setFilePickerQuery(e.target.value)}
+                      placeholder="Filter files…"
+                      autoFocus
+                      style={{
+                        width: '100%', fontSize: 12, padding: '5px 8px', marginBottom: 6,
+                        background: 'var(--panel-2)', border: '1px solid var(--border)',
+                        borderRadius: 6, color: 'var(--text)',
+                      }}
+                    />
+                    {flattenFileTree(fileTree)
+                      .filter(p => p.toLowerCase().includes(filePickerQuery.toLowerCase()))
+                      .slice(0, 200)
+                      .map(path => (
+                        <label
+                          key={path}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 6, padding: '3px 4px',
+                            fontSize: 12, fontFamily: 'var(--mono)', color: 'var(--text-dim)', cursor: 'pointer',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={attachedFiles.includes(path)}
+                            onChange={() => toggleAttachedFile(path)}
+                          />
+                          {path}
+                        </label>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <textarea
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}

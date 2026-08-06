@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import { getModelById, WORKING_MODELS } from './models.js';
+import { suggestFiles, sanitizeRelFiles } from './fileContext.js';
 // NOTE: coding-agent shares SanjayAIHub's Postgres DB so users only have
 // to configure their Alibaba key once (Profile > API Keys) instead of
 // duplicating it here. This reaches up out of modules/coding-agent into
@@ -61,6 +62,31 @@ export async function runAider({
     throw new Error(`workDir does not exist: ${workDir}. Clone the repo first via POST /api/repos/clone.`);
   }
 
+  // Resolve which files aider gets as explicit context. Two paths:
+  //   - caller passed files (manually attached in the UI, or picked by an
+  //     LLM/automation calling POST /api/agent/suggest-files first) — just
+  //     sanitize them against path traversal.
+  //   - caller passed nothing — fall back to a heuristic scan of the repo
+  //     scored against the task text, so aider isn't relying purely on its
+  //     own repo-map guess for tasks that don't name a file explicitly.
+  // Either way the resolved list comes back on the result so the caller
+  // can show the user what aider actually got.
+  let resolvedFiles;
+  let filesSource;
+  if (files && files.length > 0) {
+    const { files: clean, rejected } = sanitizeRelFiles(workDir, files);
+    if (rejected.length > 0) {
+      console.warn('[Aider] Rejected out-of-repo file paths:', rejected);
+    }
+    resolvedFiles = clean;
+    filesSource = 'manual';
+  } else {
+    resolvedFiles = suggestFiles({ workDir, task, limit: 8 }).map(f => f.path);
+    filesSource = 'auto';
+  }
+
+  console.log(`[Aider] Files (${filesSource}):`, resolvedFiles.length ? resolvedFiles.join(', ') : '(none — aider will rely on its own repo map)');
+
   // Aider uses litellm under the hood. To route a custom OPENAI_API_BASE
   // (Alibaba's DashScope compatible-mode endpoint) instead of matching
   // some other provider's preset by name, the model must be passed with
@@ -75,8 +101,9 @@ export async function runAider({
   };
 
   const aiderArgs = [
-    // Explicit files to include in context
-    ...files,
+    // Explicit files to include in context (manually attached, or
+    // auto-suggested above when the caller didn't attach any)
+    ...resolvedFiles,
     // Non-interactive mode
     '--yes-always',
     // Skip updates
@@ -108,7 +135,7 @@ export async function runAider({
       timeout: 5 * 60 * 1000, // 5 minutes
     });
 
-    return { stdout, stderr, success: true };
+    return { stdout, stderr, success: true, filesUsed: resolvedFiles, filesSource };
   } catch (error) {
     if (error.code === 'ENOENT') {
       throw new Error(
@@ -126,6 +153,8 @@ export async function runAider({
       stderr: error.stderr || '',
       success: false,
       error: error.message,
+      filesUsed: resolvedFiles,
+      filesSource,
     };
   }
 }
