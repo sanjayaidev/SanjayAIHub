@@ -1,7 +1,7 @@
 // routes/auth.js
 import express from 'express';
 import crypto from 'crypto';
-import pool from '../../db/index.js';
+import pool from '../../../../db/index.js';
 import { exchangeCodeForToken, getGithubUser } from '../lib/github.js';
 
 const router = express.Router();
