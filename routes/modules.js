@@ -15,7 +15,7 @@ const { textToVideoHandler, checkVideoStatus: checkT2VStatus, getModelCatalog: g
 const { imageToVideoHandler, checkVideoStatus: checkI2VStatus, getModelCatalog: getImageToVideoModelCatalog } = require('../modules/image-to-video');
 const { videoToVideoHandler, checkVideoStatus: checkV2VStatus, getModelCatalog: getVideoToVideoModelCatalog } = require('../modules/video-to-video');
 const { textToMusicHandler, checkAudioStatus, getModelCatalog: getMusicModelCatalog } = require('../modules/text-to-music');
-const { voiceCloneHandler, listVoicesHandler, getModelCatalog: getVoiceCloneModelCatalog } = require('../modules/voice-clone');
+const { voiceCloneHandler, synthesizeHandler: voiceSynthesizeHandler, listVoicesHandler, getModelCatalog: getVoiceCloneModelCatalog } = require('../modules/voice-clone');
 
 // ──────────────────────────────────────────────
 // GET /api/modules - List all modules with access
@@ -272,7 +272,7 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
       'image-to-video': ['pixazo'],
       'video-to-video': ['pixazo'],
       'text-to-speech': ['cloudflare', 'elevenlabs'],
-      'voice-clone': ['elevenlabs'],
+      'voice-clone': ['alibaba', 'elevenlabs'],
       'text-to-music': ['pixazo'],
       'design-studio': ['pixazo'],
       'chatbot-maker': ['alibaba'],
@@ -355,7 +355,12 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
         result = await textToMusicHandler(req.body, apiKeys, userId);
         break;
       case 'voice-clone':
-        result = await voiceCloneHandler(req.body, apiKeys, userId);
+        // Same module endpoint handles both steps: default action clones a
+        // new voice from a sample; action: 'synthesize' generates speech
+        // with an already-cloned voiceId.
+        result = req.body.action === 'synthesize'
+          ? await voiceSynthesizeHandler(req.body, apiKeys, userId)
+          : await voiceCloneHandler(req.body, apiKeys, userId);
         break;
       // Note: 'prompt-library' is a browse/favorite experience, not a
       // generation action, so it doesn't go through this generic execute
@@ -668,22 +673,35 @@ router.post('/text-to-video/status', authenticateToken, async (req, res) => {
 });
 
 // ──────────────────────────────────────────────
-// GET /api/modules/voice-clone/voices - List ElevenLabs voices for this user
+// GET /api/modules/voice-clone/voices - List cloned voices for this user
+// Query: ?provider=alibaba|elevenlabs (default: alibaba)
 // ──────────────────────────────────────────────
 router.get('/voice-clone/voices', authenticateToken, async (req, res) => {
   try {
+    const provider = req.query.provider === 'elevenlabs' ? 'elevenlabs' : 'alibaba';
+
     const result = await pool.query(
-      `SELECT api_key FROM user_api_keys 
-       WHERE user_id = $1 AND provider = 'elevenlabs' AND is_active = true`,
-      [req.user.id]
+      `SELECT api_key, workspace_id FROM user_api_keys 
+       WHERE user_id = $1 AND provider = $2 AND is_active = true`,
+      [req.user.id, provider]
     );
 
     if (result.rows.length === 0) {
-      return res.status(400).json({ success: false, message: 'ElevenLabs API key not configured' });
+      return res.status(400).json({
+        success: false,
+        message: provider === 'alibaba'
+          ? 'Alibaba Cloud API key not configured'
+          : 'ElevenLabs API key not configured'
+      });
     }
 
-    const apiKeys = { elevenlabs: { api_key: result.rows[0].api_key } };
-    const data = await listVoicesHandler(apiKeys);
+    const apiKeys = {
+      [provider]: {
+        api_key: result.rows[0].api_key,
+        workspace_id: result.rows[0].workspace_id
+      }
+    };
+    const data = await listVoicesHandler(apiKeys, provider);
 
     res.json({ success: true, ...data });
   } catch (error) {

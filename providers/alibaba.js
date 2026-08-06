@@ -239,6 +239,134 @@ class AlibabaProvider {
 
     return response.json();
   }
+
+  // ────────────────────────────────────────────────────────────
+  // Voice cloning (enrollment) + speech synthesis with a cloned voice.
+  //
+  // IMPORTANT: use the non-realtime VC model here. The "-realtime" variant
+  // (e.g. qwen3-tts-vc-realtime-*) only speaks the websocket/realtime
+  // protocol - calling it over this plain HTTP endpoint returns
+  // {"code":"InvalidParameter","message":"Invalid message type: "}.
+  // Docs: https://www.alibabacloud.com/help/en/model-studio/voice-cloning-user-guide
+  //       https://www.alibabacloud.com/help/en/model-studio/nls-tts-user-guide
+  get _voiceCustomizationUrl() {
+    return `${this.baseUrl}/api/v1/services/audio/tts/customization`;
+  }
+
+  get _ttsGenerationUrl() {
+    return `${this.baseUrl}/api/v1/services/aigc/multimodal-generation/generation`;
+  }
+
+  // Enroll a new cloned voice from a short audio sample.
+  // `audioDataUrl`: a "data:<mime>;base64,<...>" string (bare base64 is
+  // also accepted and treated as audio/wav).
+  // `preferredName` is sanitized to satisfy the API's constraints
+  // (letters/numbers/underscore, must start with a letter, max 16 chars)
+  // rather than surfacing a cryptic InvalidParameter error.
+  async cloneVoice(preferredName, audioDataUrl, language = 'en') {
+    if (!audioDataUrl) throw new Error('audioDataUrl is required');
+
+    let cleaned = String(preferredName || '').replace(/[^a-zA-Z0-9_]/g, '');
+    if (cleaned.length > 0 && !/^[a-zA-Z]/.test(cleaned)) cleaned = 'voice_' + cleaned;
+    if (cleaned.length > 16) cleaned = cleaned.substring(0, 16);
+    if (!cleaned) cleaned = 'voice_' + Date.now().toString().slice(-10);
+
+    const audio = audioDataUrl.startsWith('data:')
+      ? audioDataUrl
+      : `data:audio/wav;base64,${audioDataUrl}`;
+
+    const payload = {
+      model: 'qwen-voice-enrollment',
+      input: {
+        action: 'create',
+        target_model: AlibabaProvider.VOICE_CLONE_MODEL,
+        preferred_name: cleaned,
+        audio: { data: audio },
+        language,
+      },
+    };
+
+    const response = await fetch(this._voiceCustomizationUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.apiKey}` },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.code) {
+      throw new Error(`Alibaba voice cloning error (${data.code || response.status}): ${data.message || 'request failed'}`);
+    }
+
+    return { voiceId: data.output.voice, voiceName: cleaned };
+  }
+
+  // List voices previously cloned on this workspace.
+  async listClonedVoices() {
+    const payload = { model: 'qwen-voice-enrollment', input: { action: 'list', page_size: 50, page_index: 0 } };
+    const response = await fetch(this._voiceCustomizationUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.apiKey}` },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.code) {
+      throw new Error(`Alibaba list voices error (${data.code || response.status}): ${data.message || 'request failed'}`);
+    }
+    return data.output?.voice_list || [];
+  }
+
+  // Delete a cloned voice.
+  async deleteClonedVoice(voiceId) {
+    if (!voiceId) throw new Error('voiceId is required');
+    const payload = { model: 'qwen-voice-enrollment', input: { action: 'delete', voice: voiceId } };
+    const response = await fetch(this._voiceCustomizationUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.apiKey}` },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.code) {
+      throw new Error(`Alibaba delete voice error (${data.code || response.status}): ${data.message || 'request failed'}`);
+    }
+    return true;
+  }
+
+  // Synthesize speech with a previously cloned voice.
+  // Returns { audioBase64, contentType }.
+  async synthesizeWithClonedVoice(text, voiceId, language = 'English') {
+    if (!text || !text.trim()) throw new Error('text is required');
+    if (!voiceId) throw new Error('voiceId is required');
+
+    const payload = {
+      model: AlibabaProvider.VOICE_CLONE_MODEL,
+      input: { text, voice: voiceId, language_type: language },
+    };
+
+    const response = await fetch(this._ttsGenerationUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.apiKey}` },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    // Note: this endpoint does NOT return a top-level status_code on
+    // success - only output/usage/request_id. Success is the HTTP status
+    // (checked via response.ok) plus output.audio.url being present.
+    if (!response.ok || data.code || !data.output?.audio?.url) {
+      throw new Error(`Alibaba speech synthesis error (${data.code || response.status}): ${data.message || 'no audio returned'}`);
+    }
+
+    const audioResponse = await fetch(data.output.audio.url);
+    if (!audioResponse.ok) throw new Error(`Failed to download synthesized audio: HTTP ${audioResponse.status}`);
+    const arrayBuffer = await audioResponse.arrayBuffer();
+    const contentType = audioResponse.headers.get('content-type') || 'audio/wav';
+
+    return { audioBase64: Buffer.from(arrayBuffer).toString('base64'), contentType };
+  }
 }
+
+// The only VC model callable over the plain HTTP multimodal-generation
+// endpoint (see notes on cloneVoice/synthesizeWithClonedVoice above).
+AlibabaProvider.VOICE_CLONE_MODEL = 'qwen3-tts-vc-2026-01-22';
 
 module.exports = AlibabaProvider;

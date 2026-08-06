@@ -268,9 +268,9 @@
         <label>Provider</label>
         <select id="provider">
           <option value="alibaba">Alibaba Cloud (DashScope)</option>
-          <option value="cloudflare">Cloudflare Workers AI</option>
+          <option value="elevenlabs">ElevenLabs</option>
         </select>
-        <div class="hint">Alibaba offers higher quality; Cloudflare is faster for shorter clips.</div>
+        <div class="hint">Alibaba clones from one short sample; ElevenLabs supports higher-quality multi-sample cloning.</div>
       </div>
 
       <button type="submit" class="generate" id="genBtn">🗣️ Clone & Generate</button>
@@ -295,7 +295,12 @@
   </section>
 </main>
 <footer>SanjayAIHub · Voice Cloning · powered by Alibaba Cloud</footer>
+<script src="/js/auth.js"></script>
 <script>
+  if (!window.AUTH || !AUTH.isLoggedIn()) {
+    window.location.href = '/login.html';
+  }
+
   const els = {
     form: document.getElementById("genForm"),
     prompt: document.getElementById("prompt"),
@@ -322,10 +327,22 @@
     url_pane: document.getElementById("url_pane"),
   };
 
-  fetch("/api/health").then(r=>r.json()).then(d=>{
-    els.keyStatus.textContent = d.keyConfigured ? "✅ API key: configured" : "⚠️ API key missing";
-    els.keyStatus.className = "key-status " + (d.keyConfigured ? "ok" : "bad");
-  }).catch(()=>{ els.keyStatus.textContent="server unreachable"; els.keyStatus.className="key-status bad"; });
+  // Key status reflects whichever provider is currently selected, since
+  // that's the one this generation will actually use.
+  function refreshKeyStatus() {
+    const provider = els.provider.value;
+    fetch("/api/keys", { headers: AUTH.getAuthHeader() })
+      .then(r => r.json())
+      .then(d => {
+        const keys = d.keys || d.data || [];
+        const configured = Array.isArray(keys) && keys.some(k => k.provider === provider && k.is_active !== false);
+        els.keyStatus.textContent = configured ? `✅ ${provider} key: configured` : `⚠️ ${provider} key missing`;
+        els.keyStatus.className = "key-status " + (configured ? "ok" : "bad");
+      })
+      .catch(() => { els.keyStatus.textContent = "server unreachable"; els.keyStatus.className = "key-status bad"; });
+  }
+  refreshKeyStatus();
+  els.provider.addEventListener("change", refreshKeyStatus);
 
   document.querySelectorAll(".src-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -350,62 +367,98 @@
   function showError(msg){ els.errorBox.textContent = msg; els.errorBox.style.display = "block"; }
   function clearError(){ els.errorBox.style.display = "none"; }
 
-  let pollTimer = null, genToken = 0;
-
-  async function uploadFile(file){
-    const form = new FormData(); form.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.message || data.error || "Upload failed");
-    return data.url;
+  // Read a File as a base64 data URL (client-side — no server upload step
+  // needed, the clone endpoint accepts base64/data URLs directly).
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("Could not read the audio file"));
+      reader.readAsDataURL(file);
+    });
   }
+
+  function base64ToBlobUrl(base64, contentType) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return URL.createObjectURL(new Blob([bytes], { type: contentType || "audio/wav" }));
+  }
+
+  async function callVoiceCloneModule(body) {
+    const res = await fetch("/api/modules/voice-clone", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...AUTH.getAuthHeader() },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || "Request failed");
+    return data.data;
+  }
+
+  let genToken = 0;
 
   els.form.addEventListener("submit", async (e) => {
     e.preventDefault(); clearError();
     const text = els.prompt.value.trim();
     if (!text) return showError("Text to speak is required.");
-    let audioUrl = isUploadActive() ? null : els.audio_url.value.trim();
+
+    let audioSample = null;
     if (isUploadActive()) {
       const file = els.audio_file.files[0];
       if (!file) return showError("Please upload a voice sample.");
-      try { audioUrl = await uploadFile(file); }
-      catch (err) { return showError("Upload failed: " + err.message); }
+      try { audioSample = await fileToDataUrl(file); }
+      catch (err) { return showError(err.message); }
+    } else {
+      audioSample = els.audio_url.value.trim();
+      if (!audioSample) return showError("Voice sample URL is required.");
     }
-    if (!audioUrl) return showError("Voice sample URL is required.");
+
+    const provider = els.provider.value;
+    const language = els.language.value;
 
     genToken += 1; const myToken = genToken;
-    clearTimeout(pollTimer);
     els.genBtn.disabled = true; els.genBtn.textContent = "⏳ Cloning…";
     els.outputArea.innerHTML = `<div class="placeholder"><span class="big">⏳</span>cloning voice…</div>`;
-    els.statusLine.style.display = "flex"; els.statusText.textContent = "submitting…";
+    els.resultActions.style.display = "none";
+    els.statusLine.style.display = "flex"; els.statusText.textContent = "cloning voice…";
     els.statusDot.className = "dot live"; setTally("live"); setProgress(15);
-    const start = Date.now(); els.timecode.textContent = "00:00:00 — SUBMITTING";
-    const timer = setInterval(() => { els.timecode.textContent = fmtElapsed(Date.now() - start) + " — CLONING"; }, 1000);
+    const start = Date.now(); els.timecode.textContent = "00:00:00 — CLONING";
+    const timer = setInterval(() => { els.timecode.textContent = fmtElapsed(Date.now() - start) + " — " + els.statusText.textContent.toUpperCase(); }, 1000);
 
     try {
-      const endpoint = els.provider.value === "alibaba" ? "/api/generate/voice-clone" : "/api/generate/voice-clone-cf";
-      const res = await fetch(endpoint, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text, audio_url: audioUrl,
-          language: els.language.value,
-          speed: parseFloat(els.speed.value),
-        }),
+      // Step 1: clone the voice from the sample.
+      const cloneResult = await callVoiceCloneModule({
+        provider,
+        name: `voice_${Date.now()}`,
+        language,
+        samples: [audioSample],
       });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.message || data.error || "Cloning failed.");
       if (myToken !== genToken) return;
-      // Voice cloning is synchronous (short processing time)
+
+      setProgress(60); els.statusText.textContent = "generating speech…";
+      els.genBtn.textContent = "⏳ Generating…";
+
+      // Step 2: synthesize the requested text with the freshly cloned voice.
+      const speechResult = await callVoiceCloneModule({
+        action: "synthesize",
+        provider,
+        voiceId: cloneResult.voiceId,
+        text,
+        language,
+      });
+      if (myToken !== genToken) return;
+
       setProgress(100); setTally("done"); els.statusDot.className = "dot done";
       els.statusText.textContent = "complete"; clearInterval(timer);
       els.timecode.textContent = fmtElapsed(Date.now() - start) + " — COMPLETE";
-      const url = data.output || data.audio_url;
-      if (url) {
-        els.outputArea.innerHTML = `<audio src="${url}" controls autoplay></audio>`;
-        els.downloadLink.href = url; els.downloadLink.download = `cloned-voice-${Date.now()}.mp3`;
-        els.openLink.href = url;
-        els.resultActions.style.display = "flex";
-      } else { showError("No audio URL returned."); }
+
+      const url = base64ToBlobUrl(speechResult.audioBase64, speechResult.contentType);
+      const ext = (speechResult.contentType || "").includes("mpeg") ? "mp3" : "wav";
+      els.outputArea.innerHTML = `<audio src="${url}" controls autoplay></audio>`;
+      els.downloadLink.href = url; els.downloadLink.download = `cloned-voice-${Date.now()}.${ext}`;
+      els.openLink.href = url;
+      els.resultActions.style.display = "flex";
       els.genBtn.disabled = false; els.genBtn.textContent = "🗣️ Clone & Generate";
     } catch (err) {
       if (myToken !== genToken) return;

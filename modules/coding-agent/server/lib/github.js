@@ -5,8 +5,11 @@ const GITHUB_API = 'https://api.github.com';
 
 /**
  * Exchange an OAuth "code" for an access token.
+ * `redirectUri` must be byte-for-byte identical to the one used in the
+ * authorize step (see routes/auth.js's getRedirectUri) — GitHub rejects
+ * the exchange otherwise.
  */
-export async function exchangeCodeForToken(code) {
+export async function exchangeCodeForToken(code, redirectUri) {
   const res = await fetch('https://github.com/login/oauth/access_token', {
     method: 'POST',
     headers: {
@@ -17,7 +20,7 @@ export async function exchangeCodeForToken(code) {
       client_id: process.env.GITHUB_CLIENT_ID,
       client_secret: process.env.GITHUB_CLIENT_SECRET,
       code,
-      redirect_uri: `${process.env.APP_BASE_URL}/agent/api/auth/github/callback`,
+      redirect_uri: redirectUri,
     }),
   });
 

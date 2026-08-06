@@ -42,6 +42,7 @@ Go to: **Project → Settings → Variables**
 | `FRONTEND_URL` | Optional | Your domain (for CORS) | `https://sanjayaihub.up.railway.app` |
 | `GITHUB_CLIENT_ID` | ⚠️ | For Coding Agent OAuth | Get from GitHub Developer Settings |
 | `GITHUB_CLIENT_SECRET` | ⚠️ | For Coding Agent OAuth | Get from GitHub Developer Settings |
+| `APP_BASE_URL` | Optional | Public URL used to build the GitHub OAuth callback link. If unset, it's derived automatically from the incoming request, so this is only needed if that ever gives the wrong host (e.g. behind a non-standard proxy). No trailing slash. | `https://sanjayaihub.up.railway.app` |
 
 ## 🔗 GitHub OAuth Setup (for Coding Agent)
 
