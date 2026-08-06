@@ -11,7 +11,7 @@ const router = express.Router();
 
 function requireAuth(req, res, next) {
   if (!req.session.githubToken || !req.session.user) {
-    return res.status(401).json({ error: 'Not logged in. Visit /api/auth/github to log in.' });
+    return res.status(401).json({ error: 'Not logged in. Visit /agent/api/auth/github to log in.' });
   }
   next();
 }

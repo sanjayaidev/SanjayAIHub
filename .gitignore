@@ -1,4 +1,53 @@
-# Examples 1 and 2 demonstrate that only source/config files were changed
-# RAILWAY_SETUP.md and server.js are both source/config files
-# No build artifacts, dependencies, or temp files detected in changes
-# Therefore, no .gitignore rules are needed
+```
+# Dependencies
+node_modules/
+
+# Build artifacts
+dist/
+build/
+*.js.map
+
+# Environment
+.env
+.env.local
+.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Compiled files
+*.o
+*.obj
+*.so
+*.a
+*.dll
+*.exe
+*.out
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Cache
+.mypy_cache/
+.pytest_cache/
+.nyc_output/
+coverage/
+
+# System
+.DS_Store
+Thumbs.db
+```

@@ -17,7 +17,7 @@ export async function exchangeCodeForToken(code) {
       client_id: process.env.GITHUB_CLIENT_ID,
       client_secret: process.env.GITHUB_CLIENT_SECRET,
       code,
-      redirect_uri: `${process.env.APP_BASE_URL}/api/auth/github/callback`,
+      redirect_uri: `${process.env.APP_BASE_URL}/agent/api/auth/github/callback`,
     }),
   });
 

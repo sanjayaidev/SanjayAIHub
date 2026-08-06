@@ -16,7 +16,7 @@ router.get('/github', (req, res) => {
 
   const params = new URLSearchParams({
     client_id: process.env.GITHUB_CLIENT_ID,
-    redirect_uri: `${process.env.APP_BASE_URL}/api/auth/github/callback`,
+    redirect_uri: `${process.env.APP_BASE_URL}/agent/api/auth/github/callback`,
     scope: 'repo read:user user:email',
     state,
   });
