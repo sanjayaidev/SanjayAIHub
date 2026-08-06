@@ -148,21 +148,22 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ── Start Server & Initialize Coding Agent ──
-const httpServer = createServer(app);
-
-// Add catch-all for SPA and error handler BEFORE starting server
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'home.html'));
-});
-
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({
-    success: false,
-    message: 'Internal server error'
+// ── Config Endpoint (for coding agent URL) ──
+app.get('/api/config', (req, res) => {
+  const protocol = req.protocol;
+  const host = req.get('host');
+  const baseUrl = `${protocol}://${host}`;
+  
+  res.json({
+    success: true,
+    codingAgentUrl: `${baseUrl}/agent`,
+    frontendUrl: process.env.FRONTEND_URL || baseUrl,
+    environment: process.env.NODE_ENV || 'development'
   });
 });
+
+// ── Start Server & Initialize Coding Agent ──
+const httpServer = createServer(app);
 
 // Initialize coding agent and mount it under /agent path
 initCodingAgent().then(() => {
@@ -180,6 +181,27 @@ initCodingAgent().then(() => {
     if (createCodingAgentApp) {
       console.log(`👥 Coding Agent available at http://localhost:${PORT}/agent`);
     }
+  });
+
+  // Add catch-all for SPA routes (must be after all other routes)
+  app.get('*', (req, res, next) => {
+    // Don't intercept API routes
+    if (req.path.startsWith('/api/')) {
+      return next();
+    }
+    // Don't intercept agent routes (handled by coding-agent app)
+    if (req.path.startsWith('/agent/')) {
+      return next();
+    }
+    res.sendFile(path.join(__dirname, 'public', 'home.html'));
+  });
+
+  app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   });
 }).catch(err => {
   console.error('❌ Failed to initialize server:', err);

@@ -1,0 +1,6 @@
+{"level":"info","message":"Coding agent app initialized","module":"coding-agent","timestamp":"2026-08-06 08:04:27"}
+{"level":"info","message":"Coding agent app initialized","module":"coding-agent","timestamp":"2026-08-06 08:04:38"}
+{"level":"info","message":"Coding agent app initialized","module":"coding-agent","timestamp":"2026-08-06 08:04:49"}
+{"duration":"17ms","ip":"127.0.0.1","level":"info","message":"Audit Log","method":"GET","module":"security","path":"/api/health","status":200,"timestamp":"2026-08-06T08:04:51.635Z","userAgent":"curl/7.88.1"}
+{"duration":"4ms","ip":"127.0.0.1","level":"info","message":"Audit Log","method":"GET","module":"security","path":"/health","status":200,"timestamp":"2026-08-06T08:04:54.437Z","userAgent":"curl/7.88.1"}
+{"duration":"18ms","ip":"127.0.0.1","level":"info","message":"Audit Log","method":"GET","module":"security","path":"/","status":200,"timestamp":"2026-08-06T08:04:56.934Z","userAgent":"curl/7.88.1"}
