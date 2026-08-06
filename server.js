@@ -33,6 +33,7 @@ const PORT = process.env.PORT || 3000;
 // ── Auto Pinger for Render (Task 1) ──────────────────────────────────────
 // Uses RENDER_EXTERNAL_URL environment variable to ping the server every 14 minutes
 // This prevents Render free tier from spinning down due to inactivity
+// Note: Railway does not spin down apps, so this is only needed for Render
 if (process.env.RENDER_EXTERNAL_URL) {
   const EXTERNAL_URL = process.env.RENDER_EXTERNAL_URL;
   console.log(`🔄 Auto-pinger enabled for ${EXTERNAL_URL} (every 14 minutes)`);
@@ -61,7 +62,7 @@ if (process.env.RENDER_EXTERNAL_URL) {
       .catch(err => console.error(`❌ Initial auto-ping failed: ${err.message}`));
   }, 5000);
 } else {
-  console.log('ℹ️ RENDER_EXTERNAL_URL not set - auto-pinger disabled');
+  console.log('ℹ️ RENDER_EXTERNAL_URL not set - auto-pinger disabled (Railway does not need this)');
 }
 
 // ── Trust Proxy (required for rate-limiting behind Render/nginx) ──
