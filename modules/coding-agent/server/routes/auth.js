@@ -3,6 +3,7 @@ import express from 'express';
 import crypto from 'crypto';
 import pool from '../../../../db/index.js';
 import { exchangeCodeForToken, getGithubUser } from '../lib/github.js';
+import { resolveGithubAuth } from '../lib/githubAuth.js';
 
 const router = express.Router();
 
@@ -159,50 +160,44 @@ router.get('/github/callback', async (req, res) => {
   }
 });
 
-// Current session's user, if any
+// Current session's user, if any.
+//
+// This used to require req.session.user to already be set BEFORE it would
+// even look at the DB — so a MemoryStore restart, or simply opening the
+// agent in a new browser session, made it report "not logged in" forever,
+// even with a perfectly good token sitting in user_github_connections.
+// It now independently resolves the main-app user for this request
+// (mainUserId, set from the main app's session — see lib/githubAuth.js)
+// and checks the DB regardless of what this particular session happened
+// to have cached, so a persisted connection is always picked up.
 router.get('/me', async (req, res) => {
   try {
-    // First check session
-    if (!req.session.user) {
-      return res.status(401).json({ error: 'Not logged in' });
+    const auth = await resolveGithubAuth(req);
+
+    if (auth) {
+      return res.json({
+        user: auth.user,
+        connected: true,
+        connection: {
+          username: auth.user.login,
+          name: auth.user.name,
+          avatarUrl: auth.user.avatarUrl,
+          scope: auth.scope,
+          lastSyncedAt: auth.lastSyncedAt,
+        },
+      });
     }
 
-    // Try to load connection status from DB
-    const mainUserId = req.session.mainUserId;
-    
-    if (mainUserId) {
-      try {
-        const result = await pool.query(
-          `SELECT github_username, github_name, github_avatar_url, scope, is_active, last_synced_at 
-           FROM user_github_connections 
-           WHERE user_id = $1 AND is_active = true`,
-          [mainUserId]
-        );
-
-        if (result.rows.length > 0) {
-          const connection = result.rows[0];
-          return res.json({ 
-            user: req.session.user,
-            connected: true,
-            connection: {
-              username: connection.github_username,
-              name: connection.github_name,
-              avatarUrl: connection.github_avatar_url,
-              scope: connection.scope,
-              lastSyncedAt: connection.last_synced_at
-            }
-          });
-        }
-      } catch (dbError) {
-        console.error('[Auth] Failed to load GitHub connection from DB:', dbError.message);
-      }
+    // No active GitHub connection found in session or DB. If the main app
+    // at least knows who's asking, say so (so the UI can still show e.g.
+    // "not connected" instead of a generic error) but always mark
+    // connected: false rather than a hard 401 — asking to "log in" here
+    // is really asking to connect GitHub, not sign into the main app.
+    if (req.session.mainUserId) {
+      return res.json({ user: null, connected: false });
     }
 
-    // Fallback to session-only data
-    return res.json({ 
-      user: req.session.user,
-      connected: !!req.session.githubToken
-    });
+    return res.status(401).json({ error: 'Not logged in', connected: false });
   } catch (error) {
     console.error('[Auth] /me failed:', error);
     res.status(500).json({ error: 'Server error' });
@@ -234,38 +229,25 @@ router.get('/github/token', async (req, res) => {
     if (!req.session.mainUserId) {
       return res.status(401).json({ error: 'Not logged into main app' });
     }
-    
-    if (!req.session.githubToken) {
+
+    // Resolve independently of whatever this session happened to have
+    // cached — same DB fallback as /me and the repo routes.
+    const auth = await resolveGithubAuth(req);
+    if (!auth) {
       return res.status(401).json({ error: 'GitHub not connected' });
     }
-    
-    // Load connection details from DB
-    const result = await pool.query(
-      `SELECT github_username, scope, is_active, last_synced_at, created_at
-       FROM user_github_connections 
-       WHERE user_id = $1 AND is_active = true`,
-      [req.session.mainUserId]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'No active GitHub connection found' });
-    }
-    
-    const connection = result.rows[0];
-    
-    // Return token info (token itself should be used internally, not exposed)
+
     res.json({
       connected: true,
-      username: connection.github_username,
-      scope: connection.scope,
-      isActive: connection.is_active,
-      lastSyncedAt: connection.last_synced_at,
-      createdAt: connection.created_at,
-      // Note: We don't expose the full token to the frontend for security
-      // The token is stored securely in the session and DB
-      tokenPreview: req.session.githubToken 
-        ? req.session.githubToken.substring(0, 8) + '...' + req.session.githubToken.substring(req.session.githubToken.length - 4)
-        : null
+      username: auth.user.login,
+      scope: auth.scope,
+      isActive: true,
+      lastSyncedAt: auth.lastSyncedAt,
+      // Note: We don't expose the full token to the frontend for security.
+      // The token is only ever used server-side (repo listing, clone, push).
+      tokenPreview: auth.token
+        ? auth.token.substring(0, 8) + '...' + auth.token.substring(auth.token.length - 4)
+        : null,
     });
   } catch (error) {
     console.error('[Auth] /github/token failed:', error);

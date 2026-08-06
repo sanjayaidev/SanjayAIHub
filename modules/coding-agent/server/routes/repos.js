@@ -4,22 +4,24 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { listGithubRepos, createPullRequest } from '../lib/github.js';
 import { cloneOrUpdateRepo, commitAll, pushBranch, getDiff, setupSshRemote, ensureBranch, getCurrentBranch } from '../lib/git.js';
+import { requireGithubAuth } from '../lib/githubAuth.js';
 
 const execFileAsync = promisify(execFile);
 const GIT_PATH = 'git';
 const router = express.Router();
 
-function requireAuth(req, res, next) {
-  if (!req.session.githubToken || !req.session.user) {
-    return res.status(401).json({ error: 'Not logged in. Visit /agent/api/auth/github to log in.' });
-  }
-  next();
-}
+// requireGithubAuth independently resolves the current main-app user from
+// the shared session and, if this session doesn't already have a live
+// token, falls back to the persisted user_github_connections row for that
+// user — the token/profile end up on req.githubAuth. See lib/githubAuth.js
+// for why relying on req.session.githubToken alone used to break the
+// "already connected" case.
+const requireAuth = requireGithubAuth;
 
 // List repos the logged-in user can access
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const repos = await listGithubRepos(req.session.githubToken);
+    const repos = await listGithubRepos(req.githubAuth.token);
     res.json({ repos, total: repos.length });
   } catch (error) {
     console.error('[Repos] List failed:', error);
@@ -37,13 +39,13 @@ router.post('/clone', requireAuth, async (req, res) => {
 
   try {
     const localPath = await cloneOrUpdateRepo({
-      token: req.session.githubToken,
-      githubLogin: req.session.user.login,
+      token: req.githubAuth.token,
+      githubLogin: req.githubAuth.user.login,
       fullName,
       cloneUrl,
       defaultBranch,
-      authorName: req.session.user.name,
-      authorEmail: req.session.user.email,
+      authorName: req.githubAuth.user.name,
+      authorEmail: req.githubAuth.user.email,
     });
 
     // Task 1: Ensure we're on the main branch (or specified default branch)
@@ -147,8 +149,10 @@ router.post('/push', requireAuth, async (req, res) => {
     // Step 1: Commit all changes
     const commitResult = await commitAll(repoPath, commitMessage);
     
-    // Step 2: Push the branch
-    await pushBranch(repoPath, branchName, req.session.githubToken);
+    // Step 2: Push the branch. This is the persistence path back to the
+    // connected repo, so it must use the resolved token (session or DB
+    // fallback) rather than assuming req.session.githubToken was set.
+    await pushBranch(repoPath, branchName, req.githubAuth.token);
 
     let prInfo = null;
     
@@ -167,7 +171,7 @@ router.post('/push', requireAuth, async (req, res) => {
       const repo = pathParts[pathParts.length - 1];
       const fullName = `${owner}/${repo}`;
 
-      const prResult = await createPullRequest(req.session.githubToken, {
+      const prResult = await createPullRequest(req.githubAuth.token, {
         fullName,
         title: prTitle,
         body: prBody || `Changes from branch: ${branchName}`,

@@ -739,43 +739,35 @@ function App() {
       .catch(() => setStatus({ online: false, modelCount: 0 }));
   }, []);
 
-  useEffect(() => {
-    fetchJSON('/api/auth/me')
+  // Single source of truth for "am I connected to GitHub". /api/auth/me
+  // now independently resolves this from the DB (via mainUserId) whenever
+  // this browser session doesn't already have a live token cached — so it
+  // reflects reality even right after a server restart, instead of only
+  // ever being true immediately after the OAuth callback ran. See
+  // server/lib/githubAuth.js for the resolution logic.
+  const refreshAuth = useCallback(() => {
+    return fetchJSON('/api/auth/me')
       .then(data => {
-        setUser(data.user);
-        if (data.connected && data.connection) {
-          setGithubConnection(data.connection);
-        }
+        setUser(data.connected ? data.user : null);
+        setGithubConnection(data.connected ? data.connection : null);
       })
-      .catch(() => setUser(null))
+      .catch(() => {
+        setUser(null);
+        setGithubConnection(null);
+      })
       .finally(() => setAuthChecked(true));
   }, []);
 
-  // Fetch GitHub connection details when user is authenticated
   useEffect(() => {
-    if (!user) return;
-    fetchJSON('/api/auth/github/token')
-      .then(data => {
-        if (data.connected) {
-          setGithubConnection({
-            username: data.username,
-            scope: data.scope,
-            lastSyncedAt: data.lastSyncedAt,
-            tokenPreview: data.tokenPreview
-          });
-        } else {
-          setGithubConnection(null);
-        }
-      })
-      .catch(() => setGithubConnection(null));
-  }, [user]);
+    refreshAuth();
+  }, [refreshAuth]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!githubConnection) return;
     fetchJSON('/api/repos')
       .then(data => setRepos(data.repos || []))
       .catch(err => setRepoError(err.message));
-  }, [user]);
+  }, [githubConnection]);
 
   const loadRepo = useCallback(async () => {
     if (!selectedRepo) return;
@@ -977,15 +969,34 @@ function App() {
           </span>
           <span className="badge">Alibaba · SG</span>
           {authChecked && (
-            user ? (
-              <span className="badge" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <img src={user.avatarUrl} alt="" style={{ width: 16, height: 16, borderRadius: '50%' }} />
-                {user.login}
+            githubConnection ? (
+              // Single unified "connected as" indicator — avatar + GitHub
+              // login + last-synced time, sourced entirely from
+              // /api/auth/me so it's always in sync with what the backend
+              // (session or DB) actually considers connected.
+              <span
+                className="badge"
+                title={githubConnection.lastSyncedAt ? `Synced ${new Date(githubConnection.lastSyncedAt).toLocaleString()}` : undefined}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, borderColor: 'var(--green)' }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="status-dot green"></span>
+                  {user?.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="" style={{ width: 16, height: 16, borderRadius: '50%' }} />
+                  ) : (
+                    <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" style={{ color: 'var(--text-dim)' }}>
+                      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-4.22 0-.93.33-1.59.87-2.14-.35-.87-1.52-4.42 1.13-6.41 0 0 .9-.29 2.95 1.09.85-.24 1.77-.36 2.69-.36.92 0 1.84.12 2.69.36 2.05-1.38 2.95-1.09 2.95-1.09 2.65 1.99 1.48 5.54 1.13 6.41.54.55.87 1.21.87 2.14 0 3.34-1.86 4.02-3.64 4.22.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                    </svg>
+                  )}
+                  <span style={{ color: 'var(--text)' }}>{githubConnection.username}</span>
+                  <span style={{ color: 'var(--text-faint)' }}>connected</span>
+                </span>
                 <button
-                  onClick={logout}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', fontSize: 11, padding: 0, marginLeft: 4 }}
+                  onClick={disconnectGithub}
+                  title="Disconnect GitHub"
+                  style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 11, padding: 0 }}
                 >
-                  log out
+                  ✕
                 </button>
               </span>
             ) : (
@@ -993,23 +1004,6 @@ function App() {
                 🔗 Connect GitHub
               </a>
             )
-          )}
-          {githubConnection && (
-            <span className="badge" style={{ display: 'flex', alignItems: 'center', gap: 8, borderColor: 'var(--green)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" style={{ color: 'var(--text-dim)' }}>
-                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-4.22 0-.93.33-1.59.87-2.14-.35-.87-1.52-4.42 1.13-6.41 0 0 .9-.29 2.95 1.09.85-.24 1.77-.36 2.69-.36.92 0 1.84.12 2.69.36 2.05-1.38 2.95-1.09 2.95-1.09 2.65 1.99 1.48 5.54 1.13 6.41.54.55.87 1.21.87 2.14 0 3.34-1.86 4.02-3.64 4.22.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-                </svg>
-                {githubConnection.username}
-              </span>
-              <button
-                onClick={disconnectGithub}
-                title="Disconnect GitHub"
-                style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 11, padding: 0 }}
-              >
-                ✕
-              </button>
-            </span>
           )}
         </div>
       </header>
