@@ -211,9 +211,93 @@ router.get('/me', async (req, res) => {
 
 // Log out
 router.post('/logout', (req, res) => {
+  const mainUserId = req.session.mainUserId;
+  
+  // Also deactivate the GitHub connection in DB if mainUserId exists
+  if (mainUserId) {
+    pool.query(
+      'UPDATE user_github_connections SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE user_id = $1',
+      [mainUserId]
+    ).catch(err => {
+      console.error('[Auth] Failed to deactivate GitHub connection on logout:', err.message);
+    });
+  }
+  
   req.session.destroy(() => {
     res.json({ success: true });
   });
+});
+
+// Get GitHub access token for the connected account (for verification/debugging)
+router.get('/github/token', async (req, res) => {
+  try {
+    if (!req.session.mainUserId) {
+      return res.status(401).json({ error: 'Not logged into main app' });
+    }
+    
+    if (!req.session.githubToken) {
+      return res.status(401).json({ error: 'GitHub not connected' });
+    }
+    
+    // Load connection details from DB
+    const result = await pool.query(
+      `SELECT github_username, scope, is_active, last_synced_at, created_at
+       FROM user_github_connections 
+       WHERE user_id = $1 AND is_active = true`,
+      [req.session.mainUserId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No active GitHub connection found' });
+    }
+    
+    const connection = result.rows[0];
+    
+    // Return token info (token itself should be used internally, not exposed)
+    res.json({
+      connected: true,
+      username: connection.github_username,
+      scope: connection.scope,
+      isActive: connection.is_active,
+      lastSyncedAt: connection.last_synced_at,
+      createdAt: connection.created_at,
+      // Note: We don't expose the full token to the frontend for security
+      // The token is stored securely in the session and DB
+      tokenPreview: req.session.githubToken 
+        ? req.session.githubToken.substring(0, 8) + '...' + req.session.githubToken.substring(req.session.githubToken.length - 4)
+        : null
+    });
+  } catch (error) {
+    console.error('[Auth] /github/token failed:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Disconnect GitHub account
+router.post('/github/disconnect', async (req, res) => {
+  try {
+    const mainUserId = req.session.mainUserId;
+    
+    if (!mainUserId) {
+      return res.status(401).json({ error: 'Not logged into main app' });
+    }
+    
+    // Deactivate all GitHub connections for this user
+    await pool.query(
+      'UPDATE user_github_connections SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE user_id = $1',
+      [mainUserId]
+    );
+    
+    // Clear session data
+    delete req.session.githubToken;
+    delete req.session.user;
+    
+    console.log('[Auth] GitHub disconnected for user:', mainUserId);
+    res.json({ success: true, message: 'GitHub account disconnected' });
+  } catch (error) {
+    console.error('[Auth] /github/disconnect failed:', error);
+    res.status(500).json({ error: 'Failed to disconnect GitHub' });
+  }
 });
 
 export default router;
