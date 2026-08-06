@@ -307,8 +307,26 @@
 
 const { useState, useEffect, useRef, useCallback } = React;
 
+// This page is served under /agent (e.g. https://host/agent), but every
+// API call in this file was written as a root-relative path like
+// '/api/auth/me'. A leading '/' in fetch() is ALWAYS resolved from the
+// origin root, not from the current page's path — so every single one of
+// these calls has actually been hitting the MAIN SanjayAIHub app's routes
+// at the domain root (which is a completely different Express app/router
+// mounted outside of /agent), not the coding-agent's own backend mounted
+// under /agent. Some of those paths don't exist there at all (404), and
+// the ones that coincidentally do exist (main app also has its own
+// unrelated /api/auth/me, /api/auth/logout) require a Bearer JWT this page
+// never sends, so they 401. Either way, none of it was ever reaching this
+// module's actual route handlers — this is the real reason nothing here
+// ever behaved consistently, independent of any session/DB logic.
+// apiUrl() fixes this in one place instead of hand-prefixing every call.
+function apiUrl(path) {
+  return path.startsWith('/api/') ? `/agent${path}` : path;
+}
+
 async function fetchJSON(url, opts = {}) {
-  const res = await fetch(url, { credentials: 'same-origin', ...opts });
+  const res = await fetch(apiUrl(url), { credentials: 'same-origin', ...opts });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error || `HTTP ${res.status}`);
@@ -640,7 +658,7 @@ function Terminal({ repoPath }) {
     setInput('');
 
     try {
-      const response = await fetch('/api/repos/exec', {
+      const response = await fetch(apiUrl('/api/repos/exec'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ repoPath, command: cmd }),
@@ -767,7 +785,7 @@ function App() {
     const jwtToken = localStorage.getItem('session_token');
     if (jwtToken) {
       try {
-        await fetch('/api/auth/session-bridge', {
+        await fetch(apiUrl('/api/auth/session-bridge'), {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
@@ -779,7 +797,7 @@ function App() {
       }
     }
 
-    return fetch('/api/auth/me', { credentials: 'same-origin' })
+    return fetch(apiUrl('/api/auth/me'), { credentials: 'same-origin' })
       .then(res => res.json().then(data => ({ status: res.status, data })))
       .then(({ data }) => {
         setUser(data.connected ? data.user : null);
@@ -896,7 +914,7 @@ function App() {
   };
 
   const logout = useCallback(async () => {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+    await fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'same-origin' });
     setUser(null);
     setGithubConnection(null);
     setRepos([]);
@@ -908,7 +926,7 @@ function App() {
 
   const disconnectGithub = useCallback(async () => {
     try {
-      await fetch('/api/auth/github/disconnect', { 
+      await fetch(apiUrl('/api/auth/github/disconnect'), { 
         method: 'POST', 
         credentials: 'same-origin' 
       });
