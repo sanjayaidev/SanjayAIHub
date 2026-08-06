@@ -20,7 +20,9 @@ const router = express.Router();
 // else) without relying on getting APP_BASE_URL formatted exactly right.
 function getRedirectUri(req) {
   const base = (process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
-  return `${base}/agent/api/auth/github/callback`;
+  const redirectUri = `${base}/agent/api/auth/github/callback`;
+  console.log('[Auth] getRedirectUri returning:', redirectUri);
+  return redirectUri;
 }
 
 // Step 1: kick off GitHub OAuth
@@ -31,6 +33,10 @@ router.get('/github', (req, res) => {
 
   const state = crypto.randomBytes(16).toString('hex');
   req.session.oauthState = state;
+  
+  console.log('[Auth] Starting OAuth flow');
+  console.log('[Auth] Generated state:', state);
+  console.log('[Auth] Session ID:', req.sessionID);
 
   const params = new URLSearchParams({
     client_id: process.env.GITHUB_CLIENT_ID,
@@ -39,12 +45,19 @@ router.get('/github', (req, res) => {
     state,
   });
 
+  console.log('[Auth] Redirecting to GitHub with params:', params.toString());
   res.redirect(`https://github.com/login/oauth/authorize?${params.toString()}`);
 });
 
 // Step 2: GitHub redirects back here with a code
 router.get('/github/callback', async (req, res) => {
   const { code, state } = req.query;
+  
+  console.log('[Auth] Callback received');
+  console.log('[Auth] Code present:', !!code);
+  console.log('[Auth] State from query:', state);
+  console.log('[Auth] State from session:', req.session.oauthState);
+  console.log('[Auth] Session ID:', req.sessionID);
 
   if (!code || !state || state !== req.session.oauthState) {
     // Most common cause on a platform like Railway: the session cookie
@@ -60,8 +73,12 @@ router.get('/github/callback', async (req, res) => {
   delete req.session.oauthState;
 
   try {
-    const token = await exchangeCodeForToken(code, getRedirectUri(req));
+    const redirectUri = getRedirectUri(req);
+    console.log('[Auth] Exchanging code for token with redirect_uri:', redirectUri);
+    const token = await exchangeCodeForToken(code, redirectUri);
+    console.log('[Auth] Token received, fetching user info');
     const user = await getGithubUser(token);
+    console.log('[Auth] User info received:', user.login);
 
     req.session.githubToken = token;
     req.session.user = {
@@ -71,6 +88,7 @@ router.get('/github/callback', async (req, res) => {
       email: user.email,
     };
 
+    console.log('[Auth] Session updated, redirecting to /');
     res.redirect('/');
   } catch (error) {
     console.error('[Auth] OAuth callback failed:', error);

@@ -10,6 +10,11 @@ const GITHUB_API = 'https://api.github.com';
  * the exchange otherwise.
  */
 export async function exchangeCodeForToken(code, redirectUri) {
+  console.log('[GitHub OAuth] Exchanging code for token...');
+  console.log('[GitHub OAuth] Client ID present:', !!process.env.GITHUB_CLIENT_ID);
+  console.log('[GitHub OAuth] Client Secret present:', !!process.env.GITHUB_CLIENT_SECRET);
+  console.log('[GitHub OAuth] Redirect URI:', redirectUri);
+  
   const res = await fetch('https://github.com/login/oauth/access_token', {
     method: 'POST',
     headers: {
@@ -24,7 +29,10 @@ export async function exchangeCodeForToken(code, redirectUri) {
     }),
   });
 
+  console.log('[GitHub OAuth] Response status:', res.status);
   const data = await res.json();
+  console.log('[GitHub OAuth] Response data:', JSON.stringify({ ...data, access_token: data.access_token ? '[REDACTED]' : undefined }));
+  
   if (data.error) {
     throw new Error(`GitHub OAuth error: ${data.error_description || data.error}`);
   }
@@ -38,14 +46,18 @@ export async function exchangeCodeForToken(code, redirectUri) {
  * Fetch the authenticated user's profile.
  */
 export async function getGithubUser(token) {
+  console.log('[GitHub OAuth] Fetching user info from GitHub API');
   const res = await fetch(`${GITHUB_API}/user`, {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: 'application/vnd.github+json',
     },
   });
+  console.log('[GitHub OAuth] User API response status:', res.status);
   if (!res.ok) {
-    throw new Error(`GitHub /user failed: ${res.status} ${await res.text()}`);
+    const errorText = await res.text();
+    console.error('[GitHub OAuth] User API error:', errorText);
+    throw new Error(`GitHub /user failed: ${res.status} ${errorText}`);
   }
   return res.json();
 }
