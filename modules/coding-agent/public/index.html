@@ -753,7 +753,32 @@ function App() {
   // through, even on a non-200 response — fetchJSON discards the body on
   // error and just throws a message string, which would hide exactly the
   // info this is for.
-  const refreshAuth = useCallback(() => {
+  const refreshAuth = useCallback(async () => {
+    // Before checking /me, try to (re)establish req.session.mainUserId
+    // from the JWT already sitting in localStorage. The server.js
+    // ?token= bridge only runs on the exact navigation that launched the
+    // agent — a reload, a bookmark, or the session store getting wiped by
+    // a restart all leave mainUserId empty afterward even though the
+    // browser is still logged in. This makes /agent self-healing instead
+    // of requiring a full relaunch from the main app whenever that
+    // happens. Safe to call every load: it's a no-op if there's no token,
+    // and harmless (just re-sets the same value) if the session already
+    // has mainUserId.
+    const jwtToken = localStorage.getItem('session_token');
+    if (jwtToken) {
+      try {
+        await fetch('/api/auth/session-bridge', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: jwtToken }),
+        });
+      } catch {
+        // Non-fatal — /me below will just report mainUserId missing and
+        // the debug strip will show it.
+      }
+    }
+
     return fetch('/api/auth/me', { credentials: 'same-origin' })
       .then(res => res.json().then(data => ({ status: res.status, data })))
       .then(({ data }) => {

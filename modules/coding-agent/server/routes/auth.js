@@ -1,11 +1,40 @@
 // routes/auth.js
 import express from 'express';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import pool from '../../../../db/index.js';
 import { exchangeCodeForToken, getGithubUser } from '../lib/github.js';
 import { resolveGithubAuth } from '../lib/githubAuth.js';
 
 const router = express.Router();
+
+// Establish (or re-establish) req.session.mainUserId from the main app's
+// JWT, independent of the one-time ?token= query-param bridge in
+// server.js's /agent middleware.
+//
+// That bridge only fires on the exact navigation that launched the agent
+// with a fresh token in the URL. Anything after that — a page reload, a
+// bookmark, or the in-memory session store getting wiped by a
+// restart/redeploy — leaves req.session.mainUserId empty on later
+// requests even though the browser is still very much logged in (its JWT
+// is sitting in localStorage the whole time). The frontend calls this once
+// on load with that same JWT so the session can heal itself without
+// forcing a full relaunch from the main app.
+router.post('/session-bridge', (req, res) => {
+  const { token } = req.body || {};
+  if (!token) {
+    return res.status(400).json({ error: 'token is required' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.session.mainUserId = decoded.id;
+    console.log('[Auth] session-bridge set mainUserId:', decoded.id);
+    res.json({ success: true, mainUserId: decoded.id });
+  } catch (err) {
+    console.warn('[Auth] session-bridge: invalid/expired token:', err.message);
+    res.status(401).json({ error: 'Invalid or expired token' });
+  }
+});
 
 // Both the authorize redirect and the token exchange must send the EXACT
 // same redirect_uri GitHub has registered for this OAuth App, or GitHub
