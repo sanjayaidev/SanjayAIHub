@@ -326,6 +326,24 @@
         modelSelect.appendChild(optgroup);
       }
 
+      // Alibaba only appears in the catalog for paid tiers (server-gated in
+      // modules/text-to-speech.js's getModelCatalog) — it synthesizes with a
+      // voice already cloned in the Voice Cloning module, not a preset voice.
+      if (providers.includes('alibaba') && modelsByProvider.alibaba?.length > 0) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = 'Alibaba Cloud (Cloned Voice)';
+        modelsByProvider.alibaba.forEach(model => {
+          const opt = document.createElement('option');
+          opt.value = model;
+          opt.textContent = 'Cloned Voice (Qwen)';
+          if (model === defaults.alibaba) opt.selected = true;
+          modelToProvider[model] = 'alibaba';
+          optgroup.appendChild(opt);
+        });
+        modelSelect.appendChild(optgroup);
+        loadClonedVoiceOptions();
+      }
+
       if (modelSelect.options.length === 0) {
         const opt = document.createElement('option');
         opt.value = '';
@@ -341,9 +359,29 @@
       els.model.innerHTML = '<option value="">Error loading models</option>';
     });
 
+  // Populate the Alibaba "Cloned Voice" dropdown from the user's own cloned
+  // voices (Voice Cloning module). If they haven't configured Alibaba or
+  // haven't cloned a voice yet, the select just stays empty with a hint.
+  function loadClonedVoiceOptions() {
+    fetch("/api/modules/voice-clone/voices", { headers: AUTH.getAuthHeader() })
+      .then(r => r.json())
+      .then(data => {
+        const voices = (data.success && Array.isArray(data.voices)) ? data.voices : [];
+        const field = providerParameters.alibaba?.voiceId;
+        if (!field) return;
+        field.options = voices.map(v => ({ value: v.voice_id, label: v.name || v.voice_id }));
+        field.default = field.options[0]?.value || '';
+        if (!field.options.length) {
+          field.options = [{ value: '', label: 'No cloned voices yet — clone one first' }];
+        }
+        if (modelToProvider[els.model.value] === 'alibaba') refreshParamsForSelectedModel();
+      })
+      .catch(err => console.error('Failed to load cloned voices:', err));
+  }
+
   fetch("/api/keys", { headers: AUTH.getAuthHeader() }).then(r=>r.json()).then(d=>{
-    const configured = d.keys?.some(k => (k.provider === 'cloudflare' || k.provider === 'elevenlabs') && k.configured);
-    els.keyStatus.textContent = configured ? "✅ TTS key: configured" : "⚠️ No TTS key — add Cloudflare or ElevenLabs in Profile";
+    const configured = d.keys?.some(k => (k.provider === 'cloudflare' || k.provider === 'elevenlabs' || k.provider === 'alibaba') && k.configured);
+    els.keyStatus.textContent = configured ? "✅ TTS key: configured" : "⚠️ No TTS key — add Cloudflare, ElevenLabs, or Alibaba in Profile";
     els.keyStatus.className = "key-status " + (configured ? "ok" : "bad");
   }).catch(()=>{ els.keyStatus.textContent="server unreachable"; els.keyStatus.className="key-status bad"; });
 

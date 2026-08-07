@@ -1,0 +1,704 @@
+diff --git a/modules/voice-clone.js b/modules/voice-clone.js
+index 05aed85..8623f47 100644
+--- a/modules/voice-clone.js
++++ b/modules/voice-clone.js
+@@ -1,16 +1,15 @@
+ // modules/voice-clone.js
+-// Voice Cloning module — supports two providers:
+-//   - Alibaba Cloud (DashScope Qwen3-TTS-VC): clone from ONE sample, then
+-//     synthesize speech with the cloned voice. This is the default/primary
+-//     path (matches the "Alibaba Cloud" option already exposed in the UI).
+-//   - ElevenLabs Instant Voice Cloning: clone from one-or-more samples,
+-//     then synthesize via ElevenLabs' own TTS.
++// Voice Cloning module — Alibaba Cloud (DashScope Qwen3-TTS-VC) only:
++// clone from ONE sample, then synthesize speech with the cloned voice.
++//
++// ElevenLabs is intentionally NOT used here — it remains available for the
++// separate Text-to-Speech module (modules/text-to-speech.js), but voice
++// cloning is Alibaba-only.
+ //
+ // Audio samples travel as base64 in the JSON body (data URLs or raw base64),
+ // same convention this app already uses for imageDataUrl / audioBase64, so
+ // no multipart/multer plumbing is needed on top of the existing JSON API.
+ 
+-const ElevenLabsProvider = require('../providers/elevenlabs');
+ const AlibabaProvider = require('../providers/alibaba');
+ 
+ const MODEL_PARAMETERS = {
+@@ -23,10 +22,6 @@ const MODEL_PARAMETERS = {
+       label: 'Language'
+     },
+   },
+-  'elevenlabs': {
+-    name: { type: 'text', default: '', label: 'Voice Name' },
+-    description: { type: 'text', default: '', label: 'Description (optional)' },
+-  }
+ };
+ 
+ // DashScope's synthesis endpoint wants a full language name ("English"),
+@@ -37,22 +32,6 @@ const ALIBABA_LANGUAGE_NAMES = {
+   fr: 'French', de: 'German', es: 'Spanish', ru: 'Russian',
+ };
+ 
+-// Accepts "data:audio/mpeg;base64,AAAA..." or a bare base64 string.
+-function decodeSample(sample, index) {
+-  if (!sample || typeof sample !== 'string') {
+-    throw new Error(`Audio sample #${index + 1} is missing or invalid`);
+-  }
+-  const match = sample.match(/^data:(.+);base64,(.+)$/);
+-  const mimetype = match ? match[1] : 'audio/mpeg';
+-  const base64 = match ? match[2] : sample;
+-  const buffer = Buffer.from(base64, 'base64');
+-  if (!buffer.length) {
+-    throw new Error(`Audio sample #${index + 1} could not be decoded`);
+-  }
+-  const ext = mimetype.split('/')[1] || 'mp3';
+-  return { buffer, filename: `sample-${index + 1}.${ext}`, mimetype };
+-}
+-
+ // ────────────────────────────────────────────────────────────
+ // Clone
+ // ────────────────────────────────────────────────────────────
+@@ -107,45 +86,9 @@ async function cloneWithAlibaba(requestBody, apiKeys) {
+   };
+ }
+ 
+-async function cloneWithElevenLabs(requestBody, apiKeys) {
+-  const { name, description, samples } = requestBody;
+-
+-  if (!name || !name.trim()) {
+-    throw new Error('Voice name is required');
+-  }
+-  if (!Array.isArray(samples) || samples.length === 0) {
+-    throw new Error('At least one audio sample is required for voice cloning');
+-  }
+-  if (!apiKeys.elevenlabs?.api_key) {
+-    throw new Error('ElevenLabs API key not configured. Add it in Profile > API Keys.');
+-  }
+-
+-  const elevenlabs = new ElevenLabsProvider(apiKeys.elevenlabs.api_key);
+-  const files = samples.map(decodeSample);
+-
+-  let result;
+-  try {
+-    result = await elevenlabs.cloneVoice(name, files, { description });
+-  } catch (err) {
+-    throw new Error(`ElevenLabs voice cloning error: ${err.message}`);
+-  }
+-
+-  return {
+-    voiceId: result.voice_id,
+-    name,
+-    provider: 'elevenlabs',
+-    model: 'instant-voice-cloning',
+-    parameters: { name, description, sampleCount: files.length }
+-  };
+-}
+-
+-// provider defaults to 'alibaba' since that's the primary path surfaced
+-// in the Voice Cloning UI.
++// provider is always 'alibaba' now — voice cloning is Alibaba-only.
+ async function voiceCloneHandler(requestBody, apiKeys, userId) {
+-  const provider = requestBody.provider === 'elevenlabs' ? 'elevenlabs' : 'alibaba';
+-  return provider === 'elevenlabs'
+-    ? cloneWithElevenLabs(requestBody, apiKeys)
+-    : cloneWithAlibaba(requestBody, apiKeys);
++  return cloneWithAlibaba(requestBody, apiKeys);
+ }
+ 
+ // ────────────────────────────────────────────────────────────
+@@ -153,7 +96,7 @@ async function voiceCloneHandler(requestBody, apiKeys, userId) {
+ // ────────────────────────────────────────────────────────────
+ 
+ async function synthesizeHandler(requestBody, apiKeys, userId) {
+-  const { text, voiceId, provider = 'alibaba', language } = requestBody;
++  const { text, voiceId, language } = requestBody;
+ 
+   if (!text || !text.trim()) {
+     throw new Error('Text to speak is required');
+@@ -162,24 +105,6 @@ async function synthesizeHandler(requestBody, apiKeys, userId) {
+     throw new Error('voiceId is required — clone a voice first');
+   }
+ 
+-  if (provider === 'elevenlabs') {
+-    if (!apiKeys.elevenlabs?.api_key) {
+-      throw new Error('ElevenLabs API key not configured. Add it in Profile > API Keys.');
+-    }
+-    const elevenlabs = new ElevenLabsProvider(apiKeys.elevenlabs.api_key);
+-    try {
+-      const result = await elevenlabs.textToSpeech(text, voiceId);
+-      return {
+-        audioBase64: result.audioBase64,
+-        contentType: result.contentType,
+-        provider: 'elevenlabs',
+-        voiceId
+-      };
+-    } catch (err) {
+-      throw new Error(`ElevenLabs speech synthesis error: ${err.message}`);
+-    }
+-  }
+-
+   if (!apiKeys.alibaba?.api_key || !apiKeys.alibaba?.workspace_id) {
+     throw new Error('Alibaba Cloud API key + Workspace ID not configured. Add them in Profile > API Keys.');
+   }
+@@ -203,41 +128,30 @@ async function synthesizeHandler(requestBody, apiKeys, userId) {
+ // List / catalog
+ // ────────────────────────────────────────────────────────────
+ 
+-async function listVoicesHandler(apiKeys, provider = 'elevenlabs') {
+-  if (provider === 'alibaba') {
+-    if (!apiKeys.alibaba?.api_key || !apiKeys.alibaba?.workspace_id) {
+-      throw new Error('Alibaba Cloud API key + Workspace ID not configured. Add them in Profile > API Keys.');
+-    }
+-    const alibaba = new AlibabaProvider(apiKeys.alibaba.api_key, apiKeys.alibaba.workspace_id);
+-    const voices = await alibaba.listClonedVoices();
+-    return {
+-      voices: voices.map(v => ({
+-        voice_id: v.voice,
+-        name: v.voice,
+-        language: v.language,
+-        created_at: v.gmt_create
+-      }))
+-    };
+-  }
+-
+-  if (!apiKeys.elevenlabs?.api_key) {
+-    throw new Error('ElevenLabs API key not configured. Add it in Profile > API Keys.');
++async function listVoicesHandler(apiKeys) {
++  if (!apiKeys.alibaba?.api_key || !apiKeys.alibaba?.workspace_id) {
++    throw new Error('Alibaba Cloud API key + Workspace ID not configured. Add them in Profile > API Keys.');
+   }
+-  const elevenlabs = new ElevenLabsProvider(apiKeys.elevenlabs.api_key);
+-  const data = await elevenlabs.listVoices();
+-  return { voices: data.voices || [] };
++  const alibaba = new AlibabaProvider(apiKeys.alibaba.api_key, apiKeys.alibaba.workspace_id);
++  const voices = await alibaba.listClonedVoices();
++  return {
++    voices: voices.map(v => ({
++      voice_id: v.voice,
++      name: v.voice,
++      language: v.language,
++      created_at: v.gmt_create
++    }))
++  };
+ }
+ 
+ function getModelCatalog(userTier) {
+   return {
+-    providers: ['alibaba', 'elevenlabs'],
++    providers: ['alibaba'],
+     models: {
+-      alibaba: [AlibabaProvider.VOICE_CLONE_MODEL],
+-      elevenlabs: ['instant-voice-cloning']
++      alibaba: [AlibabaProvider.VOICE_CLONE_MODEL]
+     },
+     defaults: {
+-      alibaba: AlibabaProvider.VOICE_CLONE_MODEL,
+-      elevenlabs: 'instant-voice-cloning'
++      alibaba: AlibabaProvider.VOICE_CLONE_MODEL
+     },
+     parameters: MODEL_PARAMETERS
+   };
+diff --git a/public/profile.html b/public/profile.html
+index 22fae26..a8b51f0 100644
+--- a/public/profile.html
++++ b/public/profile.html
+@@ -466,6 +466,104 @@
+             filter: brightness(1.05);
+         }
+ 
++        /* ── Payment Provider Modal ── */
++        .pay-modal-overlay {
++            position: fixed;
++            inset: 0;
++            background: rgba(0,0,0,0.7);
++            backdrop-filter: blur(8px);
++            display: none;
++            align-items: center;
++            justify-content: center;
++            z-index: 9999;
++            padding: 20px;
++        }
++
++        .pay-modal-overlay.active {
++            display: flex;
++        }
++
++        .pay-modal {
++            position: relative;
++            width: 100%;
++            max-width: 380px;
++            background: #0d1420;
++            border: 1px solid rgba(255,255,255,0.08);
++            border-radius: 16px;
++            padding: 24px;
++            box-shadow: 0 24px 60px -12px rgba(0,0,0,0.6);
++        }
++
++        .pay-modal-close {
++            position: absolute;
++            top: 14px;
++            right: 14px;
++            background: rgba(255,255,255,0.06);
++            border: none;
++            color: #8896b0;
++            width: 28px;
++            height: 28px;
++            border-radius: 50%;
++            font-size: 16px;
++            line-height: 1;
++            cursor: pointer;
++        }
++
++        .pay-modal-close:hover {
++            background: rgba(255,255,255,0.12);
++            color: #eef2f9;
++        }
++
++        .pay-provider-list {
++            display: flex;
++            flex-direction: column;
++            gap: 10px;
++        }
++
++        .pay-provider-btn {
++            display: flex;
++            flex-direction: column;
++            align-items: flex-start;
++            gap: 2px;
++            width: 100%;
++            background: rgba(255,255,255,0.04);
++            border: 1px solid rgba(255,255,255,0.08);
++            border-radius: 10px;
++            padding: 12px 14px;
++            cursor: pointer;
++            text-align: left;
++            transition: 0.15s;
++            font-family: 'Inter', sans-serif;
++        }
++
++        .pay-provider-btn:hover:not(:disabled) {
++            border-color: #00e8a2;
++            background: rgba(0,232,162,0.06);
++        }
++
++        .pay-provider-btn:disabled {
++            opacity: 0.5;
++            cursor: not-allowed;
++        }
++
++        .pay-provider-name {
++            font-size: 14px;
++            font-weight: 600;
++            color: #eef2f9;
++        }
++
++        .pay-provider-hint {
++            font-size: 11px;
++            color: #6a7a94;
++        }
++
++        .pay-modal-status {
++            margin-top: 16px;
++            font-size: 13px;
++            color: #8896b0;
++            text-align: center;
++        }
++
+         .btn-danger {
+             background: rgba(255,90,90,0.1);
+             color: #ff9b9b;
+@@ -922,7 +1020,7 @@
+                             <input class="form-input password-input" type="password" placeholder="xxxxxxxxxxxxxxxx" id="elevenlabsKey" />
+                         </div>
+                         <div class="full-width">
+-                            <div class="form-hint"><i class="fas fa-info-circle"></i> Used for: Text-to-Speech, Voice Cloning (high quality)</div>
++                            <div class="form-hint"><i class="fas fa-info-circle"></i> Used for: Text-to-Speech</div>
+                         </div>
+                     </div>
+                     <div class="btn-group">
+@@ -1094,6 +1192,36 @@
+     </div>
+ </div>
+ 
++<!-- PAYMENT PROVIDER MODAL -->
++<div class="pay-modal-overlay" id="payModal">
++    <div class="pay-modal">
++        <button class="pay-modal-close" id="payModalClose">&times;</button>
++        <div class="tab-title" style="margin-bottom:2px;">Upgrade to <span id="payModalTierName">Plan</span></div>
++        <div class="tab-subtitle" id="payModalPrice" style="margin-bottom:20px;"></div>
++
++        <div class="pay-provider-list" id="payProviderList">
++            <button class="pay-provider-btn" data-provider="cashfree">
++                <span class="pay-provider-name">Cashfree</span>
++                <span class="pay-provider-hint">Cards, UPI, Netbanking (India)</span>
++            </button>
++            <button class="pay-provider-btn" data-provider="razorpay">
++                <span class="pay-provider-name">Razorpay</span>
++                <span class="pay-provider-hint">Cards, UPI, Netbanking (India)</span>
++            </button>
++            <button class="pay-provider-btn" data-provider="paypal">
++                <span class="pay-provider-name">PayPal</span>
++                <span class="pay-provider-hint">PayPal balance or card</span>
++            </button>
++            <button class="pay-provider-btn" data-provider="stripe">
++                <span class="pay-provider-name">Stripe</span>
++                <span class="pay-provider-hint">Card checkout</span>
++            </button>
++        </div>
++
++        <div class="pay-modal-status" id="payModalStatus" style="display:none;"></div>
++    </div>
++</div>
++
+ <!-- TOAST -->
+ <div class="toast" id="toast"></div>
+ 
+@@ -1476,11 +1604,223 @@
+         }
+     }
+ 
++    // ── Payment: plan tier -> price shown in the modal subtitle ──
++    const PLAN_PRICES = {
++        basic:      { inr: 500,  usd: 55  },
++        pro:        { inr: 1000, usd: 110 },
++        enterprise: { inr: 1500, usd: 165 },
++    };
++
++    const payModal = document.getElementById('payModal');
++    const payModalTierName = document.getElementById('payModalTierName');
++    const payModalPrice = document.getElementById('payModalPrice');
++    const payProviderList = document.getElementById('payProviderList');
++    const payModalStatus = document.getElementById('payModalStatus');
++    let selectedTier = null;
++
++    function openPayModal(tier) {
++        selectedTier = tier;
++        payModalTierName.textContent = TIER_LABELS[tier] || tier;
++        const price = PLAN_PRICES[tier];
++        const isUsd = localStorage.getItem('profile_currency') === 'usd';
++        payModalPrice.textContent = price
++            ? (isUsd ? `$${price.usd}/mo` : `\u20b9${price.inr}/mo`)
++            : '';
++        payModalStatus.style.display = 'none';
++        payModalStatus.textContent = '';
++        payProviderList.querySelectorAll('.pay-provider-btn').forEach(b => b.disabled = false);
++        payModal.classList.add('active');
++    }
++
++    function closePayModal() {
++        payModal.classList.remove('active');
++        selectedTier = null;
++    }
++
++    document.getElementById('payModalClose').addEventListener('click', closePayModal);
++    payModal.addEventListener('click', (e) => { if (e.target === payModal) closePayModal(); });
++
++    document.querySelectorAll('.plan-upgrade-btn').forEach(btn => {
++        btn.addEventListener('click', () => {
++            const tier = btn.closest('.plan-card').dataset.tier;
++            if (tier === 'enterprise') {
++                // "Contact Sales" — no self-serve checkout for this tier.
++                window.location.href = 'mailto:sales@sanjayaihub.com?subject=Enterprise%20Plan%20Inquiry';
++                return;
++            }
++            openPayModal(tier);
++        });
++    });
++
++    // ── Dynamically load a provider's checkout script once, on demand ──
++    const loadedScripts = {};
++    function loadScript(src) {
++        if (loadedScripts[src]) return loadedScripts[src];
++        loadedScripts[src] = new Promise((resolve, reject) => {
++            const s = document.createElement('script');
++            s.src = src;
++            s.onload = resolve;
++            s.onerror = () => reject(new Error(`Failed to load ${src}`));
++            document.head.appendChild(s);
++        });
++        return loadedScripts[src];
++    }
++
++    // ── Poll /api/payment/verify-order until it resolves paid/failed, or times out ──
++    async function pollVerifyOrder(orderId, { intervalMs = 3000, timeoutMs = 5 * 60 * 1000 } = {}) {
++        const startedAt = Date.now();
++        while (Date.now() - startedAt < timeoutMs) {
++            try {
++                const res = await fetch('/api/payment/verify-order', {
++                    method: 'POST',
++                    headers: { 'Content-Type': 'application/json', ...AUTH.getAuthHeader() },
++                    body: JSON.stringify({ order_id: orderId })
++                });
++                const data = await res.json();
++                if (data.paid) return { paid: true, plan_tier: data.plan_tier };
++                if (data.status === 'failed') return { paid: false, status: 'failed' };
++            } catch (err) {
++                console.error('verify-order poll error:', err);
++            }
++            await new Promise(r => setTimeout(r, intervalMs));
++        }
++        return { paid: false, status: 'timeout' };
++    }
++
++    async function finishCheckout(orderId, statusMessage) {
++        payModalStatus.style.display = 'block';
++        payModalStatus.textContent = statusMessage || 'Confirming your payment…';
++        payProviderList.querySelectorAll('.pay-provider-btn').forEach(b => b.disabled = true);
++
++        const result = await pollVerifyOrder(orderId);
++        if (result.paid) {
++            payModalStatus.textContent = 'Payment confirmed! Upgrading your account…';
++            showToast(`Upgraded to ${TIER_LABELS[result.plan_tier] || result.plan_tier}!`, 'success');
++            await loadProfile();
++            await loadModuleAccess();
++            closePayModal();
++        } else if (result.status === 'failed') {
++            payModalStatus.textContent = 'Payment failed or was cancelled.';
++            showToast('Payment failed or was cancelled', 'error');
++            payProviderList.querySelectorAll('.pay-provider-btn').forEach(b => b.disabled = false);
++        } else {
++            payModalStatus.textContent = "We couldn't confirm the payment in time. If you were charged, it will apply automatically shortly.";
++            payProviderList.querySelectorAll('.pay-provider-btn').forEach(b => b.disabled = false);
++        }
++    }
++
++    async function createOrder(provider) {
++        const res = await fetch('/api/payment/create-order', {
++            method: 'POST',
++            headers: { 'Content-Type': 'application/json', ...AUTH.getAuthHeader() },
++            body: JSON.stringify({ tier: selectedTier, provider })
++        });
++        const data = await res.json();
++        if (!res.ok || !data.success) throw new Error(data.message || 'Failed to start checkout');
++        return data;
++    }
++
++    async function startCashfree() {
++        const order = await createOrder('cashfree');
++        await loadScript('https://sdk.cashfree.com/js/v3/cashfree.js');
++        const cashfree = await window.Cashfree({ mode: order.mode.mode === 'PRODUCTION' ? 'production' : 'sandbox' });
++        // redirectTarget "_self" does a full-page redirect back to the
++        // return_url set on the order (profile.html?payment_order_id=...),
++        // so confirmation is picked up by handlePaymentReturn() on reload.
++        cashfree.checkout({ paymentSessionId: order.payment_session_id, redirectTarget: '_self' });
++    }
++
++    async function startRazorpay() {
++        const order = await createOrder('razorpay');
++        await loadScript('https://checkout.razorpay.com/v1/checkout.js');
++        const rzp = new Razorpay({
++            key: order.razorpay_key_id,
++            order_id: order.razorpay_order_id,
++            amount: Math.round(order.amount * 100),
++            currency: order.currency,
++            name: 'SanjayAIHub',
++            description: `${TIER_LABELS[selectedTier]} plan (1 month)`,
++            prefill: { name: currentUser?.full_name || currentUser?.username, email: currentUser?.email },
++            handler: function () {
++                // Razorpay only calls this after the payment succeeds; verify-order
++                // still does the authoritative server-side check before upgrading.
++                finishCheckout(order.order_id, 'Payment received, confirming with Razorpay…');
++            },
++            modal: {
++                ondismiss: function () {
++                    payModalStatus.style.display = 'block';
++                    payModalStatus.textContent = 'Checkout closed.';
++                }
++            }
++        });
++        rzp.on('payment.failed', function () {
++            payModalStatus.style.display = 'block';
++            payModalStatus.textContent = 'Payment failed. Please try again.';
++        });
++        rzp.open();
++    }
++
++    async function startPaypal() {
++        const order = await createOrder('paypal');
++        window.location.href = order.paypal_approval_url;
++    }
++
++    async function startStripe() {
++        const order = await createOrder('stripe');
++        window.location.href = order.stripe_checkout_url;
++    }
++
++    payProviderList.addEventListener('click', async (e) => {
++        const btn = e.target.closest('.pay-provider-btn');
++        if (!btn || btn.disabled) return;
++        const provider = btn.dataset.provider;
++
++        payProviderList.querySelectorAll('.pay-provider-btn').forEach(b => b.disabled = true);
++        payModalStatus.style.display = 'block';
++        payModalStatus.textContent = 'Starting checkout…';
++
++        try {
++            if (provider === 'cashfree') await startCashfree();
++            else if (provider === 'razorpay') await startRazorpay();
++            else if (provider === 'paypal') await startPaypal();
++            else if (provider === 'stripe') await startStripe();
++        } catch (err) {
++            console.error(`${provider} checkout error:`, err);
++            payModalStatus.textContent = err.message || 'Failed to start checkout';
++            payProviderList.querySelectorAll('.pay-provider-btn').forEach(b => b.disabled = false);
++        }
++    });
++
++    // ── Handle landing back on this page after a redirect-based checkout ──
++    // (Cashfree, PayPal, Stripe all bounce the user back here with
++    // ?payment_order_id=...&provider=...; Razorpay never leaves the page.)
++    function handlePaymentReturn() {
++        const params = new URLSearchParams(window.location.search);
++        const orderId = params.get('payment_order_id');
++        const provider = params.get('provider');
++        if (!orderId) return;
++
++        // Strip the params from the URL so a refresh doesn't re-trigger this.
++        params.delete('payment_order_id');
++        params.delete('provider');
++        params.delete('session_id');
++        const cleanQuery = params.toString();
++        window.history.replaceState({}, '', window.location.pathname + (cleanQuery ? `?${cleanQuery}` : '') + '#tab-plan');
++
++        document.querySelector('.nav-item[data-tab="plan"]')?.click();
++        payModal.classList.add('active');
++        payModalTierName.textContent = 'your plan';
++        payModalPrice.textContent = '';
++        payProviderList.querySelectorAll('.pay-provider-btn').forEach(b => b.disabled = true);
++        finishCheckout(orderId, `Confirming your ${provider || ''} payment…`);
++    }
++
+     // ── Init ──
+     loadProfile();
+     loadApiKeys();
+     loadModuleAccess();
+     loadUsageStats();
++    handlePaymentReturn();
+ 
+ })();
+ </script>
+diff --git a/public/voiceclone.html b/public/voiceclone.html
+index e6ea209..a1b458a 100644
+--- a/public/voiceclone.html
++++ b/public/voiceclone.html
+@@ -266,11 +266,7 @@
+       </div>
+       <div>
+         <label>Provider</label>
+-        <select id="provider">
+-          <option value="alibaba">Alibaba Cloud (DashScope)</option>
+-          <option value="elevenlabs">ElevenLabs</option>
+-        </select>
+-        <div class="hint">Alibaba clones from one short sample; ElevenLabs supports higher-quality multi-sample cloning.</div>
++        <div class="hint" style="margin-top:4px;">Alibaba Cloud (DashScope) — clones from one short audio sample.</div>
+       </div>
+ 
+       <button type="submit" class="generate" id="genBtn">🗣️ Clone & Generate</button>
+@@ -309,7 +305,6 @@
+     audio_preview: document.getElementById("audio_preview"),
+     language: document.getElementById("language"),
+     speed: document.getElementById("speed"),
+-    provider: document.getElementById("provider"),
+     genBtn: document.getElementById("genBtn"),
+     errorBox: document.getElementById("errorBox"),
+     outputArea: document.getElementById("outputArea"),
+@@ -327,10 +322,9 @@
+     url_pane: document.getElementById("url_pane"),
+   };
+ 
+-  // Key status reflects whichever provider is currently selected, since
+-  // that's the one this generation will actually use.
++  // Voice cloning is Alibaba-only, so key status always checks that provider.
+   function refreshKeyStatus() {
+-    const provider = els.provider.value;
++    const provider = "alibaba";
+     fetch("/api/keys", { headers: AUTH.getAuthHeader() })
+       .then(r => r.json())
+       .then(d => {
+@@ -342,7 +336,6 @@
+       .catch(() => { els.keyStatus.textContent = "server unreachable"; els.keyStatus.className = "key-status bad"; });
+   }
+   refreshKeyStatus();
+-  els.provider.addEventListener("change", refreshKeyStatus);
+ 
+   document.querySelectorAll(".src-btn").forEach(btn => {
+     btn.addEventListener("click", () => {
+@@ -414,7 +407,6 @@
+       if (!audioSample) return showError("Voice sample URL is required.");
+     }
+ 
+-    const provider = els.provider.value;
+     const language = els.language.value;
+ 
+     genToken += 1; const myToken = genToken;
+@@ -429,7 +421,6 @@
+     try {
+       // Step 1: clone the voice from the sample.
+       const cloneResult = await callVoiceCloneModule({
+-        provider,
+         name: `voice_${Date.now()}`,
+         language,
+         samples: [audioSample],
+@@ -442,7 +433,6 @@
+       // Step 2: synthesize the requested text with the freshly cloned voice.
+       const speechResult = await callVoiceCloneModule({
+         action: "synthesize",
+-        provider,
+         voiceId: cloneResult.voiceId,
+         text,
+         language,
+diff --git a/routes/modules.js b/routes/modules.js
+index f8652b0..e03d970 100644
+--- a/routes/modules.js
++++ b/routes/modules.js
+@@ -301,7 +301,7 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
+       'image-to-video': ['pixazo'],
+       'video-to-video': ['pixazo'],
+       'text-to-speech': ['cloudflare', 'elevenlabs'],
+-      'voice-clone': ['alibaba', 'elevenlabs'],
++      'voice-clone': ['alibaba'],
+       'text-to-music': ['pixazo'],
+       'design-studio': ['pixazo'],
+       'chatbot-maker': ['alibaba'],
+@@ -744,34 +744,30 @@ router.post('/text-to-video/status', authenticateToken, async (req, res) => {
+ 
+ // ──────────────────────────────────────────────
+ // GET /api/modules/voice-clone/voices - List cloned voices for this user
+-// Query: ?provider=alibaba|elevenlabs (default: alibaba)
++// (Alibaba Cloud only — voice cloning no longer supports ElevenLabs.)
+ // ──────────────────────────────────────────────
+ router.get('/voice-clone/voices', authenticateToken, async (req, res) => {
+   try {
+-    const provider = req.query.provider === 'elevenlabs' ? 'elevenlabs' : 'alibaba';
+-
+     const result = await pool.query(
+       `SELECT api_key, workspace_id FROM user_api_keys 
+-       WHERE user_id = $1 AND provider = $2 AND is_active = true`,
+-      [req.user.id, provider]
++       WHERE user_id = $1 AND provider = 'alibaba' AND is_active = true`,
++      [req.user.id]
+     );
+ 
+     if (result.rows.length === 0) {
+       return res.status(400).json({
+         success: false,
+-        message: provider === 'alibaba'
+-          ? 'Alibaba Cloud API key not configured'
+-          : 'ElevenLabs API key not configured'
++        message: 'Alibaba Cloud API key not configured'
+       });
+     }
+ 
+     const apiKeys = {
+-      [provider]: {
++      alibaba: {
+         api_key: result.rows[0].api_key,
+         workspace_id: result.rows[0].workspace_id
+       }
+     };
+-    const data = await listVoicesHandler(apiKeys, provider);
++    const data = await listVoicesHandler(apiKeys);
+ 
+     res.json({ success: true, ...data });
+   } catch (error) {

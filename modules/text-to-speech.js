@@ -1,10 +1,17 @@
 // modules/text-to-speech.js
-// Text-to-Speech module supporting multiple providers (Cloudflare, ElevenLabs)
-// with model-specific parameters
+// Text-to-Speech module supporting multiple providers (Cloudflare,
+// ElevenLabs, Alibaba Cloud) with model-specific parameters.
+//
+// Alibaba is a special case: it doesn't offer preset TTS voices here, only
+// synthesis with a voice the user has already cloned via the Voice Cloning
+// module (modules/voice-clone.js / AlibabaProvider.synthesizeWithClonedVoice).
+// Because that's a paid feature, it's gated to non-trial subscription tiers
+// — see the userTier check in ttsHandler() and getModelCatalog() below.
 
 const pool = require('../db');
 const CloudflareProvider = require('../providers/cloudflare');
 const ElevenLabsProvider = require('../providers/elevenlabs');
+const AlibabaProvider = require('../providers/alibaba');
 
 // Provider configurations
 const CLOUDFLARE_TTS_MODELS = [
@@ -20,8 +27,25 @@ const ELEVENLABS_TTS_MODELS = [
   'eleven_v3',
 ];
 
+// Alibaba TTS here is really "synthesize with a voice I already cloned" —
+// there's only one callable model (see AlibabaProvider.VOICE_CLONE_MODEL).
+const ALIBABA_TTS_MODELS = [AlibabaProvider.VOICE_CLONE_MODEL];
+
 const DEFAULT_CLOUDFLARE_MODEL = '@cf/myshell-ai/melotts';
 const DEFAULT_ELEVENLABS_MODEL = 'eleven_flash_v2_5';
+const DEFAULT_ALIBABA_MODEL = AlibabaProvider.VOICE_CLONE_MODEL;
+
+// Subscription tiers allowed to use the Alibaba cloned-voice TTS option.
+// Matches the 'voice-clone' module's own access_level ('basic') in Tables.sql
+// — you need a paid plan to have cloned a voice in the first place.
+const ALIBABA_TTS_ALLOWED_TIERS = ['basic', 'pro', 'enterprise'];
+
+// DashScope's synthesis endpoint wants a full language name ("English"),
+// matching the mapping already used in modules/voice-clone.js.
+const ALIBABA_LANGUAGE_NAMES = {
+  en: 'English', zh: 'Chinese', ja: 'Japanese', ko: 'Korean',
+  fr: 'French', de: 'German', es: 'Spanish', ru: 'Russian',
+};
 
 // Parameters supported by each provider
 const MODEL_PARAMETERS = {
@@ -56,10 +80,24 @@ const MODEL_PARAMETERS = {
       default: DEFAULT_ELEVENLABS_MODEL,
       label: 'Model'
     }
+  },
+  'alibaba': {
+    voiceId: {
+      type: 'select',
+      options: [], // Populated dynamically from the user's cloned voices (see GET /api/modules/voice-clone/voices)
+      default: '',
+      label: 'Cloned Voice'
+    },
+    language: {
+      type: 'select',
+      options: ['en', 'zh', 'ja', 'ko', 'fr', 'de', 'es', 'ru'],
+      default: 'en',
+      label: 'Language'
+    },
   }
 };
 
-async function ttsHandler(requestBody, apiKeys, userId) {
+async function ttsHandler(requestBody, apiKeys, userId, userTier = 'trial') {
   const {
     text,
     provider = 'cloudflare',
@@ -69,6 +107,7 @@ async function ttsHandler(requestBody, apiKeys, userId) {
     stability,
     similarity_boost,
     model_id,
+    voiceId,
   } = requestBody;
 
   if (!text || !text.trim()) {
@@ -83,6 +122,8 @@ async function ttsHandler(requestBody, apiKeys, userId) {
       selectedProvider = 'elevenlabs';
     } else if (CLOUDFLARE_TTS_MODELS.includes(requestedModel)) {
       selectedProvider = 'cloudflare';
+    } else if (ALIBABA_TTS_MODELS.includes(requestedModel)) {
+      selectedProvider = 'alibaba';
     }
   }
 
@@ -93,6 +134,21 @@ async function ttsHandler(requestBody, apiKeys, userId) {
   
   if (selectedProvider === 'elevenlabs' && !apiKeys.elevenlabs?.api_key) {
     throw new Error('ElevenLabs API key not configured. Add it in Profile > API Keys.');
+  }
+
+  if (selectedProvider === 'alibaba') {
+    // Cloned-voice synthesis is a paid-plan feature — same gate as the
+    // Voice Cloning module itself, checked here too since ttsHandler can be
+    // reached directly and shouldn't rely on the frontend hiding the option.
+    if (!ALIBABA_TTS_ALLOWED_TIERS.includes(userTier)) {
+      throw new Error('Alibaba voice-clone TTS is available on paid plans (Basic and above). Upgrade your plan, or use Cloudflare/ElevenLabs instead.');
+    }
+    if (!apiKeys.alibaba?.api_key || !apiKeys.alibaba?.workspace_id) {
+      throw new Error('Alibaba Cloud API key + Workspace ID not configured. Add them in Profile > API Keys.');
+    }
+    if (!voiceId) {
+      throw new Error('voiceId is required — clone a voice first in the Voice Cloning module.');
+    }
   }
 
   let audioBase64, contentType;
@@ -109,6 +165,17 @@ async function ttsHandler(requestBody, apiKeys, userId) {
       contentType = result.contentType;
     } catch (err) {
       throw new Error(`Cloudflare TTS error: ${err.message}`);
+    }
+  } else if (selectedProvider === 'alibaba') {
+    const alibaba = new AlibabaProvider(apiKeys.alibaba.api_key, apiKeys.alibaba.workspace_id);
+    const languageType = ALIBABA_LANGUAGE_NAMES[(language || 'en').toLowerCase()] || 'English';
+
+    try {
+      const result = await alibaba.synthesizeWithClonedVoice(text, voiceId, languageType);
+      audioBase64 = result.audioBase64;
+      contentType = result.contentType;
+    } catch (err) {
+      throw new Error(`Alibaba TTS error: ${err.message}`);
     }
   } else {
     const elevenlabs = new ElevenLabsProvider(apiKeys.elevenlabs.api_key);
@@ -133,12 +200,18 @@ async function ttsHandler(requestBody, apiKeys, userId) {
     }
   }
 
+  const modelUsed = selectedProvider === 'cloudflare'
+    ? DEFAULT_CLOUDFLARE_MODEL
+    : selectedProvider === 'alibaba'
+      ? DEFAULT_ALIBABA_MODEL
+      : (model_id || DEFAULT_ELEVENLABS_MODEL);
+
   return {
     audioBase64,
     contentType,
     provider: selectedProvider,
-    model: selectedProvider === 'cloudflare' ? DEFAULT_CLOUDFLARE_MODEL : (model_id || DEFAULT_ELEVENLABS_MODEL),
-    parameters: { language, voice_id, stability, similarity_boost }
+    model: modelUsed,
+    parameters: { language, voice_id, stability, similarity_boost, voiceId }
   };
 }
 
@@ -158,16 +231,28 @@ async function getVoices(apiKeys) {
 }
 
 function getModelCatalog(userTier) {
+  const includeAlibaba = ALIBABA_TTS_ALLOWED_TIERS.includes(userTier);
+
+  const providers = ['cloudflare', 'elevenlabs'];
+  const models = {
+    cloudflare: CLOUDFLARE_TTS_MODELS,
+    elevenlabs: ELEVENLABS_TTS_MODELS
+  };
+  const defaults = {
+    cloudflare: DEFAULT_CLOUDFLARE_MODEL,
+    elevenlabs: DEFAULT_ELEVENLABS_MODEL
+  };
+
+  if (includeAlibaba) {
+    providers.push('alibaba');
+    models.alibaba = ALIBABA_TTS_MODELS;
+    defaults.alibaba = DEFAULT_ALIBABA_MODEL;
+  }
+
   return {
-    providers: ['cloudflare', 'elevenlabs'],
-    models: {
-      cloudflare: CLOUDFLARE_TTS_MODELS,
-      elevenlabs: ELEVENLABS_TTS_MODELS
-    },
-    defaults: {
-      cloudflare: DEFAULT_CLOUDFLARE_MODEL,
-      elevenlabs: DEFAULT_ELEVENLABS_MODEL
-    },
+    providers,
+    models,
+    defaults,
     parameters: MODEL_PARAMETERS
   };
 }
@@ -178,5 +263,7 @@ module.exports = {
   getModelCatalog,
   MODEL_PARAMETERS,
   CLOUDFLARE_TTS_MODELS,
-  ELEVENLABS_TTS_MODELS
+  ELEVENLABS_TTS_MODELS,
+  ALIBABA_TTS_MODELS,
+  ALIBABA_TTS_ALLOWED_TIERS
 };
