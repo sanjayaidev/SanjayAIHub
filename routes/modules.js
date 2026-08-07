@@ -300,8 +300,8 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
       'text-to-video': ['alibaba', 'pixazo'],
       'image-to-video': ['pixazo'],
       'video-to-video': ['pixazo'],
-      'text-to-speech': ['cloudflare', 'elevenlabs'],
-      'voice-clone': ['alibaba', 'elevenlabs'],
+      'text-to-speech': ['cloudflare', 'elevenlabs', 'alibaba'],
+      'voice-clone': ['alibaba'],
       'text-to-music': ['pixazo'],
       'design-studio': ['pixazo'],
       'chatbot-maker': ['alibaba'],
@@ -400,7 +400,7 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
         result = await contentCreatorHandler(req.body, apiKeys, userId);
         break;
       case 'text-to-speech':
-        result = await ttsHandler(req.body, apiKeys, userId);
+        result = await ttsHandler(req.body, apiKeys, userId, userTier);
         break;
       case 'text-to-image':
         result = await textToImageHandler(req.body, apiKeys, userId);
@@ -744,34 +744,30 @@ router.post('/text-to-video/status', authenticateToken, async (req, res) => {
 
 // ──────────────────────────────────────────────
 // GET /api/modules/voice-clone/voices - List cloned voices for this user
-// Query: ?provider=alibaba|elevenlabs (default: alibaba)
+// (Alibaba Cloud only — voice cloning no longer supports ElevenLabs.)
 // ──────────────────────────────────────────────
 router.get('/voice-clone/voices', authenticateToken, async (req, res) => {
   try {
-    const provider = req.query.provider === 'elevenlabs' ? 'elevenlabs' : 'alibaba';
-
     const result = await pool.query(
       `SELECT api_key, workspace_id FROM user_api_keys 
-       WHERE user_id = $1 AND provider = $2 AND is_active = true`,
-      [req.user.id, provider]
+       WHERE user_id = $1 AND provider = 'alibaba' AND is_active = true`,
+      [req.user.id]
     );
 
     if (result.rows.length === 0) {
       return res.status(400).json({
         success: false,
-        message: provider === 'alibaba'
-          ? 'Alibaba Cloud API key not configured'
-          : 'ElevenLabs API key not configured'
+        message: 'Alibaba Cloud API key not configured'
       });
     }
 
     const apiKeys = {
-      [provider]: {
+      alibaba: {
         api_key: result.rows[0].api_key,
         workspace_id: result.rows[0].workspace_id
       }
     };
-    const data = await listVoicesHandler(apiKeys, provider);
+    const data = await listVoicesHandler(apiKeys);
 
     res.json({ success: true, ...data });
   } catch (error) {
