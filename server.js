@@ -15,6 +15,7 @@ const chatRoutes = require('./routes/chat');
 const reelsRoutes = require('./routes/reels');
 const uploadRoutes = require('./routes/upload');
 const imageProxyRoutes = require('./routes/image-proxy');
+const paymentRoutes = require('./routes/payment');
 
 // Import coding-agent as ESM module (dynamic import)
 let createCodingAgentApp = null;
@@ -83,7 +84,9 @@ app.use(helmet({
         "'unsafe-eval'",
         "cdnjs.cloudflare.com",
         "https://cdnjs.cloudflare.com",
-        "https://cdn.jsdelivr.net"
+        "https://cdn.jsdelivr.net",
+        "https://checkout.razorpay.com",
+        "https://sdk.cashfree.com"
       ],
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: [
@@ -100,7 +103,23 @@ app.use(helmet({
         "https://graph.instagram.com",
         "https://www.instagram.com",
         "https://instagram.com",
-        "https://*.instagram.com"
+        "https://*.instagram.com",
+        "https://api.razorpay.com",
+        "https://lumberjack.razorpay.com",
+        "https://sdk.cashfree.com",
+        "https://api.cashfree.com",
+        "https://sandbox.cashfree.com"
+      ],
+      // Razorpay's checkout widget and Cashfree's drop-in SDK both open their
+      // payment UI in an iframe on top of the current page rather than a
+      // full redirect, so they need to be allowed as frame sources.
+      frameSrc: [
+        "'self'",
+        "https://api.razorpay.com",
+        "https://checkout.razorpay.com",
+        "https://sdk.cashfree.com",
+        "https://api.cashfree.com",
+        "https://sandbox.cashfree.com"
       ],
     },
   },
@@ -154,6 +173,7 @@ app.use('/api/chat', chatRoutes); // ← ADD THIS (replaces /api/modules/chat ro
 app.use('/api/reels', reelsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/image-proxy', imageProxyRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // ── Health Check ──
 app.get('/api/health', (req, res) => {
@@ -246,6 +266,14 @@ initCodingAgent().then(() => {
       console.log(`👥 Coding Agent available at http://localhost:${PORT}/agent`);
     }
   });
+
+  // ── Payment sweep (backstop for anyone who closes the tab mid-checkout) ──
+  const PAYMENT_SWEEP_INTERVAL_MS = 5 * 60 * 1000; // every 5 minutes
+  setInterval(() => {
+    paymentRoutes.sweepPendingPayments().catch(err => {
+      console.error('[payment/sweep] sweep run failed:', err.message);
+    });
+  }, PAYMENT_SWEEP_INTERVAL_MS);
 
   // Add catch-all for SPA routes (must be after all other routes)
   app.get('*', (req, res, next) => {

@@ -466,6 +466,104 @@
             filter: brightness(1.05);
         }
 
+        /* ── Payment Provider Modal ── */
+        .pay-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+
+        .pay-modal-overlay.active {
+            display: flex;
+        }
+
+        .pay-modal {
+            position: relative;
+            width: 100%;
+            max-width: 380px;
+            background: #0d1420;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 24px 60px -12px rgba(0,0,0,0.6);
+        }
+
+        .pay-modal-close {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: rgba(255,255,255,0.06);
+            border: none;
+            color: #8896b0;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            font-size: 16px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .pay-modal-close:hover {
+            background: rgba(255,255,255,0.12);
+            color: #eef2f9;
+        }
+
+        .pay-provider-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .pay-provider-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+            width: 100%;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 12px 14px;
+            cursor: pointer;
+            text-align: left;
+            transition: 0.15s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .pay-provider-btn:hover:not(:disabled) {
+            border-color: #00e8a2;
+            background: rgba(0,232,162,0.06);
+        }
+
+        .pay-provider-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pay-provider-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #eef2f9;
+        }
+
+        .pay-provider-hint {
+            font-size: 11px;
+            color: #6a7a94;
+        }
+
+        .pay-modal-status {
+            margin-top: 16px;
+            font-size: 13px;
+            color: #8896b0;
+            text-align: center;
+        }
+
         .btn-danger {
             background: rgba(255,90,90,0.1);
             color: #ff9b9b;
@@ -1094,6 +1192,36 @@
     </div>
 </div>
 
+<!-- PAYMENT PROVIDER MODAL -->
+<div class="pay-modal-overlay" id="payModal">
+    <div class="pay-modal">
+        <button class="pay-modal-close" id="payModalClose">&times;</button>
+        <div class="tab-title" style="margin-bottom:2px;">Upgrade to <span id="payModalTierName">Plan</span></div>
+        <div class="tab-subtitle" id="payModalPrice" style="margin-bottom:20px;"></div>
+
+        <div class="pay-provider-list" id="payProviderList">
+            <button class="pay-provider-btn" data-provider="cashfree">
+                <span class="pay-provider-name">Cashfree</span>
+                <span class="pay-provider-hint">Cards, UPI, Netbanking (India)</span>
+            </button>
+            <button class="pay-provider-btn" data-provider="razorpay">
+                <span class="pay-provider-name">Razorpay</span>
+                <span class="pay-provider-hint">Cards, UPI, Netbanking (India)</span>
+            </button>
+            <button class="pay-provider-btn" data-provider="paypal">
+                <span class="pay-provider-name">PayPal</span>
+                <span class="pay-provider-hint">PayPal balance or card</span>
+            </button>
+            <button class="pay-provider-btn" data-provider="stripe">
+                <span class="pay-provider-name">Stripe</span>
+                <span class="pay-provider-hint">Card checkout</span>
+            </button>
+        </div>
+
+        <div class="pay-modal-status" id="payModalStatus" style="display:none;"></div>
+    </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -1476,11 +1604,223 @@
         }
     }
 
+    // ── Payment: plan tier -> price shown in the modal subtitle ──
+    const PLAN_PRICES = {
+        basic:      { inr: 500,  usd: 55  },
+        pro:        { inr: 1000, usd: 110 },
+        enterprise: { inr: 1500, usd: 165 },
+    };
+
+    const payModal = document.getElementById('payModal');
+    const payModalTierName = document.getElementById('payModalTierName');
+    const payModalPrice = document.getElementById('payModalPrice');
+    const payProviderList = document.getElementById('payProviderList');
+    const payModalStatus = document.getElementById('payModalStatus');
+    let selectedTier = null;
+
+    function openPayModal(tier) {
+        selectedTier = tier;
+        payModalTierName.textContent = TIER_LABELS[tier] || tier;
+        const price = PLAN_PRICES[tier];
+        const isUsd = localStorage.getItem('profile_currency') === 'usd';
+        payModalPrice.textContent = price
+            ? (isUsd ? `$${price.usd}/mo` : `\u20b9${price.inr}/mo`)
+            : '';
+        payModalStatus.style.display = 'none';
+        payModalStatus.textContent = '';
+        payProviderList.querySelectorAll('.pay-provider-btn').forEach(b => b.disabled = false);
+        payModal.classList.add('active');
+    }
+
+    function closePayModal() {
+        payModal.classList.remove('active');
+        selectedTier = null;
+    }
+
+    document.getElementById('payModalClose').addEventListener('click', closePayModal);
+    payModal.addEventListener('click', (e) => { if (e.target === payModal) closePayModal(); });
+
+    document.querySelectorAll('.plan-upgrade-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tier = btn.closest('.plan-card').dataset.tier;
+            if (tier === 'enterprise') {
+                // "Contact Sales" — no self-serve checkout for this tier.
+                window.location.href = 'mailto:sales@sanjayaihub.com?subject=Enterprise%20Plan%20Inquiry';
+                return;
+            }
+            openPayModal(tier);
+        });
+    });
+
+    // ── Dynamically load a provider's checkout script once, on demand ──
+    const loadedScripts = {};
+    function loadScript(src) {
+        if (loadedScripts[src]) return loadedScripts[src];
+        loadedScripts[src] = new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = resolve;
+            s.onerror = () => reject(new Error(`Failed to load ${src}`));
+            document.head.appendChild(s);
+        });
+        return loadedScripts[src];
+    }
+
+    // ── Poll /api/payment/verify-order until it resolves paid/failed, or times out ──
+    async function pollVerifyOrder(orderId, { intervalMs = 3000, timeoutMs = 5 * 60 * 1000 } = {}) {
+        const startedAt = Date.now();
+        while (Date.now() - startedAt < timeoutMs) {
+            try {
+                const res = await fetch('/api/payment/verify-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...AUTH.getAuthHeader() },
+                    body: JSON.stringify({ order_id: orderId })
+                });
+                const data = await res.json();
+                if (data.paid) return { paid: true, plan_tier: data.plan_tier };
+                if (data.status === 'failed') return { paid: false, status: 'failed' };
+            } catch (err) {
+                console.error('verify-order poll error:', err);
+            }
+            await new Promise(r => setTimeout(r, intervalMs));
+        }
+        return { paid: false, status: 'timeout' };
+    }
+
+    async function finishCheckout(orderId, statusMessage) {
+        payModalStatus.style.display = 'block';
+        payModalStatus.textContent = statusMessage || 'Confirming your payment…';
+        payProviderList.querySelectorAll('.pay-provider-btn').forEach(b => b.disabled = true);
+
+        const result = await pollVerifyOrder(orderId);
+        if (result.paid) {
+            payModalStatus.textContent = 'Payment confirmed! Upgrading your account…';
+            showToast(`Upgraded to ${TIER_LABELS[result.plan_tier] || result.plan_tier}!`, 'success');
+            await loadProfile();
+            await loadModuleAccess();
+            closePayModal();
+        } else if (result.status === 'failed') {
+            payModalStatus.textContent = 'Payment failed or was cancelled.';
+            showToast('Payment failed or was cancelled', 'error');
+            payProviderList.querySelectorAll('.pay-provider-btn').forEach(b => b.disabled = false);
+        } else {
+            payModalStatus.textContent = "We couldn't confirm the payment in time. If you were charged, it will apply automatically shortly.";
+            payProviderList.querySelectorAll('.pay-provider-btn').forEach(b => b.disabled = false);
+        }
+    }
+
+    async function createOrder(provider) {
+        const res = await fetch('/api/payment/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...AUTH.getAuthHeader() },
+            body: JSON.stringify({ tier: selectedTier, provider })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Failed to start checkout');
+        return data;
+    }
+
+    async function startCashfree() {
+        const order = await createOrder('cashfree');
+        await loadScript('https://sdk.cashfree.com/js/v3/cashfree.js');
+        const cashfree = await window.Cashfree({ mode: order.mode.mode === 'PRODUCTION' ? 'production' : 'sandbox' });
+        // redirectTarget "_self" does a full-page redirect back to the
+        // return_url set on the order (profile.html?payment_order_id=...),
+        // so confirmation is picked up by handlePaymentReturn() on reload.
+        cashfree.checkout({ paymentSessionId: order.payment_session_id, redirectTarget: '_self' });
+    }
+
+    async function startRazorpay() {
+        const order = await createOrder('razorpay');
+        await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+        const rzp = new Razorpay({
+            key: order.razorpay_key_id,
+            order_id: order.razorpay_order_id,
+            amount: Math.round(order.amount * 100),
+            currency: order.currency,
+            name: 'SanjayAIHub',
+            description: `${TIER_LABELS[selectedTier]} plan (1 month)`,
+            prefill: { name: currentUser?.full_name || currentUser?.username, email: currentUser?.email },
+            handler: function () {
+                // Razorpay only calls this after the payment succeeds; verify-order
+                // still does the authoritative server-side check before upgrading.
+                finishCheckout(order.order_id, 'Payment received, confirming with Razorpay…');
+            },
+            modal: {
+                ondismiss: function () {
+                    payModalStatus.style.display = 'block';
+                    payModalStatus.textContent = 'Checkout closed.';
+                }
+            }
+        });
+        rzp.on('payment.failed', function () {
+            payModalStatus.style.display = 'block';
+            payModalStatus.textContent = 'Payment failed. Please try again.';
+        });
+        rzp.open();
+    }
+
+    async function startPaypal() {
+        const order = await createOrder('paypal');
+        window.location.href = order.paypal_approval_url;
+    }
+
+    async function startStripe() {
+        const order = await createOrder('stripe');
+        window.location.href = order.stripe_checkout_url;
+    }
+
+    payProviderList.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.pay-provider-btn');
+        if (!btn || btn.disabled) return;
+        const provider = btn.dataset.provider;
+
+        payProviderList.querySelectorAll('.pay-provider-btn').forEach(b => b.disabled = true);
+        payModalStatus.style.display = 'block';
+        payModalStatus.textContent = 'Starting checkout…';
+
+        try {
+            if (provider === 'cashfree') await startCashfree();
+            else if (provider === 'razorpay') await startRazorpay();
+            else if (provider === 'paypal') await startPaypal();
+            else if (provider === 'stripe') await startStripe();
+        } catch (err) {
+            console.error(`${provider} checkout error:`, err);
+            payModalStatus.textContent = err.message || 'Failed to start checkout';
+            payProviderList.querySelectorAll('.pay-provider-btn').forEach(b => b.disabled = false);
+        }
+    });
+
+    // ── Handle landing back on this page after a redirect-based checkout ──
+    // (Cashfree, PayPal, Stripe all bounce the user back here with
+    // ?payment_order_id=...&provider=...; Razorpay never leaves the page.)
+    function handlePaymentReturn() {
+        const params = new URLSearchParams(window.location.search);
+        const orderId = params.get('payment_order_id');
+        const provider = params.get('provider');
+        if (!orderId) return;
+
+        // Strip the params from the URL so a refresh doesn't re-trigger this.
+        params.delete('payment_order_id');
+        params.delete('provider');
+        params.delete('session_id');
+        const cleanQuery = params.toString();
+        window.history.replaceState({}, '', window.location.pathname + (cleanQuery ? `?${cleanQuery}` : '') + '#tab-plan');
+
+        document.querySelector('.nav-item[data-tab="plan"]')?.click();
+        payModal.classList.add('active');
+        payModalTierName.textContent = 'your plan';
+        payModalPrice.textContent = '';
+        payProviderList.querySelectorAll('.pay-provider-btn').forEach(b => b.disabled = true);
+        finishCheckout(orderId, `Confirming your ${provider || ''} payment…`);
+    }
+
     // ── Init ──
     loadProfile();
     loadApiKeys();
     loadModuleAccess();
     loadUsageStats();
+    handlePaymentReturn();
 
 })();
 </script>
