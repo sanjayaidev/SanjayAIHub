@@ -106,11 +106,21 @@ const MODULES = {
     'text-to-speech': '/tts.html',
     'text-to-music': '/ttmusic.html',
     'voice-clone': '/voiceclone.html',
-   'coding-agent': '/agent.html' //'design-studio', 'chatbot-maker', 'mcp-integrator': not built yet
+   'coding-agent': '/agent' //'design-studio', 'chatbot-maker', 'mcp-integrator': not built yet
   },
 
   // Navigate to module page
   navigateToModule(moduleKey) {
+    // The coding agent is a separate mounted app (see server.js) and
+    // needs the user's JWT passed as a one-time ?token= param so its
+    // session middleware can link the GitHub OAuth flow back to this
+    // account (see server.js's /agent middleware). Every other module
+    // is a plain static page and doesn't need this.
+    if (moduleKey === 'coding-agent') {
+      this.launchCodingAgent();
+      return;
+    }
+
     const page = this.pages[moduleKey];
     if (page) {
       window.location.href = page;
@@ -118,6 +128,17 @@ const MODULES = {
       const moduleName = this.definitions[moduleKey]?.name || moduleKey;
       alert(`${moduleName} is coming soon.`);
     }
+  },
+
+  // Navigate to the coding agent, carrying the JWT as a one-time query
+  // param so server.js can stash mainUserId in the session before the
+  // token is stripped from the URL.
+  launchCodingAgent() {
+    const basePage = this.pages['coding-agent'] || '/agent';
+    const token = AUTH.getToken();
+    window.location.href = token
+      ? `${basePage}?token=${encodeURIComponent(token)}`
+      : basePage;
   },
   
   // Show login required modal

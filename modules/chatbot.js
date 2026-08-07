@@ -195,6 +195,20 @@ async function chatbotHandler(requestBody, apiKeys, userId, userTier) {
   let resolvedThreadId = threadId;
   if (userId) {
     try {
+      // Never trust a client-supplied threadId blindly: it may be stale
+      // (thread deleted since the page loaded), belong to another user,
+      // or reference a row that never existed (e.g. after a DB reset).
+      // Using it as-is would violate chat_messages_thread_id_fkey.
+      if (resolvedThreadId) {
+        const existing = await pool.query(
+          `SELECT id FROM chat_threads WHERE id = $1 AND user_id = $2`,
+          [resolvedThreadId, userId]
+        );
+        if (existing.rows.length === 0) {
+          resolvedThreadId = null;
+        }
+      }
+
       if (!resolvedThreadId) {
         const threadResult = await pool.query(
           `INSERT INTO chat_threads (user_id, title, model)

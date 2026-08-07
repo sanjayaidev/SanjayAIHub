@@ -767,7 +767,13 @@ router.get('/voice-clone/voices', authenticateToken, async (req, res) => {
         workspace_id: result.rows[0].workspace_id
       }
     };
-    const data = await listVoicesHandler(apiKeys);
+    // Voice cloning only supports Alibaba here (see comment above) — the
+    // apiKeys object above only ever contains an 'alibaba' entry, but
+    // listVoicesHandler defaults its provider param to 'elevenlabs' when
+    // none is passed, so every call fell into the ElevenLabs branch and
+    // failed with "ElevenLabs API key not configured" even when a valid
+    // Alibaba key was on file. Pass the provider explicitly.
+    const data = await listVoicesHandler(apiKeys, 'alibaba');
 
     res.json({ success: true, ...data });
   } catch (error) {
