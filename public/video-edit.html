@@ -429,18 +429,18 @@
     const timer = setInterval(() => { els.timecode.textContent = fmtElapsed(Date.now() - start) + " — RENDERING"; }, 1000);
 
     try {
-      const res = await fetch("/api/generate/video-to-video", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const res = await fetch("/api/modules/video-to-video", {
+        method: "POST", headers: { "Content-Type": "application/json", ...AUTH.getAuthHeader() },
         body: JSON.stringify({
           prompt, video_url: videoUrl, model: els.model.value,
           ...paramsPanel.getValues(),
         }),
       });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.message || data.error || "Submission failed.");
+      if (!res.ok || !data.success) throw new Error(data.message || data.error || "Submission failed.");
       if (myToken !== genToken) return;
       setProgress(30); els.statusText.textContent = "processing…";
-      pollStatus(data.request_id, myToken, start, timer);
+      pollStatus(data.data.requestId, myToken, start, timer);
     } catch (err) {
       if (myToken !== genToken) return;
       setTally("err"); els.statusDot.className = "dot err"; els.statusText.textContent = "failed";
@@ -453,9 +453,14 @@
   async function pollStatus(requestId, myToken, start, timer){
     if (myToken !== genToken) { clearInterval(timer); return; }
     try {
-      const res = await fetch(`/api/status/${requestId}`);
+      const res = await fetch(`/api/modules/video-to-video/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...AUTH.getAuthHeader() },
+        body: JSON.stringify({ requestId }),
+      });
       const data = await res.json();
       if (myToken !== genToken) { clearInterval(timer); return; }
+      if (!res.ok || !data.success) throw new Error(data.message || "Status check failed.");
       if (data.status === "QUEUED" || data.status === "PROCESSING") {
         setProgress(data.status === "QUEUED" ? 40 : 65);
         els.statusText.textContent = data.status.toLowerCase() + "…";
@@ -465,7 +470,7 @@
         setProgress(100); setTally("done"); els.statusDot.className = "dot done";
         els.statusText.textContent = "complete"; clearInterval(timer);
         els.timecode.textContent = fmtElapsed(Date.now() - start) + " — COMPLETE";
-        const url = data.output && data.output.media_url && data.output.media_url[0];
+        const url = data.videoUrl;
         if (url) {
           els.outputArea.innerHTML = `<video src="${url}" controls autoplay loop muted playsinline></video>`;
           els.downloadLink.href = url; els.openLink.href = url;
@@ -473,7 +478,7 @@
         } else { showError("No media URL returned."); }
         els.genBtn.disabled = false; els.genBtn.textContent = "🎬 Transform Video";
       } else {
-        throw new Error(data.error || "Generation failed.");
+        throw new Error("Generation failed.");
       }
     } catch (err) {
       if (myToken !== genToken) { clearInterval(timer); return; }
