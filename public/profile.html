@@ -926,6 +926,26 @@
                 <div class="tab-title">API Keys</div>
                 <div class="tab-subtitle">Configure your AI provider API keys. Keys are encrypted and stored securely.</div>
 
+                <!-- Pixazo Free Trial (trial-tier users only; hidden otherwise) -->
+                <div class="card" id="pixazoTrialCard" style="display:none;">
+                    <div class="card-header">
+                        <span class="card-title"><i class="fas fa-gift"></i> Pixazo Free Trial</span>
+                        <span class="api-status">
+                            <span class="dot" id="pixazoTrialDot"></span> <span id="pixazoTrialStatusText">Loading…</span>
+                        </span>
+                    </div>
+                    <div style="padding:4px 0 12px;">
+                        <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--text-secondary,#888); margin-bottom:6px;">
+                            <span id="pixazoTrialUsedLabel">0 / 20 generations used</span>
+                            <span id="pixazoTrialExpiryLabel"></span>
+                        </div>
+                        <div style="height:8px; border-radius:4px; background:rgba(255,255,255,0.08); overflow:hidden;">
+                            <div id="pixazoTrialBar" style="height:100%; width:0%; background:linear-gradient(90deg,#7c3aed,#a855f7); transition:width .3s;"></div>
+                        </div>
+                        <div class="form-hint" style="margin-top:10px;"><i class="fas fa-info-circle"></i> Free, shared access to Text to Video, Image to Video, Video to Video, Text to Music &amp; Text to Image for your first 7 days — up to 20 generations total. Add your own Pixazo key below any time to keep going after that.</div>
+                    </div>
+                </div>
+
                 <!-- Alibaba -->
                 <div class="card">
                     <div class="card-header">
@@ -1433,6 +1453,52 @@
         }
     }
 
+    // ── Pixazo Free Trial card ──
+    // Only relevant to trial-tier users, and only rendered when the server
+    // confirms the shared-trial feature is actually enabled (PIXAZO_FREE_TIER_API_KEY
+    // set) — see GET /api/modules/pixazo-trial/status in routes/modules.js.
+    async function loadPixazoTrialStatus() {
+        const card = document.getElementById('pixazoTrialCard');
+        if (!card) return;
+        try {
+            const res = await fetch('/api/modules/pixazo-trial/status', { headers: AUTH.getAuthHeader() });
+            const data = await res.json();
+            if (!res.ok || !data.success || !data.applicable || !data.configured) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = '';
+            const dot = document.getElementById('pixazoTrialDot');
+            const statusText = document.getElementById('pixazoTrialStatusText');
+            const usedLabel = document.getElementById('pixazoTrialUsedLabel');
+            const expiryLabel = document.getElementById('pixazoTrialExpiryLabel');
+            const bar = document.getElementById('pixazoTrialBar');
+
+            const used = data.used || 0;
+            const limit = data.limit || 20;
+            const pct = Math.min(100, Math.round((used / limit) * 100));
+            usedLabel.textContent = `${used} / ${limit} generations used`;
+            bar.style.width = pct + '%';
+
+            if (data.active) {
+                dot.className = 'dot configured';
+                statusText.textContent = 'Active';
+                if (data.expiresAt) {
+                    const daysLeft = Math.max(0, Math.ceil((new Date(data.expiresAt) - new Date()) / 86400000));
+                    expiryLabel.textContent = daysLeft > 0 ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left` : 'Expires today';
+                }
+            } else {
+                dot.className = 'dot missing';
+                statusText.textContent = data.expired ? 'Expired' : 'Limit reached';
+                expiryLabel.textContent = data.expired ? 'Trial window ended' : 'All free generations used';
+            }
+        } catch (error) {
+            console.error('Load Pixazo trial status error:', error);
+            card.style.display = 'none';
+        }
+    }
+
     window.saveApiKey = async function(provider) {
         const config = PROVIDER_FIELD_MAP[provider];
         const data = { provider };
@@ -1818,6 +1884,7 @@
     // ── Init ──
     loadProfile();
     loadApiKeys();
+    loadPixazoTrialStatus();
     loadModuleAccess();
     loadUsageStats();
     handlePaymentReturn();

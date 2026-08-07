@@ -3,11 +3,24 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
+const pixazoTrial = require('../config/pixazo-trial');
 require('dotenv').config();
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRY = '7d';
+
+// Attaches the shared-Pixazo-trial feature flag + limit to a user object
+// returned to the client, so the frontend can gate module cards / render
+// trial status without a separate round trip. The live used_count always
+// comes straight from the users table column selected in each query below.
+function withPixazoTrialInfo(user) {
+  return {
+    ...user,
+    pixazo_trial_enabled: pixazoTrial.ENABLED,
+    pixazo_trial_limit: pixazoTrial.LIMIT,
+  };
+}
 
 // ──────────────────────────────────────────────
 // REGISTER
@@ -66,7 +79,7 @@ router.post('/register', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO users (full_name, username, email, password_hash, role, subscription_tier)
        VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, email, username, full_name, role, subscription_tier, trial_ends_at, created_at`,
+       RETURNING id, email, username, full_name, role, subscription_tier, trial_ends_at, created_at, pixazo_trial_used_count`,
       [full_name, username, email, passwordHash, 'user', 'trial']
     );
 
@@ -128,7 +141,7 @@ router.post('/register', async (req, res) => {
       success: true,
       message: 'Account created successfully',
       token,
-      user: userWithoutPassword
+      user: withPixazoTrialInfo(userWithoutPassword)
     });
 
   } catch (error) {
@@ -157,7 +170,8 @@ router.post('/login', async (req, res) => {
     // Find user by email OR username
     const result = await pool.query(
       `SELECT id, email, username, full_name, password_hash, role, 
-              subscription_tier, trial_ends_at, is_active, created_at
+              subscription_tier, trial_ends_at, is_active, created_at,
+              pixazo_trial_used_count
        FROM users
        WHERE email = $1 OR username = $1`,
       [identifier]
@@ -215,7 +229,7 @@ router.post('/login', async (req, res) => {
       success: true,
       message: 'Login successful',
       token,
-      user: userWithoutPassword
+      user: withPixazoTrialInfo(userWithoutPassword)
     });
 
   } catch (error) {
@@ -235,7 +249,7 @@ router.get('/verify', authenticateToken, async (req, res) => {
     // Get fresh user data from DB
     const result = await pool.query(
       `SELECT id, email, username, full_name, role, subscription_tier, 
-              trial_ends_at, is_active, created_at
+              trial_ends_at, is_active, created_at, pixazo_trial_used_count
        FROM users
        WHERE id = $1`,
       [req.user.id]
@@ -259,7 +273,7 @@ router.get('/verify', authenticateToken, async (req, res) => {
 
     res.json({
       success: true,
-      user: user
+      user: withPixazoTrialInfo(user)
     });
 
   } catch (error) {
@@ -278,7 +292,8 @@ router.get('/me', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, email, username, full_name, role, subscription_tier, 
-              trial_ends_at, is_active, created_at, last_login_at
+              trial_ends_at, is_active, created_at, last_login_at,
+              pixazo_trial_used_count
        FROM users
        WHERE id = $1`,
       [req.user.id]
@@ -293,7 +308,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 
     res.json({
       success: true,
-      user: result.rows[0]
+      user: withPixazoTrialInfo(result.rows[0])
     });
 
   } catch (error) {
@@ -452,9 +467,11 @@ router.put('/me', authenticateToken, async (req, res) => {
            password_hash = COALESCE($4, password_hash),
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $5
-       RETURNING id, email, username, full_name, role, subscription_tier, trial_ends_at, created_at, last_login_at`,
+       RETURNING id, email, username, full_name, role, subscription_tier, trial_ends_at, created_at, last_login_at, pixazo_trial_used_count`,
       [full_name, username, email, passwordHash, req.user.id]
     );
+
+    result.rows[0] = withPixazoTrialInfo(result.rows[0]);
 
     res.json({
       success: true,

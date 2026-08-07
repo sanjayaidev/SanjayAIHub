@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
+const pixazoTrial = require('../config/pixazo-trial');
 
 // Import module handlers
 const { chatbotHandler, getModelCatalog: getChatModelCatalog } = require('../modules/chatbot');
@@ -24,6 +25,41 @@ const { voiceCloneHandler, synthesizeHandler: voiceSynthesizeHandler, listVoices
 // disable this entirely — the app behaves exactly as before.
 const TEMP_NVIDIA_API_KEY = process.env.NVIDIA_FREE_TIER_API_KEY || '';
 const TEMPORARY_KEY_MODULES = new Set(['chatbot', 'message-writer', 'social-content']);
+
+// ── Temporary shared key (Pixazo trial for trial-tier users) ──
+// Optional shared PIXAZO_FREE_TIER_API_KEY (config/pixazo-trial.js) lets
+// brand-new trial accounts reach the Pixazo-powered generation modules —
+// including ones normally gated to pro/enterprise tiers (video, music) —
+// for a short window without adding their own key. Two independent caps
+// apply: a 7-day window from signup (users.trial_ends_at, already set at
+// registration) AND a hard total-generation ceiling shared across every
+// module in the set below (users.pixazo_trial_used_count vs
+// pixazoTrial.LIMIT) — whichever is hit first ends the trial. Leave
+// PIXAZO_FREE_TIER_API_KEY unset in .env to disable this entirely.
+const PIXAZO_TRIAL_MODULES = new Set(pixazoTrial.MODULES);
+
+// Look up a user's current standing against the shared Pixazo trial.
+// Always queries fresh (no caching) since it gates spend.
+async function getPixazoTrialStatus(userId) {
+  const result = await pool.query(
+    `SELECT trial_ends_at, pixazo_trial_used_count FROM users WHERE id = $1`,
+    [userId]
+  );
+  const row = result.rows[0] || {};
+  const used = row.pixazo_trial_used_count || 0;
+  const expiresAt = row.trial_ends_at || null;
+  const expired = !expiresAt || new Date(expiresAt) <= new Date();
+  const remaining = Math.max(0, pixazoTrial.LIMIT - used);
+  return {
+    configured: pixazoTrial.ENABLED,
+    active: pixazoTrial.ENABLED && !expired && remaining > 0,
+    expired,
+    used,
+    limit: pixazoTrial.LIMIT,
+    remaining,
+    expiresAt
+  };
+}
 
 // ──────────────────────────────────────────────
 // GET /api/modules - List all modules with access
@@ -66,9 +102,18 @@ router.get('/', authenticateToken, async (req, res) => {
       hasOwnNvidiaKey = nvidiaKeyResult.rows.length > 0;
     }
 
+    // Shared Pixazo trial status — only meaningful for trial-tier users and
+    // only queried once per list call. Also returned at the top level so
+    // the frontend (module cards + Profile > API Keys) can render the
+    // countdown/quota without a second request.
+    let pixazoTrialStatus = null;
+    if (pixazoTrial.ENABLED && userTierLevel === 0) {
+      pixazoTrialStatus = await getPixazoTrialStatus(req.user.id);
+    }
+
     const modules = result.rows.map(mod => {
       const requiredLevel = tierOrder[mod.required_tier] || 0;
-      const hasAccessByTier = userTierLevel >= requiredLevel;
+      let hasAccessByTier = userTierLevel >= requiredLevel;
 
       // Free/trial users without their own NVIDIA key can borrow the app's
       // shared key for a limited number of messages on text modules — see
@@ -77,6 +122,15 @@ router.get('/', authenticateToken, async (req, res) => {
         && !!TEMP_NVIDIA_API_KEY
         && userTierLevel === 0
         && !hasOwnNvidiaKey;
+
+      // Trial-tier users can unlock Pixazo-capable modules (including the
+      // pro/enterprise-gated ones) early via the shared Pixazo trial key —
+      // see PIXAZO_TRIAL_MODULES / getPixazoTrialStatus above.
+      const supportsPixazoTrial = PIXAZO_TRIAL_MODULES.has(mod.module_key)
+        && !!pixazoTrialStatus;
+      if (supportsPixazoTrial && pixazoTrialStatus.active) {
+        hasAccessByTier = true;
+      }
 
       if (mod.is_allowed === null) {
         const isFree = mod.module_key === 'chatbot' || mod.module_key === 'prompt-library';
@@ -88,7 +142,8 @@ router.get('/', authenticateToken, async (req, res) => {
           used_count: 0,
           remaining: allowed ? (mod.required_tier === 'trial' ? 5 : 50) : 0,
           requires_api_key: mod.module_key !== 'prompt-library',
-          supports_temporary_key: supportsTemporaryKey
+          supports_temporary_key: supportsTemporaryKey,
+          supports_pixazo_trial: supportsPixazoTrial
         };
       }
 
@@ -96,11 +151,12 @@ router.get('/', authenticateToken, async (req, res) => {
         ...mod,
         is_allowed: mod.is_allowed && hasAccessByTier,
         requires_api_key: mod.module_key !== 'prompt-library',
-        supports_temporary_key: supportsTemporaryKey
+        supports_temporary_key: supportsTemporaryKey,
+        supports_pixazo_trial: supportsPixazoTrial
       };
     });
 
-    res.json({ success: true, modules });
+    res.json({ success: true, modules, pixazoTrial: pixazoTrialStatus });
 
   } catch (error) {
     console.error('List modules error:', error);
@@ -230,6 +286,29 @@ router.get('/usage/summary', authenticateToken, async (req, res) => {
 });
 
 // ──────────────────────────────────────────────
+// GET /api/modules/pixazo-trial/status - Shared Pixazo trial usage
+// (Profile > API Keys reads this to render the trial card)
+// ──────────────────────────────────────────────
+router.get('/pixazo-trial/status', authenticateToken, async (req, res) => {
+  try {
+    const userTier = req.user.subscription_tier || 'trial';
+    if (userTier !== 'trial') {
+      return res.json({ success: true, applicable: false });
+    }
+    const status = await getPixazoTrialStatus(req.user.id);
+    res.json({
+      success: true,
+      applicable: true,
+      modules: Array.from(PIXAZO_TRIAL_MODULES),
+      ...status
+    });
+  } catch (error) {
+    console.error('Pixazo trial status error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ──────────────────────────────────────────────
 // POST /api/modules/:moduleKey - Execute module
 // ──────────────────────────────────────────────
 router.post('/:moduleKey', authenticateToken, async (req, res) => {
@@ -267,7 +346,22 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
     const requiredLevel = tierOrder[module.required_tier] || 0;
 
     const isFree = moduleKey === 'chatbot' || moduleKey === 'prompt-library';
-    const hasAccess = isFree || (userTierLevel >= requiredLevel && module.is_allowed);
+    let hasAccess = isFree || (userTierLevel >= requiredLevel && module.is_allowed);
+
+    // ── Pixazo trial override ──
+    // Trial-tier users are normally blocked outright from pro/enterprise
+    // gated Pixazo modules (text-to-video, image-to-video, video-to-video,
+    // text-to-music) by the tier check above. If a shared trial key is
+    // configured and this user's 7-day/20-generation window is still open,
+    // let them through — the actual key gets injected further down once we
+    // know they don't already have their own provider key configured.
+    let pixazoTrialStatus = null;
+    if (!hasAccess && PIXAZO_TRIAL_MODULES.has(moduleKey) && userTierLevel === 0 && pixazoTrial.ENABLED) {
+      pixazoTrialStatus = await getPixazoTrialStatus(userId);
+      if (pixazoTrialStatus.active) {
+        hasAccess = true;
+      }
+    }
 
     if (!hasAccess) {
       return res.status(403).json({
@@ -365,6 +459,32 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
         }
       }
 
+      // ── Temporary shared Pixazo trial key ──
+      // Trial-tier users get a 7-day / 20-generation window (shared across
+      // all Pixazo-capable modules, see PIXAZO_TRIAL_MODULES above) where
+      // the app's shared PIXAZO_FREE_TIER_API_KEY stands in for their own
+      // Pixazo key. Only kicks in if the user has no other usable provider
+      // key for this module yet (so it's never spent unnecessarily), and
+      // only while the window/quota is still open.
+      if (PIXAZO_TRIAL_MODULES.has(moduleKey)
+          && requiredProviders.includes('pixazo')
+          && !requiredProviders.some(p => apiKeys[p])
+          && userTierLevel === 0
+          && pixazoTrial.ENABLED) {
+        if (!pixazoTrialStatus) pixazoTrialStatus = await getPixazoTrialStatus(userId);
+        if (pixazoTrialStatus.active) {
+          apiKeys.pixazo = { api_key: pixazoTrial.API_KEY, temporary: true, trial: true };
+        } else {
+          return res.status(403).json({
+            success: false,
+            message: pixazoTrialStatus.expired
+              ? `Your free Pixazo trial has expired. Add your own Pixazo API key in Profile > API Keys to keep using this module.`
+              : `You've used all ${pixazoTrialStatus.limit} free Pixazo trial generations. Add your own Pixazo API key in Profile > API Keys to keep using this module.`,
+            pixazoTrial: pixazoTrialStatus
+          });
+        }
+      }
+
       // Chatbot resolves its own required provider by tier inside the
       // handler, so it gives a precise "add your X key" error itself
       // instead of a generic missing-key 400 here.
@@ -441,6 +561,9 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
     if (apiKeys.nvidia?.temporary && result && typeof result === 'object') {
       result.usedTemporaryKey = true;
     }
+    if (apiKeys.pixazo?.temporary && result && typeof result === 'object') {
+      result.usedPixazoTrial = true;
+    }
 
     if (moduleKey !== 'prompt-library') {
       await pool.query(
@@ -450,6 +573,28 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
          WHERE user_id = $1 AND module_id = $2`,
         [userId, module.id]
       );
+    }
+
+    let updatedPixazoTrialStatus = null;
+    if (apiKeys.pixazo?.temporary) {
+      const inc = await pool.query(
+        `UPDATE users SET pixazo_trial_used_count = pixazo_trial_used_count + 1
+         WHERE id = $1
+         RETURNING trial_ends_at, pixazo_trial_used_count`,
+        [userId]
+      );
+      const row = inc.rows[0];
+      const used = row.pixazo_trial_used_count || 0;
+      const expired = !row.trial_ends_at || new Date(row.trial_ends_at) <= new Date();
+      updatedPixazoTrialStatus = {
+        configured: true,
+        active: !expired && used < pixazoTrial.LIMIT,
+        expired,
+        used,
+        limit: pixazoTrial.LIMIT,
+        remaining: Math.max(0, pixazoTrial.LIMIT - used),
+        expiresAt: row.trial_ends_at
+      };
     }
 
     await pool.query(
@@ -462,7 +607,8 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       data: result,
-      remaining: module.usage_limit > 0 ? (module.usage_limit - module.used_count - 1) : null
+      remaining: module.usage_limit > 0 ? (module.usage_limit - module.used_count - 1) : null,
+      pixazoTrial: updatedPixazoTrialStatus
     });
 
   } catch (error) {
@@ -627,11 +773,26 @@ router.post('/prompt-library/:promptId/view', async (req, res) => {
   }
 });
 
+// If a user has no personal Pixazo key configured but is a trial-tier user
+// still within an active shared-trial window, fall back to the trial key so
+// status polling doesn't dead-end for generations submitted with it. Purely
+// additive — never overrides an existing personal key, and never spends
+// quota (polling doesn't count as a new generation).
+async function withPixazoTrialFallback(apiKeys, userId, userTierLevel) {
+  if (apiKeys.pixazo?.api_key || userTierLevel !== 0 || !pixazoTrial.ENABLED) return apiKeys;
+  const status = await getPixazoTrialStatus(userId);
+  if (status.configured && !status.expired) {
+    apiKeys.pixazo = { api_key: pixazoTrial.API_KEY, temporary: true, trial: true };
+  }
+  return apiKeys;
+}
+
 // ──────────────────────────────────────────────
 // POST /api/modules/image-to-video/status - Check image-to-video status
 // ──────────────────────────────────────────────
 router.post('/image-to-video/status', authenticateToken, async (req, res) => {
   const { requestId, provider = 'pixazo' } = req.body;
+  const userTierLevel = ({ trial: 0, basic: 1, pro: 2, enterprise: 3 })[req.user.subscription_tier || 'trial'] || 0;
   
   if (!requestId) {
     return res.status(400).json({ success: false, message: 'Request ID is required' });
@@ -639,23 +800,24 @@ router.post('/image-to-video/status', authenticateToken, async (req, res) => {
   
   try {
     // Get user's API keys
-    const result = await pool.query(
+    let result = await pool.query(
       `SELECT provider, api_key, workspace_id FROM user_api_keys 
        WHERE user_id = $1 AND provider IN ('pixazo', 'alibaba') AND is_active = true`,
       [req.user.id]
     );
     
-    if (result.rows.length === 0) {
-      return res.status(400).json({ success: false, message: 'API key not configured' });
-    }
-    
-    const apiKeys = {};
+    let apiKeys = {};
     result.rows.forEach(row => {
       apiKeys[row.provider] = { 
         api_key: row.api_key,
         workspace_id: row.workspace_id
       };
     });
+    apiKeys = await withPixazoTrialFallback(apiKeys, req.user.id, userTierLevel);
+
+    if (!apiKeys.pixazo && !apiKeys.alibaba) {
+      return res.status(400).json({ success: false, message: 'API key not configured' });
+    }
     
     const statusResult = await checkI2VStatus(requestId, apiKeys, provider);
     
@@ -671,29 +833,31 @@ router.post('/image-to-video/status', authenticateToken, async (req, res) => {
 // ──────────────────────────────────────────────
 router.post('/video-to-video/status', authenticateToken, async (req, res) => {
   const { requestId, provider = 'pixazo' } = req.body;
+  const userTierLevel = ({ trial: 0, basic: 1, pro: 2, enterprise: 3 })[req.user.subscription_tier || 'trial'] || 0;
 
   if (!requestId) {
     return res.status(400).json({ success: false, message: 'Request ID is required' });
   }
 
   try {
-    const result = await pool.query(
+    let result = await pool.query(
       `SELECT provider, api_key, workspace_id FROM user_api_keys 
        WHERE user_id = $1 AND provider IN ('pixazo', 'alibaba') AND is_active = true`,
       [req.user.id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(400).json({ success: false, message: 'API key not configured' });
-    }
-
-    const apiKeys = {};
+    let apiKeys = {};
     result.rows.forEach(row => {
       apiKeys[row.provider] = { 
         api_key: row.api_key,
         workspace_id: row.workspace_id
       };
     });
+    apiKeys = await withPixazoTrialFallback(apiKeys, req.user.id, userTierLevel);
+
+    if (!apiKeys.pixazo && !apiKeys.alibaba) {
+      return res.status(400).json({ success: false, message: 'API key not configured' });
+    }
     
     const statusResult = await checkV2VStatus(requestId, apiKeys, provider);
 
@@ -709,29 +873,31 @@ router.post('/video-to-video/status', authenticateToken, async (req, res) => {
 // ──────────────────────────────────────────────
 router.post('/text-to-video/status', authenticateToken, async (req, res) => {
   const { requestId, provider = 'pixazo' } = req.body;
+  const userTierLevel = ({ trial: 0, basic: 1, pro: 2, enterprise: 3 })[req.user.subscription_tier || 'trial'] || 0;
 
   if (!requestId) {
     return res.status(400).json({ success: false, message: 'Request ID is required' });
   }
 
   try {
-    const result = await pool.query(
+    let result = await pool.query(
       `SELECT provider, api_key, workspace_id FROM user_api_keys 
        WHERE user_id = $1 AND provider IN ('pixazo', 'alibaba') AND is_active = true`,
       [req.user.id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(400).json({ success: false, message: 'API key not configured' });
-    }
-
-    const apiKeys = {};
+    let apiKeys = {};
     result.rows.forEach(row => {
       apiKeys[row.provider] = { 
         api_key: row.api_key,
         workspace_id: row.workspace_id
       };
     });
+    apiKeys = await withPixazoTrialFallback(apiKeys, req.user.id, userTierLevel);
+
+    if (!apiKeys.pixazo && !apiKeys.alibaba) {
+      return res.status(400).json({ success: false, message: 'API key not configured' });
+    }
     
     const statusResult = await checkT2VStatus(requestId, apiKeys, provider);
 
@@ -787,6 +953,7 @@ router.get('/voice-clone/voices', authenticateToken, async (req, res) => {
 // ──────────────────────────────────────────────
 router.post('/text-to-music/status', authenticateToken, async (req, res) => {
   const { requestId } = req.body;
+  const userTierLevel = ({ trial: 0, basic: 1, pro: 2, enterprise: 3 })[req.user.subscription_tier || 'trial'] || 0;
   
   if (!requestId) {
     return res.status(400).json({ success: false, message: 'Request ID is required' });
@@ -800,11 +967,16 @@ router.post('/text-to-music/status', authenticateToken, async (req, res) => {
       [req.user.id]
     );
     
-    if (result.rows.length === 0) {
+    let apiKeys = {};
+    if (result.rows.length > 0) {
+      apiKeys.pixazo = { api_key: result.rows[0].api_key };
+    }
+    apiKeys = await withPixazoTrialFallback(apiKeys, req.user.id, userTierLevel);
+
+    if (!apiKeys.pixazo) {
       return res.status(400).json({ success: false, message: 'Pixazo API key not configured' });
     }
     
-    const apiKeys = { pixazo: { api_key: result.rows[0].api_key } };
     const statusResult = await checkAudioStatus(requestId, apiKeys);
     
     res.json({ success: true, ...statusResult });

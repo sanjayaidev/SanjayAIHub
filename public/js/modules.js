@@ -11,14 +11,14 @@ const MODULES = {
     'social-content': { tier: 'trial', icon: '✍️', name: 'Social Content & Resume', free: false },
     'message-writer': { tier: 'trial', icon: '🌍', name: 'Wish with Multilanguage', free: false },
     'prompt-library': { tier: 'trial', icon: '📚', name: 'Prompt Library', free: true },
-    'text-to-image': { tier: 'trial', icon: '🖼️', name: 'Text to Image', free: false },
+    'text-to-image': { tier: 'trial', icon: '🖼️', name: 'Text to Image', free: false, pixazoTrial: true },
     'image-edit': { tier: 'basic', icon: '🎨', name: 'Image to Image', free: false },
     'voice-clone': { tier: 'basic', icon: '🗣️', name: 'Voice Cloning', free: false },
-    'text-to-video': { tier: 'pro', icon: '🎬', name: 'Text to Video', free: false },
-    'image-to-video': { tier: 'pro', icon: '📹', name: 'Image to Video', free: false },
-    'video-to-video': { tier: 'enterprise', icon: '🎞️', name: 'Video to Video', free: false },
+    'text-to-video': { tier: 'pro', icon: '🎬', name: 'Text to Video', free: false, pixazoTrial: true },
+    'image-to-video': { tier: 'pro', icon: '📹', name: 'Image to Video', free: false, pixazoTrial: true },
+    'video-to-video': { tier: 'enterprise', icon: '🎞️', name: 'Video to Video', free: false, pixazoTrial: true },
     'text-to-speech': { tier: 'trial', icon: '🔊', name: 'Text to Audio (TTS)', free: false },
-    'text-to-music': { tier: 'pro', icon: '🎵', name: 'Text to Song', free: false },
+    'text-to-music': { tier: 'pro', icon: '🎵', name: 'Text to Song', free: false, pixazoTrial: true },
     'design-studio': { tier: 'pro', icon: '🎯', name: 'Design Studio', free: false },
     'chatbot-maker': { tier: 'enterprise', icon: '🤖', name: 'Chatbot Maker', free: false },
     'mcp-integrator': { tier: 'enterprise', icon: '🔌', name: 'MCP & Extension Integrator', free: false }
@@ -31,6 +31,21 @@ const MODULES = {
   getUserTier() {
     const user = AUTH.getUser();
     return user?.subscription_tier || 'trial';
+  },
+
+  // Whether the shared Pixazo trial window is still open for this user —
+  // mirrors the server-side check in routes/modules.js's
+  // getPixazoTrialStatus(), using the fields the backend now attaches to
+  // the user object on login/register/verify/me (pixazo_trial_enabled,
+  // pixazo_trial_limit, pixazo_trial_used_count, trial_ends_at).
+  pixazoTrialActive() {
+    const user = AUTH.getUser();
+    if (!user || !user.pixazo_trial_enabled) return false;
+    const used = user.pixazo_trial_used_count || 0;
+    const limit = user.pixazo_trial_limit ?? 20;
+    if (used >= limit) return false;
+    if (!user.trial_ends_at) return false;
+    return new Date(user.trial_ends_at) > new Date();
   },
   
   // Check if user has access to a module
@@ -49,8 +64,15 @@ const MODULES = {
     // Check tier
     const userLevel = this.tierLevels[userTier] || 0;
     const requiredLevel = this.tierLevels[module.tier] || 0;
-    
-    return userLevel >= requiredLevel;
+
+    if (userLevel >= requiredLevel) return true;
+
+    // Trial-tier users can unlock Pixazo-powered modules early using the
+    // app's shared trial key (7 days from signup, 20 generations total
+    // across all Pixazo modules) — see routes/modules.js.
+    if (module.pixazoTrial && userTier === 'trial' && this.pixazoTrialActive()) return true;
+
+    return false;
   },
   
   // Get all modules with access status
