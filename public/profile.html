@@ -180,6 +180,74 @@
         .profile-plan.pro { background: rgba(167,139,250,0.12); color: #a78bfa; border: 1px solid rgba(167,139,250,0.2); }
         .profile-plan.enterprise { background: rgba(0,232,162,0.12); color: #00e8a2; border: 1px solid rgba(0,232,162,0.2); }
 
+        .guest-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: rgba(136,150,176,0.08);
+            border: 1px solid rgba(136,150,176,0.18);
+            color: #b8c2d6;
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 18px;
+        }
+        .guest-note i { color: #8896b0; margin-top: 2px; }
+        .guest-note strong { color: #e6e9f2; }
+
+        .plan-price-alt {
+            font-size: 13px;
+            color: #8896b0;
+            margin-top: -4px;
+            margin-bottom: 10px;
+        }
+
+        /* ── Currency Toggle ── */
+        .currency-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .currency-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #8896b0;
+            transition: color .2s;
+        }
+        .currency-label.active { color: #e6e9f2; }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 42px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .switch .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: rgba(77,142,255,0.25);
+            border: 1px solid rgba(77,142,255,0.35);
+            border-radius: 24px;
+            transition: background .2s;
+        }
+        .switch .slider::before {
+            content: "";
+            position: absolute;
+            height: 18px;
+            width: 18px;
+            left: 2px;
+            top: 2px;
+            background: #4d8eff;
+            border-radius: 50%;
+            transition: transform .2s;
+        }
+        .switch input:checked + .slider::before { transform: translateX(18px); }
+
         .nav-item {
             display: flex;
             align-items: center;
@@ -904,42 +972,64 @@
                 <div class="tab-title">Subscription Plan</div>
                 <div class="tab-subtitle">Upgrade to unlock more modules and higher usage limits</div>
 
+                <div class="guest-note">
+                    <i class="fas fa-circle-info"></i>
+                    <div>
+                        <strong>Guest</strong> (no sign-up required) &mdash; Chatbot &amp; Prompt Library only.
+                        Create a free account to start your Trial and unlock more.
+                    </div>
+                </div>
+
+                <div class="currency-toggle" id="currencyToggle">
+                    <span class="currency-label active" data-currency="inr">&#8377; INR</span>
+                    <label class="switch">
+                        <input type="checkbox" id="currencySwitch" aria-label="Toggle currency between INR and USD">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="currency-label" data-currency="usd">$ USD</span>
+                </div>
+
                 <div class="plan-grid" id="planGrid">
                     <div class="plan-card" data-tier="trial">
                         <div class="plan-name">Trial</div>
-                        <div class="plan-price">$0 <small>/month</small></div>
+                        <div class="plan-price">Free</div>
                         <div class="plan-features">
-                            <i class="fas fa-check"></i> 5 modules<br />
-                            <i class="fas fa-check"></i> 5 uses per module<br />
-                            <i class="fas fa-check"></i> Basic chat (NVIDIA text models)<br />
-                            <i class="fas fa-times" style="color:#ff6b6b;"></i> Image/Video generation
+                            <i class="fas fa-check"></i> Everything in Guest<br />
+                            <i class="fas fa-check"></i> Limited Text to Image<br />
+                            <i class="fas fa-check"></i> Access to NVIDIA-based text tools<br />
+                            <i class="fas fa-times" style="color:#ff6b6b;"></i> Video / voice generation
                         </div>
                         <span class="current-badge" style="display:none;">Current Plan</span>
                     </div>
 
                     <div class="plan-card" data-tier="basic">
                         <div class="plan-name">Basic</div>
-                        <div class="plan-price">$9 <small>/month</small></div>
+                        <div class="plan-price">
+                            <span class="price-inr">&#8377;500</span><span class="price-usd" style="display:none;">$55</span> <small>/mo</small>
+                        </div>
                         <div class="plan-features">
-                            <i class="fas fa-check"></i> 10 modules<br />
-                            <i class="fas fa-check"></i> 50 uses per module<br />
-                            <i class="fas fa-check"></i> Chat + vision (Alibaba)<br />
-                            <i class="fas fa-check"></i> Image generation<br />
-                            <i class="fas fa-check"></i> Voice cloning
+                            <i class="fas fa-check"></i> Everything in Trial<br />
+                            <i class="fas fa-check"></i> Text to Image<br />
+                            <i class="fas fa-check"></i> Image Edit<br />
+                            <i class="fas fa-check"></i> Text to Video<br />
+                            <i class="fas fa-check"></i> Basic Text to Speech
                         </div>
                         <span class="current-badge" style="display:none;">Current Plan</span>
                         <button class="btn btn-primary btn-sm plan-upgrade-btn" style="margin-top:10px;width:100%;justify-content:center;">Upgrade</button>
                     </div>
 
                     <div class="plan-card" data-tier="pro">
-                        <div class="plan-name">Pro</div>
-                        <div class="plan-price">$29 <small>/month</small></div>
+                        <div class="plan-name">Premium</div>
+                        <div class="plan-price">
+                            <span class="price-inr">&#8377;1000</span><span class="price-usd" style="display:none;">$110</span> <small>/mo</small>
+                        </div>
                         <div class="plan-features">
-                            <i class="fas fa-check"></i> 14 modules<br />
-                            <i class="fas fa-check"></i> Unlimited uses<br />
-                            <i class="fas fa-check"></i> Video generation<br />
-                            <i class="fas fa-check"></i> Text-to-Music<br />
-                            <i class="fas fa-check"></i> Priority support
+                            <i class="fas fa-check"></i> Everything in Basic<br />
+                            <i class="fas fa-check"></i> Image to Video &amp; Video to Video<br />
+                            <i class="fas fa-check"></i> Voice Clone + TTS from Clone<br />
+                            <i class="fas fa-check"></i> Text to Music<br />
+                            <i class="fas fa-check"></i> Coding Agent<br />
+                            <i class="fas fa-check"></i> MCP (Higgsfield)
                         </div>
                         <span class="current-badge" style="display:none;">Current Plan</span>
                         <button class="btn btn-primary btn-sm plan-upgrade-btn" style="margin-top:10px;width:100%;justify-content:center;">Upgrade</button>
@@ -947,13 +1037,14 @@
 
                     <div class="plan-card" data-tier="enterprise">
                         <div class="plan-name">Enterprise</div>
-                        <div class="plan-price">$99 <small>/month</small></div>
+                        <div class="plan-price">
+                            <span class="price-inr">&#8377;1500</span><span class="price-usd" style="display:none;">$165</span> <small>/mo</small>
+                        </div>
                         <div class="plan-features">
-                            <i class="fas fa-check"></i> All 16 modules<br />
-                            <i class="fas fa-check"></i> Unlimited uses<br />
-                            <i class="fas fa-check"></i> All features<br />
-                            <i class="fas fa-check"></i> Custom integrations<br />
-                            <i class="fas fa-check"></i> 24/7 support
+                            <i class="fas fa-check"></i> Everything in Premium<br />
+                            <i class="fas fa-check"></i> All current modules<br />
+                            <i class="fas fa-check"></i> Priority access to new features<br />
+                            <i class="fas fa-check"></i> More coming soon
                         </div>
                         <span class="current-badge" style="display:none;">Current Plan</span>
                         <button class="btn btn-primary btn-sm plan-upgrade-btn" style="margin-top:10px;width:100%;justify-content:center;">Contact Sales</button>
@@ -1049,6 +1140,32 @@
 
     let currentUser = null;
 
+    // Display names for internal subscription_tier values.
+    // NOTE: "pro" is kept as the internal/DB key for backward compatibility,
+    // it is shown to users as "Premium".
+    const TIER_LABELS = { guest: 'Guest', trial: 'Trial', basic: 'Basic', pro: 'Premium', enterprise: 'Enterprise' };
+
+    // ── Currency toggle (INR / USD) for the Plan tab ──
+    (function initCurrencyToggle() {
+        const switchEl = document.getElementById('currencySwitch');
+        if (!switchEl) return;
+
+        function applyCurrency(isUsd) {
+            document.querySelectorAll('.price-inr').forEach(el => { el.style.display = isUsd ? 'none' : ''; });
+            document.querySelectorAll('.price-usd').forEach(el => { el.style.display = isUsd ? '' : 'none'; });
+            document.querySelectorAll('.currency-label').forEach(label => {
+                label.classList.toggle('active', label.dataset.currency === (isUsd ? 'usd' : 'inr'));
+            });
+            localStorage.setItem('profile_currency', isUsd ? 'usd' : 'inr');
+        }
+
+        const saved = localStorage.getItem('profile_currency') === 'usd';
+        switchEl.checked = saved;
+        applyCurrency(saved);
+
+        switchEl.addEventListener('change', () => applyCurrency(switchEl.checked));
+    })();
+
     // ── Load current user profile ──
     async function loadProfile() {
         try {
@@ -1066,7 +1183,7 @@
 
             const tier = currentUser.subscription_tier || 'trial';
             const planBadge = document.getElementById('profilePlanBadge');
-            planBadge.textContent = tier.charAt(0).toUpperCase() + tier.slice(1);
+            planBadge.textContent = TIER_LABELS[tier] || (tier.charAt(0).toUpperCase() + tier.slice(1));
             planBadge.className = 'profile-plan ' + tier;
 
             const statusBadge = document.querySelector('.status-badge');
@@ -1300,7 +1417,7 @@
                 else if (limit && used >= limit) { status = 'Limited'; statusClass = 'limited'; }
                 else { status = 'Allowed'; statusClass = 'allowed'; }
 
-                const tierLabel = (m.required_tier || 'trial');
+                const tierLabel = TIER_LABELS[m.required_tier] || (m.required_tier || 'trial');
                 const icon = MODULE_ICON_FALLBACK[m.module_key] || '🧩';
 
                 return `
