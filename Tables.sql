@@ -15,6 +15,7 @@ CREATE TABLE users (
     subscription_tier VARCHAR(50) DEFAULT 'trial', -- 'trial', 'basic', 'pro', 'enterprise'
     trial_ends_at TIMESTAMP,
     subscription_ends_at TIMESTAMP,
+    pixazo_trial_used_count INT DEFAULT 0, -- generations used against the shared Pixazo trial key (config/pixazo-trial.js)
     is_active BOOLEAN DEFAULT TRUE,
     last_login_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
