@@ -553,10 +553,10 @@
         <div class="auth-divider">or continue with</div>
 
         <div class="social-buttons">
-            <button type="button" class="social-btn google" onclick="showToast('Google OAuth coming soon', 'info')">
+            <button type="button" class="social-btn google" onclick="startOAuthLogin('google')">
                 <i class="fab fa-google"></i> Google
             </button>
-            <button type="button" class="social-btn github" onclick="showToast('GitHub OAuth coming soon', 'info')">
+            <button type="button" class="social-btn github" onclick="startOAuthLogin('github')">
                 <i class="fab fa-github"></i> GitHub
             </button>
         </div>
@@ -644,10 +644,10 @@
         <div class="auth-divider">or continue with</div>
 
         <div class="social-buttons">
-            <button type="button" class="social-btn google" onclick="showToast('Google OAuth coming soon', 'info')">
+            <button type="button" class="social-btn google" onclick="startOAuthLogin('google')">
                 <i class="fab fa-google"></i> Google
             </button>
-            <button type="button" class="social-btn github" onclick="showToast('GitHub OAuth coming soon', 'info')">
+            <button type="button" class="social-btn github" onclick="startOAuthLogin('github')">
                 <i class="fab fa-github"></i> GitHub
             </button>
         </div>
@@ -698,6 +698,48 @@
             switchTab(tab.dataset.form);
         });
     });
+
+    // ── Social / OAuth Login ──
+    // Full-page redirect into the server-side OAuth flow (routes/auth.js
+    // /api/auth/google and /api/auth/github). This can't be a fetch() call
+    // since Google/GitHub's consent screens need a real top-level
+    // navigation; the server redirects back to this same page with
+    // ?token=<jwt> on success or ?oauth_error=<message> on failure.
+    window.startOAuthLogin = function(provider) {
+        window.location.href = `/api/auth/${provider}`;
+    };
+
+    // ── Handle redirect back from Google/GitHub OAuth ──
+    (function handleOAuthRedirect() {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        const oauthError = params.get('oauth_error');
+
+        if (oauthError) {
+            showToast(oauthError, 'error');
+            window.history.replaceState({}, document.title, window.location.pathname);
+            return;
+        }
+
+        if (token) {
+            localStorage.setItem('session_token', token);
+            // Fetch the full user object so localStorage matches what a
+            // normal password login would have stored.
+            fetch('/api/auth/verify', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.user) {
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                    }
+                })
+                .catch(() => {})
+                .finally(() => {
+                    window.location.href = '/';
+                });
+        }
+    })();
 
     // ── Toggle Password Visibility ──
     window.togglePassword = function(inputId, btn) {
