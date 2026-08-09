@@ -3,8 +3,12 @@ import express from 'express';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import pool from '../../../../db/index.js';
-import { exchangeCodeForToken, getGithubUser } from '../lib/github.js';
+import { exchangeCodeForToken, getGithubUser, getGithubVerifiedEmail } from '../lib/github.js';
 import { resolveGithubAuth } from '../lib/githubAuth.js';
+// Shared main-app account/JWT helpers (CommonJS module — ESM default
+// import + destructure, same interop pattern already used for pool above).
+import oauthAccounts from '../../../../services/oauth-accounts.js';
+const { findOrCreateOAuthUser, issueToken: issueMainAppToken } = oauthAccounts;
 
 const router = express.Router();
 
@@ -129,52 +133,89 @@ router.get('/github/callback', async (req, res) => {
       email: user.email,
     };
 
+    const mainUserId = req.session.mainUserId;
+
+    // ── No main-app user bridged into this session ──
+    // The /agent middleware in server.js only sets mainUserId when this
+    // OAuth round-trip started from an already-authenticated visit to
+    // /agent (via its one-time ?token= bridge). If it's absent, this
+    // request instead came from login.html's "Continue with GitHub"
+    // button (a plain, logged-out page load straight into
+    // GET /agent/api/auth/github) — i.e. the person is trying to sign
+    // into SanjayAIHub itself with GitHub, not connect a repo. Handle
+    // that here rather than falling through to the repo-connect logic
+    // below, since this callback URL is the only one registered on the
+    // GitHub OAuth App (classic GitHub OAuth Apps allow just one), so
+    // both flows have to share it.
+    if (!mainUserId) {
+      console.log('[Auth] No mainUserId in session — treating this as a SanjayAIHub login via GitHub');
+      try {
+        const email = await getGithubVerifiedEmail(accessToken);
+        if (!email) {
+          return res.redirect(`/login.html?oauth_error=${encodeURIComponent('Your GitHub account has no verified email address.')}`);
+        }
+
+        const mainUser = await findOrCreateOAuthUser({
+          provider: 'github',
+          providerId: String(user.id),
+          email,
+          name: user.name || user.login,
+          avatarUrl: user.avatar_url || null,
+        });
+
+        if (!mainUser.is_active) {
+          return res.redirect(`/login.html?oauth_error=${encodeURIComponent('Account is disabled. Please contact support.')}`);
+        }
+
+        const appToken = issueMainAppToken(mainUser);
+        console.log('[Auth] GitHub login resolved to SanjayAIHub user:', mainUser.id);
+        return res.redirect(`/login.html?token=${encodeURIComponent(appToken)}`);
+      } catch (loginError) {
+        console.error('[Auth] GitHub login (main app) failed:', loginError);
+        return res.redirect(`/login.html?oauth_error=${encodeURIComponent('GitHub sign-in failed. Please try again.')}`);
+      }
+    }
+
+    // ── mainUserId present: existing "connect GitHub for repo access" flow ──
     // Store GitHub connection in database
     try {
-      // Get the main app user ID from session (passed from main auth system)
-      const mainUserId = req.session.mainUserId;
-      
-      if (mainUserId) {
-        console.log('[Auth] Storing GitHub connection for user:', mainUserId);
-        
-        // Check if connection already exists
-        const existingConnection = await pool.query(
-          'SELECT id FROM user_github_connections WHERE user_id = $1 AND github_user_id = $2',
-          [mainUserId, String(user.id)]
-        );
+      console.log('[Auth] Storing GitHub connection for user:', mainUserId);
 
-        if (existingConnection.rows.length > 0) {
-          // Update existing connection
-          await pool.query(
-            `UPDATE user_github_connections 
-             SET access_token = $1, 
-                 github_username = $2,
-                 github_name = $3,
-                 github_email = $4,
-                 github_avatar_url = $5,
-                 scope = $6,
-                 is_active = true,
-                 last_synced_at = CURRENT_TIMESTAMP,
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE user_id = $7 AND github_user_id = $8`,
-            [accessToken, user.login, user.name || user.login, user.email, user.avatar_url, 
-             tokenScope, mainUserId, String(user.id)]
-          );
-          console.log('[Auth] GitHub connection updated');
-        } else {
-          // Create new connection
-          await pool.query(
-            `INSERT INTO user_github_connections 
-             (user_id, github_user_id, github_username, github_name, github_email, 
-              github_avatar_url, access_token, token_type, scope, is_active)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)`,
-            [mainUserId, String(user.id), user.login, user.name || user.login, 
-             user.email, user.avatar_url, accessToken, 'bearer', tokenScope]
-          );
-          console.log('[Auth] GitHub connection created');
-        }
+      // Check if connection already exists
+      const existingConnection = await pool.query(
+        'SELECT id FROM user_github_connections WHERE user_id = $1 AND github_user_id = $2',
+        [mainUserId, String(user.id)]
+      );
+
+      if (existingConnection.rows.length > 0) {
+        // Update existing connection
+        await pool.query(
+          `UPDATE user_github_connections 
+           SET access_token = $1, 
+               github_username = $2,
+               github_name = $3,
+               github_email = $4,
+               github_avatar_url = $5,
+               scope = $6,
+               is_active = true,
+               last_synced_at = CURRENT_TIMESTAMP,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = $7 AND github_user_id = $8`,
+          [accessToken, user.login, user.name || user.login, user.email, user.avatar_url, 
+           tokenScope, mainUserId, String(user.id)]
+        );
+        console.log('[Auth] GitHub connection updated');
       } else {
-        console.warn('[Auth] No mainUserId in session - skipping DB storage');
+        // Create new connection
+        await pool.query(
+          `INSERT INTO user_github_connections 
+           (user_id, github_user_id, github_username, github_name, github_email, 
+            github_avatar_url, access_token, token_type, scope, is_active)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)`,
+          [mainUserId, String(user.id), user.login, user.name || user.login, 
+           user.email, user.avatar_url, accessToken, 'bearer', tokenScope]
+        );
+        console.log('[Auth] GitHub connection created');
       }
     } catch (dbError) {
       console.error('[Auth] Failed to store GitHub connection in DB:', dbError.message);

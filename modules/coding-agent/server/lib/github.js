@@ -63,6 +63,30 @@ export async function getGithubUser(token) {
 }
 
 /**
+ * Fetch the authenticated user's email addresses (requires the
+ * `user:email` scope) and return the best verified one to use for login:
+ * the verified primary if there is one, else any other verified address.
+ * Returns null if none of their addresses are verified.
+ */
+export async function getGithubVerifiedEmail(token) {
+  const res = await fetch(`${GITHUB_API}/user/emails`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+    },
+  });
+  if (!res.ok) {
+    console.warn('[GitHub OAuth] /user/emails failed:', res.status);
+    return null;
+  }
+  const emails = await res.json();
+  const primary = emails.find(e => e.primary && e.verified);
+  if (primary) return primary.email;
+  const anyVerified = emails.find(e => e.verified);
+  return anyVerified ? anyVerified.email : null;
+}
+
+/**
  * List repos the authenticated user has access to (owned, collaborator, org member).
  * Paginates up to `maxPages` pages of 100.
  */

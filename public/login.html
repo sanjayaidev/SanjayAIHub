@@ -706,7 +706,12 @@
     // navigation; the server redirects back to this same page with
     // ?token=<jwt> on success or ?oauth_error=<message> on failure.
     window.startOAuthLogin = function(provider) {
-        window.location.href = `/api/auth/${provider}`;
+        // GitHub reuses the coding-agent's existing OAuth route/callback
+        // (the GitHub OAuth App only has that one callback URL registered)
+        // — see modules/coding-agent/server/routes/auth.js for the login
+        // handling added to that callback. Google has its own route here.
+        const url = provider === 'github' ? '/agent/api/auth/github' : `/api/auth/${provider}`;
+        window.location.href = url;
     };
 
     // ── Handle redirect back from Google/GitHub OAuth ──
