@@ -82,16 +82,26 @@ class CloudflareProvider {
   }
 
   // text-to-image via Flux 1 Schnell (@cf/black-forest-labs/flux-1-schnell) — free.
-  // params: { prompt, width=1024, height=1024, num_steps<=8, seed }
+  // params: { prompt, num_steps<=8, seed }
+  // NOTE: per Cloudflare's documented schema, this model only accepts
+  // `prompt`, `steps`, and `seed`. It does NOT accept width/height —
+  // output resolution is fixed by the model. Two bugs fixed here:
+  //   1. the request body used to send `num_steps`, but Cloudflare's API
+  //      field is `steps` — the wrong key meant every request silently
+  //      fell back to the API's own default (4) regardless of what the
+  //      user picked in the UI.
+  //   2. width/height were being sent even though Cloudflare doesn't
+  //      accept them for this model; unknown fields are silently
+  //      dropped, so those two UI controls did nothing either. They're
+  //      no longer forwarded — see modules/text-to-image.js for the
+  //      matching schema fix that removes them from the Cloudflare UI.
   // Returns { imageDataUrl } — base64 JPEG as a data: URL, ready to drop into <img src>.
   async textToImage(params = {}) {
     if (!params.prompt) throw new Error('prompt is required');
 
     const body = {
       prompt: params.prompt,
-      width: params.width || 1024,
-      height: params.height || 1024,
-      num_steps: Math.min(params.num_steps || 4, 8),
+      steps: Math.min(Math.max(parseInt(params.num_steps) || 4, 1), 8),
     };
     if (params.seed !== undefined) body.seed = params.seed;
 

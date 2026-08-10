@@ -92,7 +92,7 @@ function alibabaSchema(is3Pro) {
   };
 }
 
-function pixazoOrCloudflareSchema() {
+function pixazoSchema() {
   return {
     width: {
       type: 'select',
@@ -127,6 +127,33 @@ function pixazoOrCloudflareSchema() {
   };
 }
 
+// Cloudflare's flux-1-schnell only accepts prompt/steps/seed (see
+// providers/cloudflare.js) — no width/height control exists on their end,
+// so those fields are deliberately absent here rather than shown as
+// controls that silently do nothing.
+function cloudflareSchema() {
+  return {
+    num_steps: {
+      type: 'range',
+      label: 'Steps',
+      min: 1, max: 8, step: 1,
+      default: 4,
+    },
+    seed_mode: {
+      type: 'checkbox',
+      label: 'Use fixed seed',
+      default: false,
+    },
+    seed: {
+      type: 'range',
+      label: 'Seed',
+      min: 0, max: 999999999, step: 1,
+      default: 0,
+      dependsOn: 'seed_mode',
+    },
+  };
+}
+
 // Per-model schema map. Every entry in ALIBABA_IMAGE_MODELS/PIXAZO/CLOUDFLARE
 // must resolve to a schema here (fallback keeps things from breaking if a
 // model is added without a matching entry).
@@ -134,8 +161,8 @@ const PARAM_SCHEMAS = {};
 for (const m of ALIBABA_IMAGE_MODELS) {
   PARAM_SCHEMAS[m] = alibabaSchema(m === 'qwen-image-3.0-pro');
 }
-PARAM_SCHEMAS[PIXAZO_IMAGE_MODEL] = pixazoOrCloudflareSchema();
-PARAM_SCHEMAS[CLOUDFLARE_IMAGE_MODEL] = pixazoOrCloudflareSchema();
+PARAM_SCHEMAS[PIXAZO_IMAGE_MODEL] = pixazoSchema();
+PARAM_SCHEMAS[CLOUDFLARE_IMAGE_MODEL] = cloudflareSchema();
 
 function getSchemaForModel(model) {
   return PARAM_SCHEMAS[model] || null;
@@ -266,15 +293,13 @@ async function textToImageHandler(requestBody, apiKeys, userId) {
     model = CLOUDFLARE_IMAGE_MODEL;
     const schema = getSchemaForModel(model);
 
-    const w = schema.width.options.includes(parseInt(width)) ? parseInt(width) : schema.width.default;
-    const h = schema.height.options.includes(parseInt(height)) ? parseInt(height) : schema.height.default;
     const steps = num_steps !== undefined ? Math.min(Math.max(parseInt(num_steps) || 4, schema.num_steps.min), schema.num_steps.max) : schema.num_steps.default;
     const useFixedSeed = seed_mode === true || seed_mode === 'true' || seed_mode === 'on';
 
-    resolvedParams = { width: w, height: h, num_steps: steps };
+    resolvedParams = { num_steps: steps };
 
     try {
-      const params = { prompt, width: w, height: h, num_steps: steps };
+      const params = { prompt, num_steps: steps };
       if (useFixedSeed) { params.seed = parseInt(seed) || 0; resolvedParams.seed = params.seed; }
 
       const result = await cloudflare.textToImage(params);
