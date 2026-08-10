@@ -11,6 +11,15 @@ const AlibabaProvider = require('../providers/alibaba');
 const PixazoProvider = require('../providers/pixazo');
 const CloudflareProvider = require('../providers/cloudflare');
 
+// Legacy Wan t2i models that use the async image-synthesis endpoint
+const LEGACY_WAN_T2I_MODELS = [
+  'wan2.1-t2i-turbo',
+  'wan2.1-t2i-plus',
+  'wan2.2-t2i-flash',
+  'wan2.2-t2i-plus',
+  'wan2.5-t2i-preview',
+];
+
 // ── Provider model lists ────────────────────────────────────────────────
 const ALIBABA_IMAGE_MODELS = [
   'qwen-image-3.0-pro', // unified T2I + I2I, limited preview (Jul 2026)
@@ -20,6 +29,12 @@ const ALIBABA_IMAGE_MODELS = [
   'qwen-image-plus',
   'wan2.6-t2i',
   'wan2.7-image-pro',
+  // Legacy Wan t2i models — use async image-synthesis endpoint with polling
+  'wan2.1-t2i-turbo',
+  'wan2.1-t2i-plus',
+  'wan2.2-t2i-flash',
+  'wan2.2-t2i-plus',
+  'wan2.5-t2i-preview',
 ];
 
 const PIXAZO_IMAGE_MODEL = 'flux-1-schnell';
@@ -241,29 +256,62 @@ async function textToImageHandler(requestBody, apiKeys, userId) {
 
     resolvedParams = { size: sizeParam, n: nParam, seed: seedParam, negative_prompt, prompt_extend: promptExtendParam, watermark: watermarkParam };
 
+    // Legacy Wan t2i models use the async image-synthesis endpoint with polling
+    const isLegacyWanT2I = LEGACY_WAN_T2I_MODELS.includes(model);
+
     try {
-      const result = await alibaba.imageGeneration(prompt, {
-        model,
-        size: sizeParam,
-        n: nParam,
-        seed: seedParam,
-        negative_prompt,
-        prompt_extend: promptExtendParam,
-        watermark: watermarkParam,
-      });
+      let result;
+      if (isLegacyWanT2I) {
+        // Use the async imageSynthesisLegacy endpoint for wan2.1/2.2/2.5 t2i models
+        result = await alibaba.imageSynthesisLegacy(prompt, {
+          model,
+          size: sizeParam,
+          n: nParam,
+          seed: seedParam,
+          negative_prompt,
+          prompt_extend: promptExtendParam,
+          watermark: watermarkParam,
+        });
 
-      if (result._async) {
-        throw new Error(`Image generation is processing asynchronously. Task ID: ${result._taskId}. Please poll for completion.`);
+        // Return task info for async polling (similar to video generation)
+        const taskId = result?.output?.task_id;
+        if (!taskId) {
+          throw new Error('No task_id returned from legacy image synthesis');
+        }
+        return {
+          imageDataUrl: null,
+          imageUrl: null,
+          provider: selectedProvider,
+          model,
+          parameters: { ...resolvedParams, taskId },
+          status: 'PENDING',
+          requestId: taskId,
+        };
+      } else {
+        // Standard sync image generation for other models
+        result = await alibaba.imageGeneration(prompt, {
+          model,
+          size: sizeParam,
+          n: nParam,
+          seed: seedParam,
+          negative_prompt,
+          prompt_extend: promptExtendParam,
+          watermark: watermarkParam,
+        });
+
+        if (result._async) {
+          throw new Error(`Image generation is processing asynchronously. Task ID: ${result._taskId}. Please poll for completion.`);
+        }
+
+        const urls = result._imageUrls || [];
+        if (urls.length === 0) {
+          const errorMsg = result?.output?.text || result?.message || 'No image returned';
+          throw new Error(errorMsg);
+        }
+
+        imageUrl = urls[0];
+        resolvedParams.allImageUrls = urls;
       }
-
-      const urls = result._imageUrls || [];
-      if (urls.length === 0) {
-        const errorMsg = result?.output?.text || result?.message || 'No image returned';
-        throw new Error(errorMsg);
-      }
-
-      imageUrl = urls[0];
-      resolvedParams.allImageUrls = urls;
     } catch (err) {
       throw new Error(`Alibaba Image error: ${err.message}`);
     }
@@ -347,4 +395,5 @@ module.exports = {
   ALIBABA_IMAGE_MODELS,
   PIXAZO_IMAGE_MODEL,
   CLOUDFLARE_IMAGE_MODEL,
+  LEGACY_WAN_T2I_MODELS,
 };
