@@ -1,0 +1,35 @@
+{
+  "category": "carousel-content",
+  "canvasW": 1080,
+  "canvasH": 1350,
+  "presets": [
+    {
+      "id": "cc-bullet-neon",
+      "name": "Bullet · Neon",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1350,
+        "bg": { "type": "linear", "c1": "#0a0520", "c2": "#1a0533", "c3": "#05101f", "angle": 135, "s1": 0, "s2": 55, "s3": 100 },
+        "textBlocks": [
+          { "type": "subtitle", "text": "02 / 05", "size": 20, "font": "Space Mono", "weight": "700", "color": "#4DFFA0", "align": "left", "letterSpacing": 2, "opacity": 75, "x": 10, "y": 10, "rot": 0 },
+          { "type": "title", "text": "THE FIRST PRINCIPLE", "size": 78, "font": "Bebas Neue", "weight": "700", "color": "#ffffff", "align": "left", "lineH": 0.95, "letterSpacing": 2, "x": 10, "y": 20, "rot": 0, "textTransform": "uppercase" },
+          { "type": "bullet", "text": "Break every problem down to its fundamentals\nIgnore how it's \"usually done\"\nRebuild from the ground up with fresh logic", "size": 30, "font": "DM Sans", "weight": "500", "color": "#E2E8F8", "align": "left", "lineH": 1.5, "bulletStyle": "symbol", "bulletSymbol": "◆", "bulletColor": "#4DFFA0", "bulletSize": 26, "bulletGap": 24, "x": 10, "y": 42, "rot": 0 }
+        ],
+        "brands": [{ "text": "@YOURBRAND", "x": 50, "y": 94, "size": 20, "color": "#4DFFA0", "font": "Space Mono", "weight": 700, "align": "center", "letterSpacing": 3, "opacity": 60 }]
+      }
+    },
+    {
+      "id": "cc-body-editorial",
+      "name": "Body · Editorial",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1350,
+        "bg": { "type": "solid", "color": "#F4EFE6" },
+        "textBlocks": [
+          { "type": "subtitle", "text": "PAGE 02", "size": 18, "font": "Space Mono", "weight": "700", "color": "#8B2E2E", "align": "left", "letterSpacing": 3, "x": 12, "y": 12, "rot": 0 },
+          { "type": "title", "text": "On Patience", "size": 88, "font": "Playfair Display", "weight": "700", "color": "#1a1a1a", "align": "left", "lineH": 0.98, "x": 12, "y": 24, "rot": 0 },
+          { "type": "body", "text": "Great work is rarely made in a hurry. The best creators protect their time like a fortress — they know that depth compounds, and that most shortcuts only borrow against future quality.", "size": 32, "font": "DM Sans", "weight": "400", "color": "#3a3a3a", "align": "left", "lineH": 1.65, "x": 12, "y": 48, "rot": 0 }
+        ],
+        "brands": [{ "text": "STUDIO/NAME", "x": 88, "y": 94, "size": 18, "color": "#1a1a1a", "font": "Space Mono", "weight": 700, "align": "right", "letterSpacing": 2, "opacity": 80 }]
+      }
+    }
+  ]
+}

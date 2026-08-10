@@ -1,0 +1,36 @@
+{
+  "category": "educational",
+  "canvasW": 1080,
+  "canvasH": 1350,
+  "presets": [
+    {
+      "id": "edu-howto-neon",
+      "name": "How-To · Neon",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1350,
+        "bg": { "type": "linear", "c1": "#1a0f2e", "c2": "#0d2233", "c3": "#1a0a0a", "angle": 135, "s1": 0, "s2": 55, "s3": 100 },
+        "textBlocks": [
+          { "type": "subtitle", "text": "📘 HOW TO", "size": 24, "font": "Space Mono", "weight": "700", "color": "#A78BFA", "align": "left", "letterSpacing": 3, "x": 10, "y": 12, "rot": 0 },
+          { "type": "title", "text": "BUILD A\nSECOND\nBRAIN", "size": 130, "font": "Bebas Neue", "weight": "700", "color": "#ffffff", "align": "left", "lineH": 0.88, "letterSpacing": 2, "x": 10, "y": 24, "rot": 0, "textTransform": "uppercase" },
+          { "type": "bullet", "text": "Capture everything — don't trust memory\nOrganize by project, not by topic\nReview weekly, distill monthly\nLet tools do the remembering", "size": 28, "font": "DM Sans", "weight": "500", "color": "#E2E8F8", "align": "left", "lineH": 1.5, "bulletStyle": "symbol", "bulletSymbol": "→", "bulletColor": "#A78BFA", "bulletSize": 28, "bulletGap": 22, "x": 10, "y": 60, "rot": 0 }
+        ],
+        "brands": [{ "text": "@YOURBRAND", "x": 50, "y": 94, "size": 20, "color": "#A78BFA", "font": "Space Mono", "weight": 700, "align": "center", "letterSpacing": 3, "opacity": 70 }]
+      }
+    },
+    {
+      "id": "edu-stat-punchy",
+      "name": "Stat · Punchy",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1350,
+        "bg": { "type": "solid", "color": "#FF6B4D" },
+        "textBlocks": [
+          { "type": "subtitle", "text": "DID YOU KNOW?", "size": 24, "font": "Space Mono", "weight": "700", "color": "#1a1a1a", "align": "center", "letterSpacing": 4, "x": 50, "y": 22, "rot": 0 },
+          { "type": "headline", "text": "92%", "size": 280, "font": "Bebas Neue", "weight": "700", "color": "#1a1a1a", "align": "center", "lineH": 0.85, "letterSpacing": -4, "x": 50, "y": 48, "rot": 0 },
+          { "type": "subtitle", "text": "of creators never publish\nconsistently for 6+ months.", "size": 34, "font": "DM Sans", "weight": "500", "color": "#1a1a1a", "align": "center", "lineH": 1.4, "x": 50, "y": 72, "rot": 0 },
+          { "type": "body", "text": "Be the 8%.", "size": 28, "font": "Space Mono", "weight": "700", "color": "#ffffff", "align": "center", "letterSpacing": 3, "x": 50, "y": 86, "rot": 0 }
+        ],
+        "brands": []
+      }
+    }
+  ]
+}
