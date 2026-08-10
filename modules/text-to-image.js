@@ -29,6 +29,7 @@ const ALIBABA_IMAGE_MODELS = [
   'qwen-image-plus',
   'wan2.6-t2i',
   'wan2.7-image-pro',
+  'z-image-turbo',
   // Legacy Wan t2i models — use async image-synthesis endpoint with polling
   'wan2.1-t2i-turbo',
   'wan2.1-t2i-plus',
@@ -68,8 +69,11 @@ const ALIBABA_VALID_SIZES = [
 ];
 
 // ── Per-model UI parameter schemas (select / range / checkbox ONLY) ────
-function alibabaSchema(is3Pro) {
-  return {
+function alibabaSchema(model) {
+  const is3Pro = model === 'qwen-image-3.0-pro';
+  const isWan27Pro = model === 'wan2.7-image-pro';
+
+  const schema = {
     size: {
       type: 'select',
       label: 'Size',
@@ -105,6 +109,22 @@ function alibabaSchema(is3Pro) {
       default: false,
     },
   };
+
+  // wan2.7-image-pro specific parameters
+  if (isWan27Pro) {
+    schema.thinking_mode = {
+      type: 'checkbox',
+      label: 'Enable thinking mode',
+      default: false,
+    };
+    schema.enable_sequential = {
+      type: 'checkbox',
+      label: 'Generate sequential images',
+      default: false,
+    };
+  }
+
+  return schema;
 }
 
 function pixazoSchema() {
@@ -174,7 +194,7 @@ function cloudflareSchema() {
 // model is added without a matching entry).
 const PARAM_SCHEMAS = {};
 for (const m of ALIBABA_IMAGE_MODELS) {
-  PARAM_SCHEMAS[m] = alibabaSchema(m === 'qwen-image-3.0-pro');
+  PARAM_SCHEMAS[m] = alibabaSchema(m);
 }
 PARAM_SCHEMAS[PIXAZO_IMAGE_MODEL] = pixazoSchema();
 PARAM_SCHEMAS[CLOUDFLARE_IMAGE_MODEL] = cloudflareSchema();
@@ -236,7 +256,7 @@ async function textToImageHandler(requestBody, apiKeys, userId) {
   if (selectedProvider === 'alibaba') {
     const alibaba = new AlibabaProvider(apiKeys.alibaba.api_key, apiKeys.alibaba.workspace_id);
     model = ALIBABA_IMAGE_MODELS.includes(requestedModel) ? requestedModel : 'qwen-image';
-    const schema = getSchemaForModel(model) || alibabaSchema(false);
+    const schema = getSchemaForModel(model) || alibabaSchema(model);
 
     // size
     let sizeParam;
@@ -253,8 +273,18 @@ async function textToImageHandler(requestBody, apiKeys, userId) {
     const seedParam = useFixedSeed ? parseInt(seed) || 0 : undefined;
     const promptExtendParam = prompt_extend !== undefined ? !!(prompt_extend === true || prompt_extend === 'true' || prompt_extend === 'on') : schema.prompt_extend.default;
     const watermarkParam = watermark !== undefined ? !!(watermark === true || watermark === 'true' || watermark === 'on') : schema.watermark.default;
+    
+    // wan2.7-image-pro specific parameters
+    const thinkingModeParam = schema.thinking_mode !== undefined 
+      ? (requestBody.thinking_mode === true || requestBody.thinking_mode === 'true' || requestBody.thinking_mode === 'on')
+      : false;
+    const enableSequentialParam = schema.enable_sequential !== undefined
+      ? (requestBody.enable_sequential === true || requestBody.enable_sequential === 'true' || requestBody.enable_sequential === 'on')
+      : false;
 
     resolvedParams = { size: sizeParam, n: nParam, seed: seedParam, negative_prompt, prompt_extend: promptExtendParam, watermark: watermarkParam };
+    if (schema.thinking_mode !== undefined) resolvedParams.thinking_mode = thinkingModeParam;
+    if (schema.enable_sequential !== undefined) resolvedParams.enable_sequential = enableSequentialParam;
 
     // Legacy Wan t2i models use the async image-synthesis endpoint with polling
     const isLegacyWanT2I = LEGACY_WAN_T2I_MODELS.includes(model);
@@ -289,7 +319,7 @@ async function textToImageHandler(requestBody, apiKeys, userId) {
         };
       } else {
         // Standard sync image generation for other models
-        result = await alibaba.imageGeneration(prompt, {
+        const imageGenParams = {
           model,
           size: sizeParam,
           n: nParam,
@@ -297,7 +327,12 @@ async function textToImageHandler(requestBody, apiKeys, userId) {
           negative_prompt,
           prompt_extend: promptExtendParam,
           watermark: watermarkParam,
-        });
+        };
+        // Add wan2.7-image-pro specific parameters
+        if (schema.thinking_mode !== undefined) imageGenParams.thinking_mode = thinkingModeParam;
+        if (schema.enable_sequential !== undefined) imageGenParams.enable_sequential = enableSequentialParam;
+        
+        result = await alibaba.imageGeneration(prompt, imageGenParams);
 
         if (result._async) {
           throw new Error(`Image generation is processing asynchronously. Task ID: ${result._taskId}. Please poll for completion.`);
