@@ -12,6 +12,7 @@ const authRoutes = require('./routes/auth');
 const moduleRoutes = require('./routes/modules');
 const apiKeyRoutes = require('./routes/apikeys');
 const chatRoutes = require('./routes/chat');
+const designerRoutes = require('./routes/designer');
 const reelsRoutes = require('./routes/reels');
 const uploadRoutes = require('./routes/upload');
 const imageProxyRoutes = require('./routes/image-proxy');
@@ -169,8 +170,8 @@ app.use(session({
 // ── Routes ──
 app.use('/api/auth', authRoutes);
 app.use('/api/modules', moduleRoutes);
-app.use('/api/keys', apiKeyRoutes);
-app.use('/api/chat', chatRoutes); // ← ADD THIS (replaces /api/modules/chat routes)
+app.use('/api/chat', chatRoutes);
+app.use('/api/designer', designerRoutes);
 app.use('/api/reels', reelsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/image-proxy', imageProxyRoutes);

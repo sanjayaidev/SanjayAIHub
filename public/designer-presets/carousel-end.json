@@ -1,0 +1,35 @@
+{
+  "category": "carousel-end",
+  "canvasW": 1080,
+  "canvasH": 1350,
+  "presets": [
+    {
+      "id": "ce-cta-neon",
+      "name": "CTA · Neon Glow",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1350,
+        "bg": { "type": "radial", "c1": "#1a0533", "c2": "#0a0520", "c3": "#05101f", "radShape": "circle", "s1": 0, "s2": 60, "s3": 100 },
+        "textBlocks": [
+          { "type": "headline", "text": "SAVE THIS\nFOR LATER", "size": 140, "font": "Bebas Neue", "weight": "700", "color": "#4DFFA0", "align": "center", "lineH": 0.9, "letterSpacing": 3, "textShadow": "glow", "textTransform": "uppercase", "x": 50, "y": 40, "rot": 0 },
+          { "type": "subtitle", "text": "Follow for more tips like this every week.", "size": 34, "font": "DM Sans", "weight": "400", "color": "#DCE6F8", "align": "center", "lineH": 1.5, "x": 50, "y": 65, "rot": 0 },
+          { "type": "body", "text": "← BACK TO START", "size": 22, "font": "Space Mono", "weight": "700", "color": "#4DFFA0", "align": "center", "letterSpacing": 3, "opacity": 75, "x": 50, "y": 78, "rot": 0 }
+        ],
+        "brands": [{ "text": "@YOURBRAND", "x": 50, "y": 93, "size": 24, "color": "#ffffff", "font": "Space Mono", "weight": 700, "align": "center", "letterSpacing": 3, "opacity": 85 }]
+      }
+    },
+    {
+      "id": "ce-cta-editorial",
+      "name": "CTA · Editorial",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1350,
+        "bg": { "type": "solid", "color": "#1a1a1a" },
+        "textBlocks": [
+          { "type": "subtitle", "text": "— THE END", "size": 20, "font": "Space Mono", "weight": "700", "color": "#8B2E2E", "align": "center", "letterSpacing": 4, "x": 50, "y": 30, "rot": 0 },
+          { "type": "headline", "text": "FOLLOW\nFOR MORE", "size": 150, "font": "Playfair Display", "weight": "900", "color": "#F4EFE6", "align": "center", "lineH": 0.9, "letterSpacing": -2, "x": 50, "y": 52, "rot": 0 },
+          { "type": "subtitle", "text": "@yourhandle", "size": 28, "font": "Space Mono", "weight": "400", "color": "#8B2E2E", "align": "center", "letterSpacing": 2, "x": 50, "y": 78, "rot": 0 }
+        ],
+        "brands": []
+      }
+    }
+  ]
+}

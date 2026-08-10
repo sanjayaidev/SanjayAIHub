@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Image Designer — API Mode</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&family=Bebas+Neue&family=Playfair+Display:wght@400;700;900&family=Oswald:wght@400;600;700&family=Montserrat:wght@400;600;700;900&family=Raleway:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="html2canvas.min.js"></script>
+<style>
+  :root{
+    --bg:#0A0D14; --panel:#0F1420; --panel2:#141A28; --s3:#1A2232;
+    --border:#1F2A3E; --muted:#6A7A9A; --muted2:#4A5A7A;
+    --text:#DCE6F8; --accent:#4DFFA0; --accent2:#4D9FFF; --danger:#ef4444;
+    --mono:'Space Mono',monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;overflow:hidden;height:100vh;}
+  .app{display:grid;grid-template-columns:360px 1fr;height:100vh;}
+
+  /* ── LEFT PANEL ── */
+  .panel{background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;padding:12px;}
+  .topbar{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+  .topbar-title{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+  .topbar-row{display:flex;gap:6px;align-items:center;}
+  .topbar-row label{font-size:10px;color:var(--muted);font-family:var(--mono);min-width:22px;}
+  .topbar-row input[type="number"]{background:var(--s3);border:1px solid var(--border);color:var(--text);border-radius:3px;padding:4px 6px;width:70px;font-family:var(--mono);font-size:11px;}
+  .btn{background:var(--s3);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;}
+  .btn:hover{background:var(--panel2);border-color:var(--accent);}
+  .btn-primary{background:var(--accent);color:#0A0D14;border-color:var(--accent);font-weight:700;}
+  .btn-primary:hover{background:#3de08a;}
+  .btn-danger{background:transparent;color:var(--danger);border-color:rgba(239,68,68,.3);}
+  .btn-export{background:var(--accent2);color:#fff;border-color:var(--accent2);font-weight:700;}
+  #presetButtons{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;}
+
+  /* ── PRESET BAR ── */
+  .preset-bar{display:flex;flex-direction:column;gap:6px;padding:8px;background:rgba(77,255,160,0.04);border:1px solid rgba(77,255,160,0.15);border-radius:6px;}
+  .preset-bar .lbl{font-size:9px;color:var(--accent);font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;}
+  .preset-row{display:flex;gap:6px;align-items:center;}
+  .preset-row select{flex:1;background:var(--s3);border:1px solid var(--border);color:var(--text);border-radius:3px;padding:5px 6px;font-family:var(--mono);font-size:10px;cursor:pointer;}
+  .preset-row select:focus{outline:none;border-color:var(--accent);}
+  .preset-btns{display:flex;gap:4px;}
+  .preset-btns .btn{flex:1;font-size:9px;padding:5px 6px;}
+
+  /* ── LAYERS ── */
+  .layer{background:var(--panel2);border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden;}
+  .layer-head{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;background:var(--s3);user-select:none;}
+  .layer-num{font-family:var(--mono);font-size:9px;color:var(--accent);background:rgba(77,255,160,.1);padding:2px 6px;border-radius:3px;font-weight:700;}
+  .layer-title{flex:1;font-family:var(--mono);font-size:11px;font-weight:600;}
+  .layer-arrow{color:var(--muted2);font-size:10px;transition:transform .2s;}
+  .layer.open .layer-arrow{transform:rotate(90deg);}
+  .layer-body{display:none;padding:10px;flex-direction:column;gap:8px;}
+  .layer.open .layer-body{display:flex;}
+  .field{display:flex;flex-direction:column;gap:3px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .lbl{font-size:9px;color:var(--muted);font-family:var(--mono);letter-spacing:.5px;text-transform:uppercase;}
+  input[type="text"],input[type="number"],input[type="url"],select,textarea{
+    background:var(--s3);border:1px solid var(--border);color:var(--text);border-radius:3px;padding:5px 7px;font-family:'DM Sans',sans-serif;font-size:12px;width:100%;
+  }
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);}
+  textarea{resize:vertical;min-height:50px;font-family:'DM Sans',sans-serif;}
+  input[type="color"]{background:var(--s3);border:1px solid var(--border);height:28px;padding:2px;cursor:pointer;border-radius:3px;}
+  input[type="file"]{font-size:10px;color:var(--muted2);}
+  .range-row{display:flex;align-items:center;gap:8px;}
+  .range-row input[type="range"]{flex:1;}
+  .range-val{font-family:var(--mono);font-size:10px;color:var(--muted);min-width:44px;text-align:right;}
+  .radio-row{display:flex;gap:4px;flex-wrap:wrap;}
+  .radio-btn{flex:1;padding:5px 8px;background:var(--s3);border:1px solid var(--border);border-radius:3px;font-family:var(--mono);font-size:10px;text-align:center;cursor:pointer;color:var(--muted2);}
+  .radio-btn.active{background:var(--accent);color:#0A0D14;border-color:var(--accent);font-weight:700;}
+  .item-card{background:var(--s3);border:1px solid var(--border);border-radius:4px;padding:8px;position:relative;margin-bottom:6px;}
+  .item-card .del{position:absolute;top:6px;right:6px;background:rgba(239,68,68,.1);border:none;color:var(--danger);width:20px;height:20px;border-radius:3px;cursor:pointer;font-size:11px;}
+  .divider{height:1px;background:var(--border);margin:8px 0;}
+  .hint{font-size:11px;color:var(--muted2);text-align:center;padding:12px;}
+  .add-row{display:flex;gap:4px;flex-wrap:wrap;}
+  .add-row .btn{flex:1;font-size:9px;padding:6px 4px;}
+
+  /* ── CANVAS AREA ── */
+  .canvas-area{background:#07090F;overflow:auto;display:flex;align-items:center;justify-content:center;position:relative;padding:24px;}
+  #canvasWrap{position:relative;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+  #canvas{position:relative;width:1080px;height:1350px;background:#0A0A14;overflow:hidden;transform-origin:top left;}
+  .canvas-layer{position:absolute;inset:0;pointer-events:none;}
+  #layer-bg{z-index:1;}
+  #layer-imgbg{z-index:2;}
+  #layer-imgbg-overlay{z-index:3;background:rgba(0,0,0,0);}
+  #layer-main{z-index:4;display:flex;align-items:center;justify-content:center;}
+  #layer-icons{z-index:5;}
+  #layer-text{z-index:6;}
+  #layer-brand{z-index:8;}
+  #layer-logo{z-index:99;pointer-events:none;}
+  #canvasInfo{position:absolute;bottom:12px;left:12px;font-family:var(--mono);font-size:10px;color:var(--muted2);background:rgba(0,0,0,.5);padding:4px 8px;border-radius:3px;}
+
+  /* ── API BAR ── */
+  #apiBar{display:none;position:fixed;top:12px;right:12px;background:var(--panel);border:1px solid var(--accent);border-radius:6px;padding:8px 12px;z-index:1000;box-shadow:0 8px 24px rgba(0,0,0,.5);}
+  .api-status{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;}
+  .api-dot{width:8px;height:8px;border-radius:50%;background:var(--muted2);}
+  .api-dot.idle{background:var(--muted2);}
+  .api-dot.active{background:#FF9F4D;animation:pulse 1s infinite;}
+  .api-dot.ready{background:var(--accent);}
+  @keyframes pulse{50%{opacity:.4;}}
+  #testApiBtn{display:none;}
+
+  /* ── AI AGENT CHAT WIDGET ── */
+  .agent-toggle{
+    position:fixed;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    border:none;color:#0A0D14;font-size:24px;cursor:pointer;z-index:9998;
+    box-shadow:0 8px 24px rgba(77,255,160,.3);
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .2s;
+  }
+  .agent-toggle:hover{transform:scale(1.08);}
+  .agent-toggle .badge{
+    position:absolute;top:-2px;right:-2px;width:14px;height:14px;border-radius:50%;
+    background:var(--danger);border:2px solid var(--bg);
+  }
+  .agent-panel{
+    position:fixed;bottom:90px;right:20px;width:380px;height:560px;
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);
+    z-index:9999;display:none;flex-direction:column;overflow:hidden;
+  }
+  .agent-panel.open{display:flex;animation:slideUp .25s ease;}
+  @keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+  .agent-header{
+    padding:14px 16px;background:linear-gradient(135deg,rgba(77,255,160,.1),rgba(77,159,255,.1));
+    border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;
+  }
+  .agent-avatar{
+    width:32px;height:32px;border-radius:50%;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:flex;align-items:center;justify-content:center;font-size:16px;color:#0A0D14;font-weight:700;
+  }
+  .agent-title{flex:1;}
+  .agent-title h4{font-family:var(--mono);font-size:12px;letter-spacing:1px;}
+  .agent-title p{font-size:10px;color:var(--muted);margin-top:2px;}
+  .agent-close{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px 8px;}
+  .agent-close:hover{color:var(--danger);}
+  .agent-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+  .agent-msg{max-width:85%;padding:8px 12px;border-radius:10px;font-size:12px;line-height:1.5;word-wrap:break-word;}
+  .agent-msg.user{align-self:flex-end;background:var(--accent2);color:#fff;border-bottom-right-radius:3px;}
+  .agent-msg.bot{align-self:flex-start;background:var(--s3);color:var(--text);border-bottom-left-radius:3px;}
+  .agent-msg.system{align-self:center;background:transparent;color:var(--muted);font-size:10px;font-family:var(--mono);text-align:center;padding:4px;}
+  .agent-msg.bot .applied-badge{display:inline-block;margin-top:6px;font-size:9px;color:var(--accent);font-family:var(--mono);letter-spacing:1px;}
+  .agent-msg.bot .applied-badge.ok{color:var(--accent);}
+  .agent-msg.bot .applied-badge.err{color:var(--danger);}
+  .agent-actions{display:flex;gap:4px;margin-top:6px;}
+  .agent-actions .btn{font-size:9px;padding:3px 8px;}
+  .agent-typing{display:flex;gap:3px;padding:8px 12px;}
+  .agent-timing span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1.4s infinite;}
+  .agent-timing span:nth-child(2){animation-delay:.2s;}
+  .agent-timing span:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,60%,100%{opacity:.3;}30%{opacity:1;}}
+  .agent-input-wrap{padding:10px;border-top:1px solid var(--border);background:var(--panel2);display:flex;gap:6px;}
+  .agent-input-wrap textarea{flex:1;min-height:38px;max-height:120px;resize:none;font-size:12px;padding:8px;}
+  .agent-send{background:var(--accent);color:#0A0D14;border:none;border-radius:6px;padding:0 14px;cursor:pointer;font-weight:700;font-family:var(--mono);font-size:11px;}
+  .agent-send:disabled{opacity:.4;cursor:not-allowed;}
+  .agent-input-wrap textarea:focus{outline:none;border-color:var(--accent);}
+  .agent-status{font-size:9px;color:var(--muted);font-family:var(--mono);text-align:center;padding:4px;background:var(--bg);}
+  /* Add to your existing CSS */
+#layer-icons img, 
+#layer-main img,
+#layer-text > div {
+  transition: outline 0.1s ease;
+}
+
+#layer-icons img:hover, 
+#layer-main img:hover,
+#layer-text > div:hover {
+  outline: 2px solid rgba(77, 255, 160, 0.5);
+  outline-offset: 2px;
+  cursor: move;
+}
+
+.resize-handle:hover {
+  transform: scale(1.3);
+  background: #4D9FFF !important;
+}
+
+#transform-rotate-handle:hover {
+  transform: translateX(-50%) scale(1.2);
+  background: #4DFFA0 !important;
+}
+
+#transform-delete-btn:hover {
+  transform: scale(1.1);
+  background: #ff4444 !important;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ═══════════ LEFT PANEL ═══════════ -->
+  <div class="panel">
+    <div class="topbar">
+      <div class="topbar-title">Image Studio</div>
+      <div class="topbar-row">
+        <label>W</label><input type="number" id="canvasW" value="1080">
+        <label>×</label><input type="number" id="canvasH" value="1350">
+        <button class="btn" id="resetBtn" style="margin-left:auto;">↺ Reset</button>
+        <button class="btn btn-export btn-export" id="exportBtn">⬇ Export PNG</button>
+        <button class="btn" id="testApiBtn" style="display:none;">🧪 Test API</button>
+      </div>
+      <div id="presetButtons"></div>
+
+      <!-- NEW: PRESET BAR -->
+      <div class="preset-bar">
+        <div class="lbl">⚡ Presets</div>
+		<!-- Add this button after the preset buttons -->
+<button id="viewSavedPresetsBtn" style="padding:4px 10px;border-radius:4px;font-family:var(--mono);font-size:10px;background:var(--accent);border:none;color:#000;cursor:pointer;margin-left:8px;">📚 View Saved Presets</button>
+        <div class="preset-row">
+          <select id="presetCategory" title="Category">
+            <option value="">— Category —</option>
+            <option value="carousel-first">Carousel · First Slide</option>
+            <option value="carousel-content">Carousel · Content Slide</option>
+            <option value="carousel-end">Carousel · End Slide</option>
+            <option value="single-post">Single Post</option>
+            <option value="product-showcase">Product Showcase</option>
+            <option value="educational">Educational / Tips</option>
+            <option value="quote-card">Quote Card</option>
+			<option value="story">Story (9:16 · 1080×1920)</option>
+			<option value="reel-cover">Reel Cover (9:16 · 1080×1920)</option>
+          </select>
+        </div>
+        <div class="preset-row">
+          <select id="presetSelect" title="Preset" disabled>
+            <option value="">— Pick a category first —</option>
+          </select>
+        </div>
+        <div class="preset-btns">
+          <button class="btn btn-primary" id="applyPresetBtn">✓ Apply</button>
+          <button class="btn" id="savePresetBtn">+ Save Current</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LAYER 1 -->
+    <div class="layer open" id="layer1">
+      <div class="layer-head" data-layer="layer1"><span class="layer-num">1</span><span class="layer-title">Background</span><span class="layer-arrow">▶</span></div>
+      <div class="layer-body">
+        <div class="field"><label class="lbl">Type</label>
+          <div class="radio-row" id="bgTypeRow">
+            <div class="radio-btn active" data-val="solid">Solid</div>
+            <div class="radio-btn" data-val="linear">Linear</div>
+            <div class="radio-btn" data-val="radial">Radial</div>
+          </div>
+        </div>
+        <div id="bgSolidFields" style="display:flex;flex-direction:column;gap:6px;">
+          <div class="field"><label class="lbl">Color</label><input type="color" id="bgColor" value="#0A0A14"></div>
+        </div>
+        <div id="bgGradFields" style="display:none;flex-direction:column;gap:6px;">
+          <div class="field-row">
+            <div class="field"><label class="lbl">Color 1</label><input type="color" id="bgC1" value="#1a0533"></div>
+            <div class="field"><label class="lbl">Color 2</label><input type="color" id="bgC2" value="#0d1f4a"></div>
+          </div>
+          <div class="field"><label class="lbl">Color 3 (opt)</label><input type="color" id="bgC3" value="#0a1a0a"></div>
+        </div>
+        <div id="angleField" style="display:none;"><div class="field"><label class="lbl">Angle °</label><input type="number" id="bgAngle" value="135" min="0" max="360"></div></div>
+        <div class="field"><label class="lbl">Stop Positions (%)</label>
+          <div class="field-row">
+            <input type="number" id="bgS1" value="0" min="0" max="100">
+            <input type="number" id="bgS2" value="50" min="0" max="100">
+            <input type="number" id="bgS3" value="100" min="0" max="100">
+          </div>
+        </div>
+        <div id="radialShapeField" style="display:none;">
+          <div class="field"><label class="lbl">Radial Shape</label>
+            <div class="radio-row" id="radShapeRow">
+              <div class="radio-btn active" data-shape="circle">Circle</div>
+              <div class="radio-btn" data-shape="ellipse">Ellipse</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LAYER 2 -->
+    <div class="layer" id="layer2">
+      <div class="layer-head" data-layer="layer2"><span class="layer-num">2</span><span class="layer-title">Background Image</span><span class="layer-arrow">▶</span></div>
+      <div class="layer-body">
+        <div class="field"><label class="lbl">Source</label>
+          <div class="radio-row" id="imgSrcTypeRow">
+            <div class="radio-btn active" data-src="url">URL</div>
+            <div class="radio-btn" data-src="file">File</div>
+            <div class="radio-btn" data-src="none">None</div>
+          </div>
+        </div>
+        <div id="imgUrlField"><div class="field"><label class="lbl">Image URL</label><input type="url" id="bgImgUrl" placeholder="https://..."></div></div>
+        <div id="imgFileField" style="display:none;"><div class="field"><label class="lbl">Upload File</label><input type="file" id="bgImgFile" accept="image/*"></div></div>
+        <div class="field"><label class="lbl">Size</label>
+          <div class="radio-row" id="imgSizeRow">
+            <div class="radio-btn active" data-size="cover">Cover</div>
+            <div class="radio-btn" data-size="contain">Contain</div>
+            <div class="radio-btn" data-size="100% 100%">Stretch</div>
+          </div>
+        </div>
+        <div class="field"><label class="lbl">Position</label>
+          <select id="bgImgPos">
+            <option>center</option><option>top</option><option>bottom</option>
+            <option>left</option><option>right</option>
+            <option>top left</option><option>top right</option>
+            <option>bottom left</option><option>bottom right</option>
+          </select>
+        </div>
+        <div class="field"><label class="lbl">Opacity</label>
+          <div class="range-row"><input type="range" id="bgImgOpacity" min="0" max="100" value="100"><span class="range-val">100%</span></div>
+        </div>
+        <div class="field"><label class="lbl">Overlay (darken)</label>
+          <div class="range-row"><input type="range" id="bgImgOverlay" min="0" max="100" value="0"><span class="range-val">0%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LAYER 3 -->
+    <div class="layer" id="layer3">
+      <div class="layer-head" data-layer="layer3"><span class="layer-num">3</span><span class="layer-title">Main Image</span><span class="layer-arrow">▶</span></div>
+      <div class="layer-body">
+        <div class="field"><label class="lbl">Source</label>
+          <div class="radio-row" id="mainImgSrcRow">
+            <div class="radio-btn active" data-src="url">URL</div>
+            <div class="radio-btn" data-src="file">File</div>
+            <div class="radio-btn" data-src="none">None</div>
+          </div>
+        </div>
+        <div id="mainImgUrlField"><div class="field"><label class="lbl">URL</label><input type="url" id="mainImgUrl" placeholder="https://..."></div></div>
+        <div id="mainImgFileField" style="display:none;"><div class="field"><label class="lbl">Upload</label><input type="file" id="mainImgFile" accept="image/*"></div></div>
+        <div class="field-row">
+          <div class="field"><label class="lbl">Width %</label><input type="number" id="mainImgW" value="80" min="1" max="200"></div>
+          <div class="field"><label class="lbl">Max Height %</label><input type="number" id="mainImgH" value="70" min="1" max="200"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label class="lbl">Vertical Position %</label><input type="number" id="mainImgY" value="50" min="0" max="100"></div>
+          <div class="field"><label class="lbl">Horizontal Position %</label><input type="number" id="mainImgX" value="50" min="0" max="100"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label class="lbl">Rotation °</label><input type="number" id="mainImgRot" value="0" min="-180" max="180"></div>
+          <div class="field"><label class="lbl">Opacity</label><input type="number" id="mainImgOpacity" value="100" min="0" max="100"></div>
+        </div>
+        <div class="field"><label class="lbl">Blend Mode</label>
+          <select id="mainImgBlend">
+            <option>normal</option><option>multiply</option><option>screen</option>
+            <option>overlay</option><option>darken</option><option>lighten</option>
+            <option>hard-light</option><option>soft-light</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- LAYER 4 -->
+    <div class="layer" id="layer4">
+      <div class="layer-head" data-layer="layer4"><span class="layer-num">4</span><span class="layer-title">Icons & Small Images</span><span class="layer-arrow">▶</span></div>
+      <div class="layer-body">
+        <button class="btn btn-primary" id="addIconBtn" style="width:100%;">+ Add Icon / Image</button>
+        <div id="iconList"></div>
+      </div>
+    </div>
+
+    <!-- LAYER 5 -->
+    <div class="layer" id="layer5">
+      <div class="layer-head" data-layer="layer5"><span class="layer-num">5</span><span class="layer-title">Brand Text Elements</span><span class="layer-arrow">▶</span></div>
+      <div class="layer-body">
+        <button class="btn btn-primary" id="addBrandBtn" style="width:100%;">+ Add Brand Element</button>
+        <div id="brandList"></div>
+      </div>
+    </div>
+
+    <!-- LAYER 6 -->
+    <div class="layer" id="layer6">
+      <div class="layer-head" data-layer="layer6"><span class="layer-num">6</span><span class="layer-title">Text Content</span><span class="layer-arrow">▶</span></div>
+      <div class="layer-body">
+        <div class="add-row">
+          <button class="btn" data-block-type="headline">+ Headline</button>
+          <button class="btn" data-block-type="title">+ Title</button>
+          <button class="btn" data-block-type="subtitle">+ Subtitle</button>
+          <button class="btn" data-block-type="body">+ Body</button>
+          <button class="btn" data-block-type="bullet">+ Bullets</button>
+        </div>
+        <div class="field-row" style="margin-top:6px;">
+          <div class="field"><label class="lbl">Zone Pad H</label><input type="number" id="textPadX" value="60"></div>
+          <div class="field"><label class="lbl">Zone Pad V</label><input type="number" id="textPadY" value="60"></div>
+        </div>
+        <div class="field"><label class="lbl">Vertical Align (legacy flex)</label>
+          <div class="radio-row" id="textVAlignRow">
+            <div class="radio-btn active" data-valign="flex-start">Top</div>
+            <div class="radio-btn" data-valign="center">Mid</div>
+            <div class="radio-btn" data-valign="flex-end">Bottom</div>
+          </div>
+        </div>
+        <div id="textBlockList"></div>
+      </div>
+    </div>
+
+    <!-- LAYER 7 -->
+    <div class="layer" id="layer7">
+      <div class="layer-head" data-layer="layer7"><span class="layer-num">7</span><span class="layer-title">Logo</span><span class="layer-arrow">▶</span></div>
+      <div class="layer-body">
+        <div class="field"><label class="lbl">Source</label>
+          <div class="radio-row" id="logoSrcRow">
+            <div class="radio-btn active" data-src="url">URL</div>
+            <div class="radio-btn" data-src="file">File</div>
+            <div class="radio-btn" data-src="none">None</div>
+          </div>
+        </div>
+        <div id="logoUrlField"><div class="field"><label class="lbl">URL</label><input type="url" id="logoUrl" placeholder="https://..."></div></div>
+        <div id="logoFileField" style="display:none;"><div class="field"><label class="lbl">Upload</label><input type="file" id="logoFile" accept="image/*"></div></div>
+        <div class="field-row">
+          <div class="field"><label class="lbl">Width (px)</label><input type="number" id="logoW" value="200"></div>
+          <div class="field"><label class="lbl">Height (auto=0)</label><input type="number" id="logoH" value="0"></div>
+        </div>
+        <div class="field"><label class="lbl">Anchor Corner</label>
+          <div class="radio-row" id="logoAnchorRow">
+            <div class="radio-btn" data-anchor="tl">↖ TL</div>
+            <div class="radio-btn" data-anchor="tr">↗ TR</div>
+            <div class="radio-btn active" data-anchor="bl">↙ BL</div>
+            <div class="radio-btn" data-anchor="br">↘ BR</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label class="lbl">Margin X (px)</label><input type="number" id="logoMX" value="50"></div>
+          <div class="field"><label class="lbl">Margin Y (px)</label><input type="number" id="logoMY" value="50"></div>
+        </div>
+        <div class="field"><label class="lbl">Opacity</label>
+          <div class="range-row"><input type="range" id="logoOpacity" min="0" max="100" value="100"><span class="range-val">100%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ CANVAS AREA ═══════════ -->
+  <div class="canvas-area">
+    <div id="canvasWrap">
+      <div id="canvas">
+        <div id="layer-bg" class="canvas-layer"></div>
+        <div id="layer-imgbg" class="canvas-layer"></div>
+        <div id="layer-imgbg-overlay" class="canvas-layer"></div>
+        <div id="layer-main" class="canvas-layer"></div>
+        <div id="layer-icons" class="canvas-layer"></div>
+        <div id="layer-text" class="canvas-layer"></div>
+        <div id="layer-brand" class="canvas-layer"></div>
+        <div id="layer-logo" class="canvas-layer"></div>
+      </div>
+    </div>
+    <div id="canvasInfo">Scale: 100% · 1080×1350px</div>
+  </div>
+</div>
+
+<!-- ═══════════ API STATUS BAR ═══════════ -->
+<div id="apiBar">
+  <div class="api-status">
+    <div id="apiDot" class="api-dot idle"></div>
+    <span id="apiStatusText">Idle</span>
+  </div>
+</div>
+
+<!-- ═══════════ AI AGENT CHAT WIDGET ═══════════ -->
+<button class="agent-toggle" id="agentToggle" title="AI Design Agent">
+  ✦
+  <span class="badge" id="agentBadge" style="display:none;"></span>
+</button>
+
+<div class="agent-panel" id="agentPanel">
+  <div class="agent-header">
+  <div class="agent-avatar">✦</div>
+  <div class="agent-title">
+    <h4>DESIGN AGENT</h4>
+    <p id="agentSubtitle">Ready · via extension</p>
+  </div>
+  <!-- DeepSeek only - provider fixed -->
+<input type="hidden" id="agentProvider" value="deepseek">
+<div style="background:var(--s3);border:1px solid var(--border);border-radius:4px;padding:4px 10px;font-family:var(--mono);font-size:9px;color:var(--accent);">
+  🔍 DeepSeek · Creative Design AI
+</div>
+  <button class="agent-close" id="agentClose" title="Close">✕</button>
+</div>
+  <div class="agent-messages" id="agentMessages">
+    <div class="agent-msg system">Hi — I can design anything. Try:<br>
+      <em>"Make a carousel cover about AI tools"</em><br>
+      <em>"Apply the neon-cyber preset"</em><br>
+      <em>"Make the headline bigger and green"</em>
+    </div>
+  </div>
+  <div class="agent-status" id="agentStatus">idle</div>
+  <div class="agent-input-wrap">
+    <textarea id="agentInput" placeholder="Describe a design change..." rows="1"></textarea>
+    <button class="agent-send" id="agentSend">SEND</button>
+  </div>
+</div>
+<script src="designer.js"></script>
+<script src="controller.js"></script>
+<script src="presets.js"></script>
+<script src="agent.js"></script>
+
+</body>
+</html>
