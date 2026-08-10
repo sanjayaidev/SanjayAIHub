@@ -1,0 +1,27 @@
+diff --git a/migrations/add_mcp_integration.sql b/migrations/add_mcp_integration.sql
+index 715b8c1..19163f6 100644
+--- a/migrations/add_mcp_integration.sql
++++ b/migrations/add_mcp_integration.sql
+@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS mcp_client_registrations (
+ -- Per-user OAuth connection/tokens for a given MCP server (e.g. a user's
+ -- own Higgsfield account, linked via "Connect Higgsfield").
+ CREATE TABLE IF NOT EXISTS user_mcp_connections (
+-  id SERIAL PRIMARY KEY,
+-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
++  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
++  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+   server_key VARCHAR(64) NOT NULL,
+   access_token TEXT NOT NULL,
+   refresh_token TEXT,
+@@ -38,8 +38,8 @@ CREATE INDEX IF NOT EXISTS idx_user_mcp_connections_user ON user_mcp_connections
+ -- Higgsfield module page can show "My generations" without re-querying
+ -- the remote server every time.
+ CREATE TABLE IF NOT EXISTS mcp_generations (
+-  id SERIAL PRIMARY KEY,
+-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
++  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
++  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+   server_key VARCHAR(64) NOT NULL,
+   tool_name VARCHAR(128) NOT NULL,
+   input_args JSONB,
+
