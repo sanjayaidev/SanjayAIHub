@@ -128,7 +128,8 @@ const MODULES = {
     'text-to-speech': '/tts.html',
     'text-to-music': '/ttmusic.html',
     'voice-clone': '/voiceclone.html',
-   'coding-agent': '/agent' //'design-studio', 'chatbot-maker', 'mcp-integrator': not built yet
+    'mcp-integrator': '/higgsfield.html',
+   'coding-agent': '/agent' //'design-studio', 'chatbot-maker'
   },
 
   // Navigate to module page
