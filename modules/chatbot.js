@@ -9,12 +9,11 @@ const NVIDIA_TEXT_MODELS = [
   'meta/llama-3.1-70b-instruct',
   'meta/llama-3.1-8b-instruct',
   'meta/llama-3.2-3b-instruct',
-  
-  // Mistral models
-  'mistralai/mistral-medium-3.5-128b',
-  
+
   // NVIDIA text models (excluding safety/content moderation)
-  'nvidia/ising-calibration-1-35b-a3b',
+  // Removed 2026-08-10: mistralai/mistral-medium-3.5-128b (410 Gone,
+  // EOL 2026-08-07) and nvidia/ising-calibration-1-35b-a3b (410 Gone,
+  // EOL 2026-07-27) — both confirmed dead via scripts/test-endpoints.js.
   'nvidia/llama-3.3-nemotron-super-49b-v1',
   'nvidia/nemotron-3-nano-30b-a3b',
   'nvidia/nemotron-3-super-120b-a12b',
@@ -36,7 +35,7 @@ const NVIDIA_DEFAULT_MODEL = 'meta/llama-3.1-70b-instruct';
 const MULTILINGUAL_MODELS = new Set([
   'meta/llama-3.1-70b-instruct',
   'meta/llama-3.1-8b-instruct',
-  'mistralai/mistral-medium-3.5-128b',
+  // mistralai/mistral-medium-3.5-128b removed 2026-08-10 (410 Gone, EOL 2026-08-07)
 ]);
 
 // ── ALIBABA ──────────────────────────────────────────────

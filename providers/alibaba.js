@@ -26,15 +26,11 @@ class AlibabaProvider {
       max_tokens = 2048,
       top_p = 1,
       stream = false,
-      enable_thinking,
     } = options;
 
     if (!model) throw new Error('Alibaba chatCompletion requires a model');
 
     const payload = { model, messages, temperature, max_tokens, top_p, stream };
-    if (enable_thinking !== undefined) {
-      payload.enable_thinking = enable_thinking;
-    }
 
     const response = await fetch(`${this.chatBaseUrl}/chat/completions`, {
       method: 'POST',
@@ -226,10 +222,13 @@ class AlibabaProvider {
     return response.json();
   }
 
-  // Poll an async video task submitted via videoGeneration().
-  // Returns { output: { task_status, video_url, ... } }.
+  // Poll ANY DashScope async task — video-synthesis, and now also the
+  // legacy image-synthesis tasks submitted via imageSynthesisLegacy().
+  // Both submit to different endpoints but share this same generic
+  // /api/v1/tasks/{id} polling endpoint.
+  // Returns { output: { task_status, video_url | results, ... } }.
   // task_status: PENDING | RUNNING | SUCCEEDED | FAILED
-  async checkVideoTask(taskId) {
+  async checkTask(taskId) {
     if (!taskId) throw new Error('taskId is required');
 
     const response = await fetch(`${this.baseUrl}/api/v1/tasks/${encodeURIComponent(taskId)}`, {
@@ -238,10 +237,71 @@ class AlibabaProvider {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Alibaba video task status error (${response.status}): ${errorText}`);
+      throw new Error(`Alibaba task status error (${response.status}): ${errorText}`);
     }
 
     return response.json();
+  }
+
+  // Back-compat alias — existing callers use checkVideoTask().
+  async checkVideoTask(taskId) {
+    return this.checkTask(taskId);
+  }
+
+  // Legacy Wan text-to-image models (wan2.1-t2i-turbo, wan2.1-t2i-plus,
+  // wan2.2-t2i-flash, wan2.2-t2i-plus, wan2.5-t2i-preview) live on
+  // DashScope's OLDER image-synthesis API, not the same sync
+  // multimodal-generation endpoint used by imageGeneration() for
+  // Qwen-Image and the newer wan2.6-t2i/wan2.7-image. Calling these
+  // models through the wrong endpoint produces a nonsensical
+  // "url error, please check url" response — confirmed via
+  // scripts/test-endpoints.js on 2026-08-10. See LEGACY_IMAGE_SYNTHESIS_MODELS
+  // at the bottom of this file for the exact model list this applies to.
+  //
+  // This is async like videoGeneration() — submit here, then poll with
+  // checkTask(). On SUCCEEDED, output.results is an array of { url }.
+  // Docs: https://www.alibabacloud.com/help/en/model-studio/text-to-image-v2-api-reference
+  async imageSynthesisLegacy(prompt, options = {}) {
+    const {
+      model,
+      size,
+      n = 1,
+      seed,
+      negative_prompt,
+      prompt_extend = true,
+      watermark = false,
+    } = options;
+
+    if (!model) throw new Error('Alibaba imageSynthesisLegacy requires a model');
+    if (!prompt || !prompt.trim()) throw new Error('prompt is required');
+
+    const input = { prompt };
+    if (negative_prompt && negative_prompt.trim()) input.negative_prompt = negative_prompt;
+
+    const parameters = { prompt_extend: !!prompt_extend, watermark: !!watermark, n: parseInt(n) || 1 };
+    if (size) parameters.size = size;
+    if (seed !== undefined && seed !== null && seed !== '') parameters.seed = parseInt(seed);
+
+    const response = await fetch(`${this.baseUrl}/api/v1/services/aigc/text2image/image-synthesis`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+        'X-DashScope-Async': 'enable',
+      },
+      body: JSON.stringify({ model, input, parameters }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let detail = errorText;
+      try {
+        detail = JSON.parse(errorText).error?.message || errorText;
+      } catch (_) {}
+      throw new Error(`Alibaba legacy image synthesis error (${response.status}): ${detail}`);
+    }
+
+    return response.json(); // { output: { task_id, task_status } }
   }
 
   // ────────────────────────────────────────────────────────────
@@ -372,5 +432,17 @@ class AlibabaProvider {
 // The only VC model callable over the plain HTTP multimodal-generation
 // endpoint (see notes on cloneVoice/synthesizeWithClonedVoice above).
 AlibabaProvider.VOICE_CLONE_MODEL = 'qwen3-tts-vc-2026-01-22';
+
+// Legacy Wan t2i models that must go through imageSynthesisLegacy()
+// instead of imageGeneration() — see the comment on that method for why.
+// Callers (modules/text-to-image.js, scripts/test-endpoints.js) check
+// this list to route correctly.
+AlibabaProvider.LEGACY_IMAGE_SYNTHESIS_MODELS = [
+  'wan2.1-t2i-turbo',
+  'wan2.1-t2i-plus',
+  'wan2.2-t2i-flash',
+  'wan2.2-t2i-plus',
+  'wan2.5-t2i-preview',
+];
 
 module.exports = AlibabaProvider;

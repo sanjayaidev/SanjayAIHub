@@ -10,7 +10,7 @@ const NvidiaProvider = require('../providers/nvidia');
 const NVIDIA_MODELS = [
   'meta/llama-3.1-70b-instruct',
   'meta/llama-3.1-8b-instruct',
-  'mistralai/mistral-medium-3.5-128b',
+  // mistralai/mistral-medium-3.5-128b removed 2026-08-10 (410 Gone, EOL 2026-08-07)
 ];
 
 const ALIBABA_MODELS = [

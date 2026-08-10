@@ -76,25 +76,10 @@ async function runPool(items, worker, concurrency = 4, delayMs = 150) {
   return results;
 }
 
-// Timeout wrapper for individual requests - prevents stuck models from halting all tests
-const REQUEST_TIMEOUT_MS = parseInt(process.env.TEST_REQUEST_TIMEOUT || '60000', 10); // default 60s
-
-async function withTimeout(promise, timeoutMs = REQUEST_TIMEOUT_MS, description = 'request') {
-  let timeoutId;
-  const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error(`${description} timed out after ${timeoutMs}ms`)), timeoutMs);
-  });
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-async function timed(fn, timeoutMs = REQUEST_TIMEOUT_MS, description = 'request') {
+async function timed(fn) {
   const start = Date.now();
   try {
-    const value = await withTimeout(fn(), timeoutMs, description);
+    const value = await fn();
     return { ok: true, ms: Date.now() - start, value };
   } catch (err) {
     return { ok: false, ms: Date.now() - start, error: err.message || String(err) };
@@ -116,38 +101,6 @@ function classifyAlibabaVisual(id) {
   return 'image';
 }
 
-// Check if model is an omni model requiring special max_tokens range
-function isAlibabaOmniModel(modelId) {
-  return /-omni-/.test(modelId);
-}
-
-// Check if model requires enable_thinking=false
-function alibabaModelNeedsThinkingDisabled(modelId) {
-  return modelId === 'qwen3-14b';
-}
-
-// Get appropriate max_tokens for Alibaba model
-function getAlibabaMaxTokens(modelId) {
-  if (isAlibabaOmniModel(modelId)) {
-    // Omni models support up to 65536, but use conservative 2048 for testing
-    return 2048;
-  }
-  return 5; // minimal for most chat models
-}
-
-// Get appropriate size for Alibaba image model
-function getAlibabaImageSize(modelId) {
-  // Wan series image models need larger sizes (589824 to 2073600 pixels)
-  if (/^wan[0-9.]+-t2i/.test(modelId) || /^wan[0-9.]+-image/.test(modelId)) {
-    return '1024*1024'; // 1048576 pixels - within valid range
-  }
-  // Standard Qwen image models have specific allowed sizes
-  if (/^qwen-image(?!-edit)/.test(modelId) && !modelId.includes('2.0') && !modelId.includes('3.0')) {
-    return '1024*1024'; // Use a common valid size
-  }
-  return '512*512'; // Default for most models
-}
-
 // ══════════════════════════════════════════════════════════════
 async function testAlibaba(rows) {
   const apiKey = process.env.TEST_ALIBABA_API_KEY;
@@ -162,16 +115,8 @@ async function testAlibaba(rows) {
   const { text, vision } = getChatModels();
   const chatModels = capped([...text, ...vision]);
   await runPool(chatModels, async (model) => {
-    const maxTokens = getAlibabaMaxTokens(model);
-    const needsThinkingDisabled = alibabaModelNeedsThinkingDisabled(model);
-    const chatOptions = { model, max_tokens: maxTokens };
-    if (needsThinkingDisabled) {
-      chatOptions.enable_thinking = false;
-    }
     const result = await timed(() =>
-      alibaba.chatCompletion([{ role: 'user', content: 'Reply with exactly: OK' }], chatOptions),
-      REQUEST_TIMEOUT_MS,
-      `chat/${model}`
+      alibaba.chatCompletion([{ role: 'user', content: 'Reply with exactly: OK' }], { model, max_tokens: 5 })
     );
     record(rows, {
       provider: 'alibaba', category: 'chat', model,
@@ -185,12 +130,35 @@ async function testAlibaba(rows) {
   const visualModels = capped(getModelsByCategory('vision'));
   await runPool(visualModels, async (model) => {
     const kind = classifyAlibabaVisual(model);
-    if (kind === 'image') {
-      const size = getAlibabaImageSize(model);
-      const result = await timed(() => alibaba.imageGeneration('a red circle on white background', { model, size, prompt_extend: false }), REQUEST_TIMEOUT_MS, `image/${model}`);
+    if (kind === 'image' && AlibabaProvider.LEGACY_IMAGE_SYNTHESIS_MODELS.includes(model)) {
+      // These models (wan2.1/2.2 t2i + wan2.5-t2i-preview) live on
+      // DashScope's older async image-synthesis endpoint, not the sync
+      // multimodal-generation one imageGeneration() uses — confirmed
+      // 2026-08-10 after they failed with a misleading "url error" when
+      // called through the wrong endpoint. '1024*1024' is one of their
+      // documented valid sizes (unlike '512*512', which isn't).
+      const submit = await timed(() => alibaba.imageSynthesisLegacy('a red circle on white background', { model, size: '1024*1024', prompt_extend: false }));
+      if (!submit.ok) {
+        record(rows, { provider: 'alibaba', category: 'image', model, status: 'FAIL', ms: submit.ms, error: submit.error });
+        return;
+      }
+      const taskId = submit.value?.output?.task_id;
+      if (!waitVideo || !taskId) {
+        record(rows, { provider: 'alibaba', category: 'image', model, status: 'SUBMITTED', ms: submit.ms, error: taskId ? undefined : 'no task_id in response' });
+        return;
+      }
+      const polled = await pollAlibabaVideo(alibaba, taskId);
+      record(rows, { provider: 'alibaba', category: 'image', model, status: polled.ok ? 'PASS' : 'FAIL', ms: submit.ms + polled.ms, error: polled.error });
+    } else if (kind === 'image') {
+      // '1328*1328' is a documented valid size for every remaining sync
+      // image model (legacy Qwen-Image models are restricted to a fixed
+      // preset list that does NOT include '512*512', which is what this
+      // used to send — confirmed 2026-08-10 via qwen-image/qwen-image-plus
+      // both failing with "size does not match the allowed size").
+      const result = await timed(() => alibaba.imageGeneration('a red circle on white background', { model, size: '1328*1328', prompt_extend: false }));
       record(rows, { provider: 'alibaba', category: 'image', model, status: result.ok ? 'PASS' : 'FAIL', ms: result.ms, error: result.error });
     } else {
-      const submit = await timed(() => alibaba.videoGeneration('a red circle rotating', { model, resolution: '480P', ratio: '16:9' }), REQUEST_TIMEOUT_MS, `video/${model}`);
+      const submit = await timed(() => alibaba.videoGeneration('a red circle rotating', { model, resolution: '480P', ratio: '16:9' }));
       if (!submit.ok) {
         record(rows, { provider: 'alibaba', category: 'video', model, status: 'FAIL', ms: submit.ms, error: submit.error });
         return;
@@ -241,9 +209,7 @@ async function testNvidia(rows) {
   const models = capped([...NVIDIA_TEXT_MODELS, ...NVIDIA_VISION_MODELS]);
   await runPool(models, async (model) => {
     const result = await timed(() =>
-      nvidia.chatCompletion([{ role: 'user', content: 'Reply with exactly: OK' }], { model, max_tokens: 5 }),
-      REQUEST_TIMEOUT_MS,
-      `chat/${model}`
+      nvidia.chatCompletion([{ role: 'user', content: 'Reply with exactly: OK' }], { model, max_tokens: 5 })
     );
     record(rows, { provider: 'nvidia', category: 'chat', model, status: result.ok ? 'PASS' : 'FAIL', ms: result.ms, error: result.error });
   }, 4, 150);
@@ -260,10 +226,10 @@ async function testCloudflare(rows) {
   const cf = new CloudflareProvider(apiToken, accountId);
   const models = CloudflareProvider.getFreeModels();
 
-  const tts = await timed(() => cf.textToSpeech('connectivity test', { lang: 'en' }), REQUEST_TIMEOUT_MS, 'tts');
+  const tts = await timed(() => cf.textToSpeech('connectivity test', { lang: 'en' }));
   record(rows, { provider: 'cloudflare', category: 'tts', model: models.tts[0], status: tts.ok ? 'PASS' : 'FAIL', ms: tts.ms, error: tts.error });
 
-  const img = await timed(() => cf.textToImage({ prompt: 'a red circle', width: 256, height: 256, num_steps: 1 }), REQUEST_TIMEOUT_MS, 'image');
+  const img = await timed(() => cf.textToImage({ prompt: 'a red circle', width: 256, height: 256, num_steps: 1 }));
   record(rows, { provider: 'cloudflare', category: 'image', model: models.image[0], status: img.ok ? 'PASS' : 'FAIL', ms: img.ms, error: img.error });
 }
 
@@ -276,13 +242,13 @@ async function testElevenLabs(rows) {
   }
   const el = new ElevenLabsProvider(apiKey);
 
-  const conn = await timed(() => el.testConnection(), REQUEST_TIMEOUT_MS, 'testConnection');
+  const conn = await timed(() => el.testConnection());
   record(rows, { provider: 'elevenlabs', category: 'account', model: '(key check)', status: conn.ok ? 'PASS' : 'FAIL', ms: conn.ms, error: conn.error });
   if (!conn.ok) return; // no point burning credits on every model if the key itself is bad
 
   const { tts: models } = ElevenLabsProvider.getFreeModels();
   await runPool(capped(models), async (model) => {
-    const result = await timed(() => el.textToSpeech('Hi', undefined, { model_id: model }), REQUEST_TIMEOUT_MS, `tts/${model}`);
+    const result = await timed(() => el.textToSpeech('Hi', undefined, { model_id: model }));
     record(rows, { provider: 'elevenlabs', category: 'tts', model, status: result.ok ? 'PASS' : 'FAIL', ms: result.ms, error: result.error });
   }, 2, 300);
 }
@@ -297,10 +263,10 @@ async function testPixazo(rows) {
   const pixazo = new PixazoProvider(apiKey);
   const free = PixazoProvider.getFreeModels();
 
-  const img = await timed(() => pixazo.generateImage({ prompt: 'a red circle', width: 64, height: 64, num_steps: 1 }), REQUEST_TIMEOUT_MS, 'image');
+  const img = await timed(() => pixazo.generateImage({ prompt: 'a red circle', width: 64, height: 64, num_steps: 1 }));
   record(rows, { provider: 'pixazo', category: 'image', model: free.image[0], status: img.ok ? 'PASS' : 'FAIL', ms: img.ms, error: img.error });
 
-  const audio = await timed(() => pixazo.generateAudio({ prompt: 'a short chime sound' }), REQUEST_TIMEOUT_MS, 'audio');
+  const audio = await timed(() => pixazo.generateAudio({ prompt: 'a short chime sound' }));
   if (!audio.ok) {
     record(rows, { provider: 'pixazo', category: 'audio', model: free.audio[0], status: 'FAIL', ms: audio.ms, error: audio.error });
   } else {
@@ -311,7 +277,7 @@ async function testPixazo(rows) {
     const params = { prompt: 'a red circle rotating', width: 512, height: 512, num_frames: 25 };
     if (mode === 'image-to-video') params.image_url = 'https://placehold.co/512x512.png';
     if (mode === 'video-to-video') params.video_url = 'https://raw.githubusercontent.com/w3c/web-platform-tests/master/media-source/mp4/test.mp4';
-    const submit = await timed(() => pixazo.generateVideo(mode, params), REQUEST_TIMEOUT_MS, `video/${model}`);
+    const submit = await timed(() => pixazo.generateVideo(mode, params));
     if (!submit.ok) {
       record(rows, { provider: 'pixazo', category: 'video', model: `${model} (${mode})`, status: 'FAIL', ms: submit.ms, error: submit.error });
       continue;
