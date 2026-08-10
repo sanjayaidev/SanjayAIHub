@@ -4,7 +4,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test:endpoints": "node scripts/test-endpoints.js"
   },
   "dependencies": {
     "axios": "^1.6.0",
