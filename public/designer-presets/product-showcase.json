@@ -1,0 +1,36 @@
+{
+  "category": "product-showcase",
+  "canvasW": 1080,
+  "canvasH": 1350,
+  "presets": [
+    {
+      "id": "ps-minimal-light",
+      "name": "Minimal · Light",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1350,
+        "bg": { "type": "solid", "color": "#F8F5F0" },
+        "textBlocks": [
+          { "type": "subtitle", "text": "NEW DROP", "size": 20, "font": "Space Mono", "weight": "700", "color": "#D2691E", "align": "center", "letterSpacing": 5, "x": 50, "y": 15, "rot": 0 },
+          { "type": "headline", "text": "THE\nEVERYDAY\nTEE", "size": 130, "font": "Oswald", "weight": "700", "color": "#1a1a1a", "align": "center", "lineH": 0.9, "letterSpacing": 2, "x": 50, "y": 42, "rot": 0, "textTransform": "uppercase" },
+          { "type": "body", "text": "Heavyweight cotton · 280 GSM\nDesigned in Portugal\n$48 · SHOP LINK IN BIO", "size": 24, "font": "DM Sans", "weight": "500", "color": "#5a5a5a", "align": "center", "lineH": 1.7, "x": 50, "y": 82, "rot": 0 }
+        ],
+        "brands": [{ "text": "STUDIO/NAME", "x": 50, "y": 95, "size": 18, "color": "#1a1a1a", "font": "Space Mono", "weight": 700, "align": "center", "letterSpacing": 3 }]
+      }
+    },
+    {
+      "id": "ps-tech-dark",
+      "name": "Tech · Dark Glow",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1350,
+        "bg": { "type": "radial", "c1": "#1a1a2e", "c2": "#0a0a1a", "c3": "#050510", "radShape": "circle", "s1": 0, "s2": 60, "s3": 100 },
+        "textBlocks": [
+          { "type": "subtitle", "text": "— INTRODUCING", "size": 20, "font": "Space Mono", "weight": "700", "color": "#4D9FFF", "align": "center", "letterSpacing": 4, "x": 50, "y": 15, "rot": 0 },
+          { "type": "headline", "text": "MODEL X1", "size": 150, "font": "Syne", "weight": "800", "color": "#ffffff", "align": "center", "lineH": 0.95, "letterSpacing": -1, "textShadow": "glow", "x": 50, "y": 45, "rot": 0 },
+          { "type": "subtitle", "text": "Engineered for tomorrow.", "size": 30, "font": "DM Sans", "weight": "400", "color": "#B0B8D0", "align": "center", "lineH": 1.4, "x": 50, "y": 65, "rot": 0 },
+          { "type": "body", "text": "PRE-ORDER · $299", "size": 24, "font": "Space Mono", "weight": "700", "color": "#4D9FFF", "align": "center", "letterSpacing": 3, "x": 50, "y": 82, "rot": 0 }
+        ],
+        "brands": [{ "text": "BRAND.CO", "x": 50, "y": 94, "size": 20, "color": "#ffffff", "font": "Space Mono", "weight": 700, "align": "center", "letterSpacing": 4, "opacity": 80 }]
+      }
+    }
+  ]
+}

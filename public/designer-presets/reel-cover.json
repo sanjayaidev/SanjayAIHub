@@ -1,0 +1,50 @@
+{
+  "category": "reel-cover",
+  "canvasW": 1080,
+  "canvasH": 1920,
+  "presets": [
+    {
+      "id": "rc-talking-head",
+      "name": "Talking Head · Bold",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1920,
+        "bg": { "type": "linear", "c1": "#1a0533", "c2": "#0d1f4a", "c3": "#0a0a1a", "angle": 180, "s1": 0, "s2": 50, "s3": 100 },
+        "textBlocks": [
+          { "type": "subtitle", "text": "▶ REEL · 0:42", "size": 22, "font": "Space Mono", "weight": "700", "color": "#F472B6", "align": "center", "letterSpacing": 3, "x": 50, "y": 12, "rot": 0 },
+          { "type": "headline", "text": "STOP\nDOING\nTHIS.", "size": 220, "font": "Bebas Neue", "weight": "700", "color": "#ffffff", "align": "center", "lineH": 0.85, "letterSpacing": 3, "textShadow": "hard", "textTransform": "uppercase", "x": 50, "y": 38, "rot": 0 },
+          { "type": "subtitle", "text": "One mistake killing\nyour engagement →", "size": 38, "font": "DM Sans", "weight": "500", "color": "#F472B6", "align": "center", "lineH": 1.35, "x": 50, "y": 70, "rot": 0 }
+        ],
+        "brands": [{ "text": "@YOURBRAND", "x": 50, "y": 88, "size": 24, "color": "#ffffff", "font": "Space Mono", "weight": 700, "align": "center", "letterSpacing": 3, "opacity": 80 }]
+      }
+    },
+    {
+      "id": "rc-tutorial-numbered",
+      "name": "Tutorial · Numbered",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1920,
+        "bg": { "type": "solid", "color": "#0a0a14" },
+        "textBlocks": [
+          { "type": "subtitle", "text": "TUTORIAL · 60 SEC", "size": 20, "font": "Space Mono", "weight": "700", "color": "#4D9FFF", "align": "center", "letterSpacing": 4, "x": 50, "y": 14, "rot": 0 },
+          { "type": "headline", "text": "HOW I", "size": 130, "font": "Montserrat", "weight": "900", "color": "#ffffff", "align": "center", "lineH": 0.95, "letterSpacing": 1, "x": 50, "y": 30, "rot": 0 },
+          { "type": "headline", "text": "10X'D\nMY\nOUTPUT", "size": 200, "font": "Bebas Neue", "weight": "700", "color": "#4D9FFF", "align": "center", "lineH": 0.85, "letterSpacing": 3, "textShadow": "glow", "textTransform": "uppercase", "x": 50, "y": 50, "rot": 0 },
+          { "type": "subtitle", "text": "(the boring trick nobody talks about)", "size": 28, "font": "DM Sans", "weight": "400", "color": "#B0B8D0", "align": "center", "lineH": 1.4, "x": 50, "y": 75, "rot": 0 }
+        ],
+        "brands": [{ "text": "@YOURBRAND", "x": 50, "y": 90, "size": 22, "color": "#4D9FFF", "font": "Space Mono", "weight": 700, "align": "center", "letterSpacing": 3, "opacity": 75 }]
+      }
+    },
+    {
+      "id": "rc-listicle",
+      "name": "Listicle · 3 Things",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1920,
+        "bg": { "type": "linear", "c1": "#2a0a0a", "c2": "#1a0533", "c3": "#0a0a1a", "angle": 135, "s1": 0, "s2": 55, "s3": 100 },
+        "textBlocks": [
+          { "type": "subtitle", "text": "▶ REEL", "size": 22, "font": "Space Mono", "weight": "700", "color": "#ef4444", "align": "center", "letterSpacing": 4, "x": 50, "y": 15, "rot": 0 },
+          { "type": "headline", "text": "3 APPS\nYOU NEED", "size": 170, "font": "Bebas Neue", "weight": "700", "color": "#ffffff", "align": "center", "lineH": 0.88, "letterSpacing": 2, "textTransform": "uppercase", "x": 50, "y": 35, "rot": 0 },
+          { "type": "bullet", "text": "The one for ideas\nThe one for focus\nThe one for shipping", "size": 36, "font": "DM Sans", "weight": "500", "color": "#E2E8F8", "align": "center", "lineH": 1.5, "bulletStyle": "numbered", "bulletColor": "#ef4444", "bulletSize": 36, "bulletGap": 28, "x": 50, "y": 62, "rot": 0 }
+        ],
+        "brands": [{ "text": "@YOURBRAND", "x": 50, "y": 90, "size": 22, "color": "#ef4444", "font": "Space Mono", "weight": 700, "align": "center", "letterSpacing": 3, "opacity": 75 }]
+      }
+    }
+  ]
+}

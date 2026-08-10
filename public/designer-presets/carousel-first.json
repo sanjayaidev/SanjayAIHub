@@ -1,0 +1,35 @@
+{
+  "category": "carousel-first",
+  "canvasW": 1080,
+  "canvasH": 1350,
+  "presets": [
+    {
+      "id": "cf-neon-dark",
+      "name": "Neon Dark · Hook",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1350,
+        "bg": { "type": "linear", "c1": "#0a0520", "c2": "#1a0533", "c3": "#05101f", "angle": 150, "s1": 0, "s2": 55, "s3": 100 },
+        "textBlocks": [
+          { "type": "subtitle", "text": "SWIPE TO LEARN →", "size": 22, "font": "Space Mono", "weight": "700", "color": "#4DFFA0", "align": "center", "letterSpacing": 4, "opacity": 85, "textTransform": "uppercase", "x": 50, "y": 32, "rot": 0 },
+          { "type": "headline", "text": "YOUR\nBIG\nIDEA", "size": 160, "font": "Bebas Neue", "weight": "700", "color": "#ffffff", "align": "center", "lineH": 0.88, "letterSpacing": 3, "textShadow": "glow", "textTransform": "uppercase", "x": 50, "y": 55, "rot": 0 },
+          { "type": "subtitle", "text": "A quick hook that makes them stop scrolling", "size": 32, "font": "DM Sans", "weight": "400", "color": "#B0B8D0", "align": "center", "lineH": 1.4, "x": 50, "y": 82, "rot": 0 }
+        ],
+        "brands": [{ "text": "@YOURBRAND", "x": 50, "y": 94, "size": 22, "color": "#4DFFA0", "font": "Space Mono", "weight": 700, "align": "center", "letterSpacing": 3, "opacity": 70 }]
+      }
+    },
+    {
+      "id": "cf-editorial-minimal",
+      "name": "Editorial · Minimal",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1350,
+        "bg": { "type": "solid", "color": "#F4EFE6" },
+        "textBlocks": [
+          { "type": "subtitle", "text": "— ISSUE 01", "size": 20, "font": "Space Mono", "weight": "700", "color": "#8B2E2E", "align": "left", "letterSpacing": 3, "x": 12, "y": 18, "rot": 0 },
+          { "type": "headline", "text": "THE ART OF\nSLOW DESIGN", "size": 140, "font": "Playfair Display", "weight": "900", "color": "#1a1a1a", "align": "left", "lineH": 0.95, "letterSpacing": -2, "x": 12, "y": 50, "rot": 0 },
+          { "type": "subtitle", "text": "Why patience is the ultimate creative superpower →", "size": 28, "font": "DM Sans", "weight": "400", "color": "#5a5a5a", "align": "left", "lineH": 1.4, "x": 12, "y": 78, "rot": 0 }
+        ],
+        "brands": [{ "text": "STUDIO/NAME", "x": 88, "y": 94, "size": 18, "color": "#1a1a1a", "font": "Space Mono", "weight": 700, "align": "right", "letterSpacing": 2, "opacity": 80 }]
+      }
+    }
+  ]
+}

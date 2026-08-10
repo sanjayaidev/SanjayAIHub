@@ -129,7 +129,8 @@ const MODULES = {
     'text-to-music': '/ttmusic.html',
     'voice-clone': '/voiceclone.html',
     'mcp-integrator': '/higgsfield.html',
-   'coding-agent': '/agent' //'design-studio', 'chatbot-maker'
+    'coding-agent': '/agent',
+    'design-studio': '/designer.html'
   },
 
   // Navigate to module page

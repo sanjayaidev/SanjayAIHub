@@ -1,0 +1,35 @@
+{
+  "category": "quote-card",
+  "canvasW": 1080,
+  "canvasH": 1080,
+  "presets": [
+    {
+      "id": "qc-editorial-serif",
+      "name": "Editorial · Serif",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1080,
+        "bg": { "type": "solid", "color": "#F4EFE6" },
+        "textBlocks": [
+          { "type": "subtitle", "text": "“", "size": 300, "font": "Playfair Display", "weight": "900", "color": "#8B2E2E", "align": "left", "lineH": 0.7, "opacity": 40, "x": 10, "y": 20, "rot": 0 },
+          { "type": "headline", "text": "Simplicity is the\nultimate sophistication.", "size": 72, "font": "Playfair Display", "weight": "700", "color": "#1a1a1a", "align": "left", "lineH": 1.15, "letterSpacing": -1, "x": 15, "y": 48, "rot": 0 },
+          { "type": "subtitle", "text": "— LEONARDO DA VINCI", "size": 22, "font": "Space Mono", "weight": "700", "color": "#8B2E2E", "align": "left", "letterSpacing": 3, "x": 15, "y": 82, "rot": 0 }
+        ],
+        "brands": [{ "text": "@YOURBRAND", "x": 88, "y": 93, "size": 18, "color": "#1a1a1a", "font": "Space Mono", "weight": 700, "align": "right", "letterSpacing": 2, "opacity": 70 }]
+      }
+    },
+    {
+      "id": "qc-modern-dark",
+      "name": "Modern · Dark",
+      "spec": {
+        "canvasW": 1080, "canvasH": 1080,
+        "bg": { "type": "linear", "c1": "#201020", "c2": "#0d1f35", "c3": "#1a1020", "angle": 135, "s1": 0, "s2": 55, "s3": 100 },
+        "textBlocks": [
+          { "type": "subtitle", "text": "// WORDS TO LIVE BY", "size": 18, "font": "Space Mono", "weight": "700", "color": "#F472B6", "align": "left", "letterSpacing": 3, "x": 10, "y": 18, "rot": 0 },
+          { "type": "headline", "text": "\"MAKE IT\nWORK, MAKE\nIT RIGHT.\"", "size": 110, "font": "Syne", "weight": "800", "color": "#ffffff", "align": "left", "lineH": 0.95, "letterSpacing": -1, "textShadow": "soft", "x": 12, "y": 50, "rot": 0 },
+          { "type": "subtitle", "text": "— Kent Beck", "size": 24, "font": "DM Sans", "weight": "400", "color": "#F472B6", "align": "left", "letterSpacing": 1, "x": 12, "y": 83, "rot": 0 }
+        ],
+        "brands": [{ "text": "@YOURBRAND", "x": 88, "y": 93, "size": 18, "color": "#F472B6", "font": "Space Mono", "weight": 700, "align": "right", "letterSpacing": 2, "opacity": 70 }]
+      }
+    }
+  ]
+}
