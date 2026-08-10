@@ -26,11 +26,15 @@ class AlibabaProvider {
       max_tokens = 2048,
       top_p = 1,
       stream = false,
+      enable_thinking,
     } = options;
 
     if (!model) throw new Error('Alibaba chatCompletion requires a model');
 
     const payload = { model, messages, temperature, max_tokens, top_p, stream };
+    if (enable_thinking !== undefined) {
+      payload.enable_thinking = enable_thinking;
+    }
 
     const response = await fetch(`${this.chatBaseUrl}/chat/completions`, {
       method: 'POST',
