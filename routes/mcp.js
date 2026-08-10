@@ -22,6 +22,31 @@ function loadServerOr404(req, res) {
   return server;
 }
 
+// Postgres error 42P01 = undefined_table. In practice this only ever
+// means one thing here: migrations/add_mcp_integration.sql hasn't been
+// run against this database yet. Surface that clearly instead of a raw
+// stack trace / generic 500, both in the logs and in the API response.
+function isMissingTableError(error) {
+  return error && error.code === '42P01';
+}
+
+function logAndRespondDbError(res, error, context, redirectTo) {
+  if (isMissingTableError(error)) {
+    console.error(
+      `[MCP] ${context}: database tables are missing. Run ` +
+      `"psql $DATABASE_URL < migrations/add_mcp_integration.sql" against ` +
+      `this environment's database, then try again. (${error.message})`
+    );
+    const message = 'MCP is not set up on this server yet (missing database tables) — an admin needs to run the pending migration.';
+    if (redirectTo) return redirectTo(message);
+    return res.status(503).json({ success: false, code: 'MCP_NOT_MIGRATED', message });
+  }
+  console.error(`[MCP] ${context}:`, error);
+  const message = redirectTo ? null : 'Server error';
+  if (redirectTo) return redirectTo(message);
+  return res.status(500).json({ success: false, message });
+}
+
 // ──────────────────────────────────────────────
 // GET /api/mcp/servers — list configured MCP servers (for the frontend
 // to render "Connect X" cards without hardcoding the list).
@@ -79,8 +104,9 @@ router.get('/:serverKey/connect', async (req, res) => {
 
     throw new Error('MCP server did not return an authorization URL');
   } catch (error) {
-    console.error(`[MCP] ${server.key} connect failed:`, error);
-    return res.redirect(`/higgsfield.html?mcp_error=${encodeURIComponent('Could not start Higgsfield sign-in. Please try again.')}`);
+    return logAndRespondDbError(res, error, `${server.key} connect failed`, (message) =>
+      res.redirect(`/higgsfield.html?mcp_error=${encodeURIComponent(message || 'Could not start Higgsfield sign-in. Please try again.')}`)
+    );
   }
 });
 
@@ -113,8 +139,9 @@ router.get('/:serverKey/callback', async (req, res) => {
     delete req.session.mcpOauth[server.key];
     return res.redirect(`/higgsfield.html?connected=1`);
   } catch (error) {
-    console.error(`[MCP] ${server.key} callback failed:`, error);
-    return res.redirect(`/higgsfield.html?mcp_error=${encodeURIComponent('Higgsfield sign-in failed. Please try again.')}`);
+    return logAndRespondDbError(res, error, `${server.key} callback failed`, (message) =>
+      res.redirect(`/higgsfield.html?mcp_error=${encodeURIComponent(message || 'Higgsfield sign-in failed. Please try again.')}`)
+    );
   }
 });
 
@@ -137,8 +164,7 @@ router.get('/:serverKey/status', authenticateToken, async (req, res) => {
       connectedAt: result.rows[0]?.connected_at || null,
     });
   } catch (error) {
-    console.error('[MCP] status check failed:', error);
-    res.status(500).json({ success: false, message: 'Server error checking connection status' });
+    return logAndRespondDbError(res, error, 'status check failed');
   }
 });
 
@@ -156,8 +182,7 @@ router.post('/:serverKey/disconnect', authenticateToken, async (req, res) => {
     );
     res.json({ success: true, message: `Disconnected from ${server.name}` });
   } catch (error) {
-    console.error('[MCP] disconnect failed:', error);
-    res.status(500).json({ success: false, message: 'Server error disconnecting' });
+    return logAndRespondDbError(res, error, 'disconnect failed');
   }
 });
 
@@ -191,6 +216,9 @@ router.get('/:serverKey/tools', authenticateToken, async (req, res) => {
         code: 'NOT_CONNECTED',
         message: `Not connected to ${server.name}. Please connect first.`,
       });
+    }
+    if (isMissingTableError(error)) {
+      return logAndRespondDbError(res, error, `${server.key} tools/list failed`);
     }
     console.error(`[MCP] ${server.key} tools/list failed:`, error);
     res.status(502).json({ success: false, message: `Could not reach ${server.name}. Please try again.` });
@@ -267,6 +295,9 @@ router.post('/:serverKey/call', authenticateToken, async (req, res) => {
         message: `Not connected to ${server.name}. Please connect first.`,
       });
     }
+    if (isMissingTableError(error)) {
+      return logAndRespondDbError(res, error, `${server.key} tools/call failed`);
+    }
     console.error(`[MCP] ${server.key} tools/call failed:`, error);
     res.status(502).json({ success: false, message: error.message || `${server.name} generation failed. Please try again.` });
   }
@@ -292,8 +323,7 @@ router.get('/:serverKey/history', authenticateToken, async (req, res) => {
     );
     res.json({ success: true, generations: result.rows });
   } catch (error) {
-    console.error('[MCP] history fetch failed:', error);
-    res.status(500).json({ success: false, message: 'Server error fetching history' });
+    return logAndRespondDbError(res, error, 'history fetch failed');
   }
 });
 
