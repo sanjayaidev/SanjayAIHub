@@ -24,6 +24,7 @@ function toggleLayer(layerId) {
 document.getElementById(layerId).classList.toggle('open');
 }
 let currentEditContext = null;
+if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 if (request.action === 'applyDesign') {
 currentEditContext = { postId: request.postId, slideIndex: request.slideIndex };
@@ -44,6 +45,7 @@ exportPNG(request.filename).then(() => sendResponse({ success: true }));
 return true;
 }
 });
+}
 async function handleSaveEditedSlide() {
 if (!currentEditContext) return { success: false, error: 'No edit context' };
 setApiStatus('active', 'Saving edit...');
