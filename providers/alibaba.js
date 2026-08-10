@@ -80,6 +80,8 @@ class AlibabaProvider {
       negative_prompt,
       prompt_extend = true,
       watermark = false,
+      thinking_mode,
+      enable_sequential,
     } = options;
 
     if (!model) throw new Error('Alibaba imageGeneration requires a model');
@@ -94,6 +96,8 @@ class AlibabaProvider {
     if (n !== undefined && n !== null) parameters.n = parseInt(n) || 1;
     if (negative_prompt && negative_prompt.trim()) parameters.negative_prompt = negative_prompt;
     if (seed !== undefined && seed !== null && seed !== '') parameters.seed = parseInt(seed);
+    if (thinking_mode !== undefined) parameters.thinking_mode = !!thinking_mode;
+    if (enable_sequential !== undefined) parameters.enable_sequential = !!enable_sequential;
 
     const payload = {
       model,
