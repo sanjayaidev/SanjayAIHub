@@ -16,6 +16,7 @@ const reelsRoutes = require('./routes/reels');
 const uploadRoutes = require('./routes/upload');
 const imageProxyRoutes = require('./routes/image-proxy');
 const paymentRoutes = require('./routes/payment');
+const mcpRoutes = require('./routes/mcp');
 
 // Import coding-agent as ESM module (dynamic import)
 let createCodingAgentApp = null;
@@ -174,6 +175,7 @@ app.use('/api/reels', reelsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/image-proxy', imageProxyRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/mcp', mcpRoutes);
 
 // ── Health Check ──
 app.get('/api/health', (req, res) => {
