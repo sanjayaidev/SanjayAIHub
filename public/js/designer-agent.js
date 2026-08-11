@@ -435,7 +435,11 @@ Output ONLY the complete JSON design spec now. Remember:
     try { data = await res.json(); } catch (e) { throw new Error(`Server returned an invalid response (${res.status})`); }
 
     if (!res.ok || !data.success) {
-      throw new Error(data.message || `Request failed (${res.status})`);
+      const err = new Error(data.message || `Request failed (${res.status})`);
+      // Carry the raw AI text along so the UI can show it for debugging,
+      // even though the request itself failed.
+      err.rawResponse = data.rawResponse;
+      throw err;
     }
 
     return data; // { success, spec, conversationId, rawResponse }
@@ -738,6 +742,7 @@ Output ONLY the complete JSON design spec now. Remember:
       // Backend already extracts + validates the JSON spec server-side; fall
       // back to the client-side extractor only if that's ever missing.
       let spec = backendResult.spec || extractJSON(raw);
+      let lastRaw = raw;
 
       if (!spec) {
         console.warn('[Agent API] First parse failed, sending fix prompt...');
@@ -746,10 +751,17 @@ Output ONLY the complete JSON design spec now. Remember:
           const retryResult = await callDesignBackend(fixPrompt, convId, effectiveCanvasState);
           addToConversation(convId, 'assistant', retryResult.rawResponse);
           spec = retryResult.spec || extractJSON(retryResult.rawResponse);
-        } catch (retryErr) {}
+          lastRaw = retryResult.rawResponse || lastRaw;
+        } catch (retryErr) {
+          lastRaw = retryErr.rawResponse || lastRaw;
+        }
       }
       
-      if (!spec) throw new Error('JSON parse failed after retry');
+      if (!spec) {
+        const err = new Error('JSON parse failed after retry');
+        err.rawResponse = lastRaw;
+        throw err;
+      }
       
       let result = { success: true, spec, conversationId: convId };
       
@@ -838,7 +850,10 @@ Output ONLY the complete JSON design spec now. Remember:
     } catch (err) {
       console.error('[Agent UI] error:', err);
       window.DesignerAgentUI?.removeTyping();
-      window.DesignerAgentUI?.addMessage('bot', `<span class="applied-badge err">✗ ${escapeHTML(err.message)}</span>`);
+      const rawBlock = err.rawResponse
+        ? `<details class="agent-raw"><summary>Show raw AI response (${err.rawResponse.length} chars)</summary><pre>${escapeHTML(err.rawResponse)}</pre></details>`
+        : '';
+      window.DesignerAgentUI?.addMessage('bot', `<span class="applied-badge err">✗ ${escapeHTML(err.message)}</span>${rawBlock}`);
       window.DesignerAgentUI?.setStatus(`error · DeepSeek`);
     } finally {
       window.DesignerAgentUI?.busy(false);

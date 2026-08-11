@@ -123,13 +123,15 @@ router.post('/generate', authenticateToken, async (req, res) => {
     const designSpec = extractJSON(aiResponse);
     
     if (!designSpec) {
-      // Log the raw model output server-side so a future regression here
-      // (e.g. thinking-mode reasoning eating the token budget again) is
-      // diagnosable instead of just a generic client-facing message.
-      console.error('Designer: failed to extract JSON from AI response. Raw response:', aiResponse);
+      // Surface the raw model output straight to the UI (see
+      // public/js/designer-agent.js handleSend / callDesignBackend) instead
+      // of only logging it server-side — the browser is a much easier place
+      // to inspect the exact text than server logs, which can interleave or
+      // reorder large multi-line writes from concurrent requests.
       return res.status(500).json({
         success: false,
-        message: 'Failed to generate valid design specification'
+        message: 'Failed to generate valid design specification',
+        rawResponse: aiResponse
       });
     }
 
@@ -409,7 +411,15 @@ function extractJSON(s) {
   // Try to repair common JSON issues
   candidate = candidate.replace(/,\s*([]}])/g, '$1'); // Remove trailing commas
   candidate = candidate.replace(/'([^']*)'\s*:/g, '"$1":'); // Fix single quotes
-  
+  // Strip stray backslashes before [ or ]. Some models (esp. reasoning
+  // models) over-eagerly markdown-escape square brackets — e.g. emitting
+  // "opacity": \[35\] instead of "opacity": 35 — likely defensive against
+  // the bracket being read as markdown reference-link syntax elsewhere in
+  // the pipeline. \[ and \] are never legal JSON escapes (only
+  // \" \\ \/ \b \f \n \r \t \uXXXX are), so unescaping them is always safe,
+  // never destructive to genuinely valid JSON.
+  candidate = candidate.replace(/\\([[\]])/g, '$1');
+
   try { return JSON.parse(candidate); } catch (e) {}
   
   return null;

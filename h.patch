@@ -1,64 +1,115 @@
-diff --git a/providers/alibaba.js b/providers/alibaba.js
-index 513ccfc..0ba22e1 100644
---- a/providers/alibaba.js
-+++ b/providers/alibaba.js
-@@ -26,11 +26,22 @@ class AlibabaProvider {
-       max_tokens = 2048,
-       top_p = 1,
-       stream = false,
-+      // Hybrid reasoning models hosted here (deepseek-v3.2 and later,
-+      // qwen3-*) think by default. Callers that need a direct, immediately
-+      // parseable answer (e.g. strict-JSON output) should pass
-+      // enable_thinking: false, or the reasoning trace can eat the whole
-+      // max_tokens budget before the model ever emits its final answer,
-+      // leaving `message.content` empty or truncated. Omit this option
-+      // entirely to leave the model's own default behavior untouched.
-+      enable_thinking,
-     } = options;
+diff --git a/public/designer.html b/public/designer.html
+index 08699bc..cbdb45b 100644
+--- a/public/designer.html
++++ b/public/designer.html
+@@ -142,6 +142,10 @@
+   .agent-msg.bot .applied-badge{display:inline-block;margin-top:6px;font-size:9px;color:var(--accent);font-family:var(--mono);letter-spacing:1px;}
+   .agent-msg.bot .applied-badge.ok{color:var(--accent);}
+   .agent-msg.bot .applied-badge.err{color:var(--danger);}
++  .agent-raw{margin-top:6px;}
++  .agent-raw summary{cursor:pointer;font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:0.3px;}
++  .agent-raw summary:hover{color:var(--text);}
++  .agent-raw pre{margin:6px 0 0 0;max-height:240px;overflow:auto;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:10px;line-height:1.5;font-family:var(--mono);white-space:pre-wrap;word-break:break-word;color:var(--text);}
+   .agent-actions{display:flex;gap:4px;margin-top:6px;}
+   .agent-actions .btn{font-size:9px;padding:3px 8px;}
+   .agent-typing{display:flex;gap:3px;padding:8px 12px;}
+diff --git a/public/js/designer-agent.js b/public/js/designer-agent.js
+index 14afac4..02611fb 100644
+--- a/public/js/designer-agent.js
++++ b/public/js/designer-agent.js
+@@ -435,7 +435,11 @@ Output ONLY the complete JSON design spec now. Remember:
+     try { data = await res.json(); } catch (e) { throw new Error(`Server returned an invalid response (${res.status})`); }
  
-     if (!model) throw new Error('Alibaba chatCompletion requires a model');
+     if (!res.ok || !data.success) {
+-      throw new Error(data.message || `Request failed (${res.status})`);
++      const err = new Error(data.message || `Request failed (${res.status})`);
++      // Carry the raw AI text along so the UI can show it for debugging,
++      // even though the request itself failed.
++      err.rawResponse = data.rawResponse;
++      throw err;
+     }
  
-     const payload = { model, messages, temperature, max_tokens, top_p, stream };
-+    if (enable_thinking !== undefined) {
-+      payload.enable_thinking = enable_thinking;
-+    }
+     return data; // { success, spec, conversationId, rawResponse }
+@@ -738,6 +742,7 @@ Output ONLY the complete JSON design spec now. Remember:
+       // Backend already extracts + validates the JSON spec server-side; fall
+       // back to the client-side extractor only if that's ever missing.
+       let spec = backendResult.spec || extractJSON(raw);
++      let lastRaw = raw;
  
-     const response = await fetch(`${this.chatBaseUrl}/chat/completions`, {
-       method: 'POST',
+       if (!spec) {
+         console.warn('[Agent API] First parse failed, sending fix prompt...');
+@@ -746,10 +751,17 @@ Output ONLY the complete JSON design spec now. Remember:
+           const retryResult = await callDesignBackend(fixPrompt, convId, effectiveCanvasState);
+           addToConversation(convId, 'assistant', retryResult.rawResponse);
+           spec = retryResult.spec || extractJSON(retryResult.rawResponse);
+-        } catch (retryErr) {}
++          lastRaw = retryResult.rawResponse || lastRaw;
++        } catch (retryErr) {
++          lastRaw = retryErr.rawResponse || lastRaw;
++        }
+       }
+       
+-      if (!spec) throw new Error('JSON parse failed after retry');
++      if (!spec) {
++        const err = new Error('JSON parse failed after retry');
++        err.rawResponse = lastRaw;
++        throw err;
++      }
+       
+       let result = { success: true, spec, conversationId: convId };
+       
+@@ -838,7 +850,10 @@ Output ONLY the complete JSON design spec now. Remember:
+     } catch (err) {
+       console.error('[Agent UI] error:', err);
+       window.DesignerAgentUI?.removeTyping();
+-      window.DesignerAgentUI?.addMessage('bot', `<span class="applied-badge err">✗ ${escapeHTML(err.message)}</span>`);
++      const rawBlock = err.rawResponse
++        ? `<details class="agent-raw"><summary>Show raw AI response (${err.rawResponse.length} chars)</summary><pre>${escapeHTML(err.rawResponse)}</pre></details>`
++        : '';
++      window.DesignerAgentUI?.addMessage('bot', `<span class="applied-badge err">✗ ${escapeHTML(err.message)}</span>${rawBlock}`);
+       window.DesignerAgentUI?.setStatus(`error · DeepSeek`);
+     } finally {
+       window.DesignerAgentUI?.busy(false);
 diff --git a/routes/designer.js b/routes/designer.js
-index f2bd16a..71c8771 100644
+index 71c8771..5ff487d 100644
 --- a/routes/designer.js
 +++ b/routes/designer.js
-@@ -123,6 +123,10 @@ router.post('/generate', authenticateToken, async (req, res) => {
+@@ -123,13 +123,15 @@ router.post('/generate', authenticateToken, async (req, res) => {
      const designSpec = extractJSON(aiResponse);
      
      if (!designSpec) {
-+      // Log the raw model output server-side so a future regression here
-+      // (e.g. thinking-mode reasoning eating the token budget again) is
-+      // diagnosable instead of just a generic client-facing message.
-+      console.error('Designer: failed to extract JSON from AI response. Raw response:', aiResponse);
+-      // Log the raw model output server-side so a future regression here
+-      // (e.g. thinking-mode reasoning eating the token budget again) is
+-      // diagnosable instead of just a generic client-facing message.
+-      console.error('Designer: failed to extract JSON from AI response. Raw response:', aiResponse);
++      // Surface the raw model output straight to the UI (see
++      // public/js/designer-agent.js handleSend / callDesignBackend) instead
++      // of only logging it server-side — the browser is a much easier place
++      // to inspect the exact text than server logs, which can interleave or
++      // reorder large multi-line writes from concurrent requests.
        return res.status(500).json({
          success: false,
-         message: 'Failed to generate valid design specification'
-@@ -289,7 +293,19 @@ async function callAlibabaDeepSeekAPI(prompt, apiKey, workspaceId, model = 'deep
-         { role: 'system', content: 'You are a professional design assistant. Output ONLY valid JSON.' },
-         { role: 'user', content: prompt }
-       ],
--      { model, temperature: 0.7, max_tokens: 4000 }
-+      {
-+        model,
-+        temperature: 0.7,
-+        max_tokens: 4000,
-+        // deepseek-v3.2+ is a hybrid reasoning model that thinks by default.
-+        // We need the raw JSON spec, not a reasoning trace, and the two
-+        // share the same max_tokens budget — without this, DeepSeek can
-+        // spend the entire budget "thinking" and return an empty or
-+        // truncated message.content, which then fails JSON extraction
-+        // below with a generic "Failed to generate valid design
-+        // specification" error. See providers/alibaba.js chatCompletion().
-+        enable_thinking: false,
-+      }
-     );
-   } catch (err) {
-     throw new Error(`Alibaba API error: ${err.message}`);
+-        message: 'Failed to generate valid design specification'
++        message: 'Failed to generate valid design specification',
++        rawResponse: aiResponse
+       });
+     }
+ 
+@@ -409,7 +411,15 @@ function extractJSON(s) {
+   // Try to repair common JSON issues
+   candidate = candidate.replace(/,\s*([]}])/g, '$1'); // Remove trailing commas
+   candidate = candidate.replace(/'([^']*)'\s*:/g, '"$1":'); // Fix single quotes
+-  
++  // Strip stray backslashes before [ or ]. Some models (esp. reasoning
++  // models) over-eagerly markdown-escape square brackets — e.g. emitting
++  // "opacity": \[35\] instead of "opacity": 35 — likely defensive against
++  // the bracket being read as markdown reference-link syntax elsewhere in
++  // the pipeline. \[ and \] are never legal JSON escapes (only
++  // \" \\ \/ \b \f \n \r \t \uXXXX are), so unescaping them is always safe,
++  // never destructive to genuinely valid JSON.
++  candidate = candidate.replace(/\\([[\]])/g, '$1');
++
+   try { return JSON.parse(candidate); } catch (e) {}
+   
+   return null;
 
