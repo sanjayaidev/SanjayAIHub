@@ -218,8 +218,15 @@ Text blocks MUST include: x (0-100% horizontal position), y (0-100% vertical pos
 Use ONLY these fonts: DM Sans, Space Mono, Bebas Neue, Playfair Display, Oswald, Montserrat, Raleway, Syne.
 CREATIVE FREEDOM: Use your designer's eye — add imgBg, mainImg, icons, logos, text bg fills to maximize visual impact as you think will be right for the image.
 CONTENT MUST FIT: All elements must stay within canvas bounds with proper spacing.
+
+NUMBER FORMATTING (STRICT — this is valid JSON, not JavaScript):
+Every numeric value (opacity, overlay, size, x, y, rot, w, h, etc.) MUST be a bare JSON number.
+NEVER wrap a number in parentheses. WRONG: "opacity": (35)  →  RIGHT: "opacity": 35
+NEVER start a decimal with just a dot. WRONG: "overlay": .8  →  RIGHT: "overlay": 0.8
+NEVER put a number in quotes, brackets, or any other symbol. Just the digits, nothing else around them.
+
 MINIMUM REQUIREMENTS:
-Background: If using imgBg make sure to always use imgBg with a verified Unsplash URL (opacity 20-40, overlay 65-80). A solid/plain background is NOT acceptable — always layer an image behind the gradient.
+Background: If using imgBg make sure to always use imgBg with a verified Unsplash URL, opacity between 20 and 40 and overlay between 65 and 80 as plain numbers. A solid/plain background is NOT acceptable — always layer an image behind the gradient.
 Icons: include 3-5 icons using icons8 URLs. Use generic icons if topic-specific ones are uncertain must not overalp with text
 Brand: Always include brand signature at bottom
 Text blocks: Use appropriate hierarchy (headline → subtitle → body/bullets)if the texts are realted keep verital Y gap to MINIMUM
