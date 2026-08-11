@@ -601,6 +601,155 @@
       margin-right: 6px;
     }
 
+    /* ── Featured Promo Section ── */
+    .featured-section {
+      margin-bottom: 2.2rem;
+    }
+
+    .featured-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #eef0f7;
+    }
+
+    .featured-title i { color: #ff9f43; font-size: 15px; }
+
+    .featured-title .featured-flag {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: rgba(255,159,67,0.12);
+      color: #ff9f43;
+      border: 1px solid rgba(255,159,67,0.3);
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .featured-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+    }
+
+    .featured-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(180deg, #14121a 0%, #0e1016 100%);
+      border: 1px solid rgba(255,159,67,0.25);
+      border-radius: 16px;
+      padding: 1.5rem 1.4rem;
+      text-decoration: none;
+      color: inherit;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .featured-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 100% 0%, var(--f-glow, rgba(255,159,67,.14)), transparent 60%);
+      pointer-events: none;
+    }
+
+    .featured-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--f-border-hover, #ff9f43);
+      box-shadow: 0 14px 32px rgba(0,0,0,0.55);
+    }
+
+    .featured-card .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .featured-card .card-icon {
+      font-size: 28px;
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--f-icon-bg, rgba(255,159,67,0.1));
+      border: 1px solid rgba(255,159,67,0.3);
+      flex-shrink: 0;
+    }
+
+    .featured-card .featured-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--f-badge-color, #ff9f43);
+      background: var(--f-badge-bg, rgba(255,159,67,0.1));
+      border: 1px solid rgba(255,159,67,0.3);
+      padding: 4px 10px;
+      border-radius: 12px;
+      white-space: nowrap;
+    }
+
+    .featured-card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 6px;
+      letter-spacing: -0.01em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .featured-card p {
+      font-size: 13px;
+      color: #a3aabd;
+      line-height: 1.55;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .featured-card .featured-footer {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+    }
+
+    .featured-card .featured-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #0a0c10;
+      background: var(--f-cta-bg, #ff9f43);
+      padding: 8px 16px;
+      border-radius: 10px;
+      transition: gap 0.2s;
+    }
+
+    .featured-card:hover .featured-cta { gap: 12px; }
+
+    .featured-card .featured-tag {
+      font-size: 11px;
+      color: #6a7a94;
+    }
+
+    .featured-video { --f-glow: rgba(255,159,67,.16); --f-border-hover: #ff9f43; --f-icon-bg: rgba(255,159,67,0.1); --f-badge-color: #ff9f43; --f-badge-bg: rgba(255,159,67,0.1); --f-cta-bg: #ff9f43; }
+    .featured-course { --f-glow: rgba(167,139,250,.16); --f-border-hover: #a78bfa; --f-icon-bg: rgba(167,139,250,0.1); --f-badge-color: #a78bfa; --f-badge-bg: rgba(167,139,250,0.1); --f-cta-bg: #a78bfa; }
+
     /* ── Responsive ── */
     @media (max-width: 700px) {
       .hero { flex-direction: column; align-items: flex-start; gap: 16px; }
@@ -608,6 +757,7 @@
       .modules-grid { grid-template-columns: 1fr 1fr; }
       .auth-modal { padding: 24px 20px; margin: 16px; }
       .auth-modal-buttons { flex-direction: column; }
+      .featured-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 480px) {
@@ -632,6 +782,44 @@
     <!-- Auth buttons / user info will be injected here by JavaScript -->
     <div id="headerAuth"></div>
   </header>
+
+  <!-- ─── FEATURED PROMO SECTION ─── -->
+  <div class="featured-section">
+    <div class="featured-title">
+      <i class="fas fa-star"></i> Featured for you <span class="featured-flag">New</span>
+    </div>
+    <div class="featured-grid">
+
+      <!-- Featured: AI Video Editing Service -->
+      <a class="featured-card featured-video" href="https://sanjaymeher-ai-reels.vercel.app/aivideoedit.html" target="_blank" rel="noopener">
+        <div class="card-top">
+          <div class="card-icon">🎬</div>
+          <span class="featured-badge">service</span>
+        </div>
+        <h3>AI Video Editing Service</h3>
+        <p>Done‑for‑you AI‑powered video editing for reels, shorts &amp; ads — hand off your raw footage and get scroll‑stopping edits back.</p>
+        <div class="featured-footer">
+          <span class="featured-tag">by Sanjay Meher</span>
+          <span class="featured-cta">Get started <i class="fas fa-arrow-right"></i></span>
+        </div>
+      </a>
+
+      <!-- Featured: AI Video Editing Course -->
+      <a class="featured-card featured-course" href="https://sanjaymeher-ai-reels.vercel.app/aivideocourse.html" target="_blank" rel="noopener">
+        <div class="card-top">
+          <div class="card-icon">🎓</div>
+          <span class="featured-badge">course</span>
+        </div>
+        <h3>AI Video Editing Course</h3>
+        <p>Learn to edit high‑retention reels and shorts with AI tools, step by step — from raw clips to a polished, publish‑ready video.</p>
+        <div class="featured-footer">
+          <span class="featured-tag">by Sanjay Meher</span>
+          <span class="featured-cta">Explore course <i class="fas fa-arrow-right"></i></span>
+        </div>
+      </a>
+
+    </div>
+  </div>
 
   <!-- ─── HERO ─── -->
   <div class="hero">
