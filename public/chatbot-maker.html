@@ -327,7 +327,7 @@ function viewConfig(id) {
 }
 
 function getAuthHeader() {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('session_token');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
