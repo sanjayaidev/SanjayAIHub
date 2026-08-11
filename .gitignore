@@ -1,11 +1,11 @@
 ```
-# Database migrations
-migrations/*.sql
+# Dependencies
+node_modules/
 
-# Public assets
-public/*.html
-public/js/*.js
+# Environment variables
+.env
 
-# Routes
-routes/*.js
+# Logs
+*.log
+
 ```
