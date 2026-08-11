@@ -389,7 +389,7 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
       'coding-agent': ['nvidia'],
       'social-content': ['nvidia'],
       'message-writer': ['nvidia'],
-      'text-to-image': ['alibaba', 'pixazo'],
+      'text-to-image': ['alibaba', 'pixazo', 'cloudflare'],
       'image-edit': ['alibaba'],
       'text-to-video': ['alibaba', 'pixazo'],
       'image-to-video': ['pixazo'],
