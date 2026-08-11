@@ -461,7 +461,24 @@ Output ONLY the complete JSON design spec now. Remember:
     // Fix single quotes for keys/values (basic repair)
     result = result.replace(/'\s*:/g, '":');
     result = result.replace(/:\s*'/g, ':"');
-    
+
+    // Strip stray backslashes before [ or ]. Some models over-eagerly
+    // markdown-escape square brackets — e.g. "opacity": \[35\] instead of
+    // "opacity": 35. \[ and \] are never legal JSON escapes, so this is
+    // always safe.
+    result = result.replace(/\\([[\]])/g, '$1');
+
+    // Add the leading 0 to bare decimals like ": .80" — JSON doesn't allow
+    // a number to start with just ".", but DeepSeek sometimes emits it.
+    result = result.replace(/([:[,]\s*)(-?)\.(\d)/g, '$1$20.$3');
+
+    // Strip a stray '&' immediately before a numeric value, e.g. DeepSeek
+    // emitting "opacity": &35 or "overlay": &80 instead of 35 / 80. Only
+    // matches '&' directly after ':', '[', or ',' followed by a digit, so
+    // it never touches a legitimate '&' inside a quoted string (e.g. a URL
+    // query string like "...?w=1080&auto=format").
+    result = result.replace(/([:[,]\s*)&(?=-?\.?\d)/g, '$1');
+
     return result;
   }
 
