@@ -151,7 +151,16 @@ app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 // ── Static Files ──
-app.use(express.static(path.join(__dirname, 'public')));
+// `index: false` is required here: public/ still contains a stale
+// public/index.html (an old duplicate of home.html from an earlier upload).
+// Express's static middleware auto-serves index.html for directory-style
+// requests (including the root '/') *before* our own routes ever run, so
+// visitors were being served that stale file instead of public/home.html
+// (see the catch-all app.get('*', ...) below, which is supposed to be the
+// single source of truth for '/'). Disabling the auto-index behavior lets
+// that catch-all handle '/' as intended. Explicit paths like /prompts.html
+// are unaffected — this only changes directory-style ('/', '/foo/') lookups.
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // ── Shareable prompt-library deep link ──
 // /prompts/:id serves the same prompts.html shell; the page's client-side
