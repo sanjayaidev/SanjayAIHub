@@ -1,27 +1,6 @@
-// agent.js — Design Agent v3.5 (enhanced image loading + error handling)
+// agent.js — Design Agent v3.5 (Backend API mode - no Chrome extension)
 (function () {
   'use strict';
-
-  const EXTENSION_ID = 'noapjcmepjdbbnhdddiflndjbodlamph';
-
-  function sendToExt(message) {
-    return new Promise((resolve, reject) => {
-      if (typeof chrome === 'undefined' || !chrome.runtime) {
-        reject(new Error('Chrome API not available'));
-        return;
-      }
-      try {
-        const isInternal = !!chrome.runtime.id;
-        const target = isInternal ? null : EXTENSION_ID;
-        chrome.runtime.sendMessage(target, message, (response) => {
-          if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return; }
-          if (!response) { reject(new Error('Empty response')); return; }
-          if (!response.success) { reject(new Error(response.error || 'Unknown error from background')); return; }
-          resolve(response.result !== undefined ? response.result : response);
-        });
-      } catch (err) { reject(err); }
-    });
-  }
 
   const conversationStore = new Map();
   const MAX_HISTORY = 10;
@@ -406,7 +385,6 @@ Output ONLY the complete JSON design spec now. Remember:
 - Use real Unsplash URLs for images (not local paths)
 - Output valid JSON only — no markdown, no commentary.`;
 
-  const PROVIDER = 'deepseek';
 
   // ✅ FIX: Completely rewritten to correctly escape actual newline characters inside JSON strings
   function repairJSON(s) {
@@ -682,35 +660,17 @@ Output ONLY the complete JSON design spec now. Remember:
     const startTime = Date.now();
     await acquireLock();
     
-    try {
-      if (forceReset) {
-        conversationStore.delete(convId);
-      }
-      
-      const effectiveCanvasState = forceReset ? { reset: true, timestamp: Date.now() } : canvasState;
-      const fullPrompt = buildPrompt(actualPrompt, convId, effectiveCanvasState);
-      
-      console.log('[Agent] Sending to DeepSeek, reset mode:', forceReset);
-      const raw = await sendToExt({ action: 'execute', provider: PROVIDER, actionType: 'prompt', params: { message: fullPrompt } });
+      // Call backend API directly - uses NVIDIA provider (meta/llama-3.1-70b-instruct)
+      const result = await callDesignAgentAPI(actualPrompt, convId, canvasState);
       
       addToConversation(convId, 'user', prompt);
-      addToConversation(convId, 'assistant', raw);
+      addToConversation(convId, 'assistant', JSON.stringify(result.spec));
       
-      let spec = extractJSON(raw);
+      let spec = result.spec;
       
-      if (!spec) {
-        console.warn('[Agent API] First parse failed, sending fix prompt...');
-        try {
-          const fixPrompt = `Your previous response was not valid JSON. Output ONLY the corrected JSON object — no markdown, no commentary, no code fences. Previous response:\n\n${raw.slice(0, 4000)}`;
-          const raw2 = await sendToExt({ action: 'execute', provider: PROVIDER, actionType: 'prompt', params: { message: fixPrompt } });
-          addToConversation(convId, 'assistant', raw2);
-          spec = extractJSON(raw2);
-        } catch (retryErr) {}
-      }
+      if (!spec) throw new Error('No design spec returned from API');
       
-      if (!spec) throw new Error('JSON parse failed after retry');
-      
-      let result = { success: true, spec, conversationId: convId };
+      let apiResult = { success: true, spec, conversationId: convId };
       
       if (autoApply && window.ContentDesignerAPI) {
         const shouldClearFirst = clearCanvasFirst || forceReset;
@@ -812,68 +772,43 @@ Output ONLY the complete JSON design spec now. Remember:
     const json = JSON.stringify(spec, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    sendToExt({ action: 'download', url, filename: `agent-design-${Date.now()}.json` }).catch(err => alert('Download failed: ' + err.message));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `agent-design-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'agentProcessPrompt') {
-      const requestKey = `${request.prompt}_${request.options?.conversationId || request.conversationId || ''}`;
-      const now = Date.now();
-      
-      if (_agentProcessedRequests.has(requestKey)) {
-        const lastRequest = _agentProcessedRequests.get(requestKey);
-        if (now - lastRequest < _AGENT_DEDUP_TIMEOUT) {
-          console.warn('[Agent] Duplicate request ignored:', requestKey);
-          sendResponse({ success: false, error: 'Duplicate request ignored' });
-          return true;
-        }
-      }
-      
-      _agentProcessedRequests.set(requestKey, now);
-      
-      // Clean up old entries
-      for (const [key, timestamp] of _agentProcessedRequests.entries()) {
-        if (now - timestamp > _AGENT_DEDUP_TIMEOUT) {
-          _agentProcessedRequests.delete(key);
-        }
-      }
-      
-      processPrompt(request.options || {
-        prompt: request.prompt,
-        conversationId: request.conversationId,
-        canvasState: request.canvasState,
-        autoApply: request.autoApply !== false,
-        autoExport: request.autoExport || false,
-        returnDataUrl: request.returnDataUrl || false,
-        clearCanvasFirst: request.clearCanvasFirst || false
+  // Backend API call function - uses /api/designer/generate endpoint
+  async function callDesignAgentAPI(prompt, conversationId, canvasState) {
+    const response = await fetch('/api/designer/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+      },
+      body: JSON.stringify({
+        prompt,
+        conversationId,
+        canvasState,
+        model: 'nvidia' // Use NVIDIA provider (meta/llama-3.1-70b-instruct)
       })
-        .then(result => {
-          sendResponse({ success: true, result });
-        })
-        .catch(error => {
-          sendResponse({ success: false, error: error.message });
-        });
-      
-      return true;
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Request failed' }));
+      throw new Error(error.message || 'Failed to generate design');
     }
     
-    if (request.action === 'agentClearConversation') {
-      clearConversation(request.conversationId);
-      sendResponse({ success: true });
-      return true;
-    }
-    
-    if (request.action === 'agentGetHistory') {
-      const history = getConversationHistory(request.conversationId);
-      sendResponse({ success: true, history });
-      return true;
-    }
-  });
+    const result = await response.json();
+    return result;
+  }
 
   window.DesignerAgentAPI = {
     processPrompt,
     clearConversation,
     getConversationHistory,
+    callDesignAgentAPI,
     version: '3.5.0'
   };
 
