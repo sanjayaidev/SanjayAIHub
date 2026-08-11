@@ -408,6 +408,39 @@ Output ONLY the complete JSON design spec now. Remember:
 
   const PROVIDER = 'deepseek';
 
+  // Calls this app's own backend (routes/designer.js -> POST /api/designer/generate),
+  // which runs the same DESIGN AGENT system prompt server-side against the
+  // DeepSeek (or NVIDIA) API using the signed-in user's saved API key.
+  // Requires the user to be logged in (Bearer token in localStorage) and on
+  // the 'pro' tier or higher — same gating the backend already enforces.
+  async function callDesignBackend(userMessage, conversationId, canvasState) {
+    const token = localStorage.getItem('session_token');
+    if (!token) throw new Error('Please log in to use the Design Agent.');
+
+    const res = await fetch('/api/designer/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        prompt: userMessage,
+        conversationId,
+        canvasState,
+        model: PROVIDER
+      })
+    });
+
+    let data;
+    try { data = await res.json(); } catch (e) { throw new Error(`Server returned an invalid response (${res.status})`); }
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || `Request failed (${res.status})`);
+    }
+
+    return data; // { success, spec, conversationId, rawResponse }
+  }
+
   // ✅ FIX: Completely rewritten to correctly escape actual newline characters inside JSON strings
   function repairJSON(s) {
     if (!s) return s;
@@ -690,21 +723,29 @@ Output ONLY the complete JSON design spec now. Remember:
       const effectiveCanvasState = forceReset ? { reset: true, timestamp: Date.now() } : canvasState;
       const fullPrompt = buildPrompt(actualPrompt, convId, effectiveCanvasState);
       
-      console.log('[Agent] Sending to DeepSeek, reset mode:', forceReset);
-      const raw = await sendToExt({ action: 'execute', provider: PROVIDER, actionType: 'prompt', params: { message: fullPrompt } });
-      
+      console.log('[Agent] Sending to DeepSeek via /api/designer/generate, reset mode:', forceReset);
+      // Note: the backend (routes/designer.js) builds its own SYSTEM_PROMPT +
+      // conversation history from the `designer_conversation` table server-side,
+      // so we send the raw user message + canvas state rather than the
+      // client-built `fullPrompt` (kept above only for the local conversation
+      // log / potential future direct-API fallback).
+      const backendResult = await callDesignBackend(actualPrompt, convId, effectiveCanvasState);
+      const raw = backendResult.rawResponse;
+
       addToConversation(convId, 'user', prompt);
       addToConversation(convId, 'assistant', raw);
-      
-      let spec = extractJSON(raw);
-      
+
+      // Backend already extracts + validates the JSON spec server-side; fall
+      // back to the client-side extractor only if that's ever missing.
+      let spec = backendResult.spec || extractJSON(raw);
+
       if (!spec) {
         console.warn('[Agent API] First parse failed, sending fix prompt...');
         try {
-          const fixPrompt = `Your previous response was not valid JSON. Output ONLY the corrected JSON object — no markdown, no commentary, no code fences. Previous response:\n\n${raw.slice(0, 4000)}`;
-          const raw2 = await sendToExt({ action: 'execute', provider: PROVIDER, actionType: 'prompt', params: { message: fixPrompt } });
-          addToConversation(convId, 'assistant', raw2);
-          spec = extractJSON(raw2);
+          const fixPrompt = `Your previous response was not valid JSON. Output ONLY the corrected JSON object — no markdown, no commentary, no code fences. Previous response:\n\n${(raw || '').slice(0, 4000)}`;
+          const retryResult = await callDesignBackend(fixPrompt, convId, effectiveCanvasState);
+          addToConversation(convId, 'assistant', retryResult.rawResponse);
+          spec = retryResult.spec || extractJSON(retryResult.rawResponse);
         } catch (retryErr) {}
       }
       
@@ -812,9 +853,24 @@ Output ONLY the complete JSON design spec now. Remember:
     const json = JSON.stringify(spec, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    sendToExt({ action: 'download', url, filename: `agent-design-${Date.now()}.json` }).catch(err => alert('Download failed: ' + err.message));
+    // Plain browser download — no extension messaging needed. `sendToExt`
+    // (chrome.downloads under the hood) only works inside the companion
+    // extension; a normal <a download> click works everywhere.
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `agent-design-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+  // Guard: `chrome`/`chrome.runtime` only exist when this page runs inside the
+  // companion extension. On the plain web app they're undefined, and this
+  // listener registration used to throw uncaught at the top level of the file —
+  // which aborted the whole script before it reached `sendBtn.addEventListener`
+  // further down, so the chat Send button silently did nothing.
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'agentProcessPrompt') {
       const requestKey = `${request.prompt}_${request.options?.conversationId || request.conversationId || ''}`;
@@ -869,6 +925,7 @@ Output ONLY the complete JSON design spec now. Remember:
       return true;
     }
   });
+  }
 
   window.DesignerAgentAPI = {
     processPrompt,

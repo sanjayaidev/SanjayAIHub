@@ -21,12 +21,26 @@
     });
   }
 
+  // NOTE: these are served by Express as static files from
+  // public/designer-presets/*.json (see server.js `express.static`).
+  // They used to be pointed at 'presets/...' which only exists inside the
+  // companion Chrome extension bundle (chrome-extension://EXTENSION_ID/presets/...),
+  // so on the plain web page every fetch 404'd.
   const PRESET_FILES = {
-    'carousel-first': 'presets/carousel-first.json', 'carousel-content': 'presets/carousel-content.json',
-    'carousel-end': 'presets/carousel-end.json', 'single-post': 'presets/single-post.json',
-    'product-showcase': 'presets/product-showcase.json', 'educational': 'presets/educational.json',
-    'quote-card': 'presets/quote-card.json', 'story': 'presets/story.json', 'reel-cover': 'presets/reel-cover.json'
+    'carousel-first': 'designer-presets/carousel-first.json', 'carousel-content': 'designer-presets/carousel-content.json',
+    'carousel-end': 'designer-presets/carousel-end.json', 'single-post': 'designer-presets/single-post.json',
+    'product-showcase': 'designer-presets/product-showcase.json', 'educational': 'designer-presets/educational.json',
+    'quote-card': 'designer-presets/quote-card.json', 'story': 'designer-presets/story.json', 'reel-cover': 'designer-presets/reel-cover.json'
   };
+
+  // Safe check — `chrome` / `chrome.runtime` are only defined when this page is
+  // actually running inside the companion extension (or on a site the extension
+  // has allowlisted via externally_connectable). On the normal web app neither
+  // exists, so accessing `chrome.runtime.id` directly used to throw
+  // "Cannot read properties of undefined (reading 'id')".
+  function isExtensionContext() {
+    return typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.runtime.id;
+  }
 
   let currentCategory = null;
   let loadedPresets = null;
@@ -51,10 +65,10 @@
       if (!window.ContentDesignerAPI || typeof window.ContentDesignerAPI.loadPresetsFromURL !== 'function') {
         throw new Error('ContentDesignerAPI not ready. Refresh the page.');
       }
-      // Use extension URL if internal, else fallback (though fallback won't work without chrome API)
-      const isInternal = !!chrome.runtime.id;
-      const url = isInternal ? chrome.runtime.getURL(PRESET_FILES[cat]) : PRESET_FILES[cat];
-      
+      // Inside the extension, pull the bundled copy; on the plain web page,
+      // fetch the same JSON from this server's static /designer-presets/ folder.
+      const url = isExtensionContext() ? chrome.runtime.getURL(PRESET_FILES[cat]) : '/' + PRESET_FILES[cat];
+
       const data = await window.ContentDesignerAPI.loadPresetsFromURL(url);
       const arr = (data && Array.isArray(data)) ? data : (data?.presets || []);
       loadedPresets = arr;
@@ -80,6 +94,14 @@
 
   saveBtn.addEventListener('click', async () => {
     if (!currentCategory) { alert('Pick a category first.'); return; }
+    // Saving new presets to Postgres is currently only wired up through the
+    // companion Chrome extension's background script (dbSavePreset/dbLoadPresets)
+    // — this repo has no /api/designer preset-CRUD route or table for it yet.
+    // Fail with a clear message here instead of a raw "Chrome API not available".
+    if (!isExtensionContext()) {
+      alert('Saving new presets isn\'t available in the web app yet — it currently requires the companion browser extension. You can still pick and apply the built-in presets above.');
+      return;
+    }
     const name = prompt('Preset name:', 'My Preset ' + new Date().toLocaleTimeString());
     if (!name) return;
     const spec = window.ContentDesignerAPI.saveCurrentAsSpec();
