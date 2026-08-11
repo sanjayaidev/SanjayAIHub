@@ -731,6 +731,32 @@
   let prompts = [], filteredPrompts = [], selectedPromptId = null;
   let currentCategory = 'all', currentSubCategory = '', currentSearch = '', currentSort = 'newest';
   let favoriteIds = new Set();
+  let suppressAutoSelect = false; // true while a deep-linked prompt is about to be opened explicitly
+
+  // ── shareable URL helpers ──
+  // Accepts either the pretty path form (/prompts/<id>) or a query-param
+  // form (/prompts.html?id=<id>), so old links and the new share links
+  // both work.
+  function getPromptIdFromLocation() {
+    const pathMatch = window.location.pathname.match(/\/prompts\/([^/?#]+)/);
+    if (pathMatch) return decodeURIComponent(pathMatch[1]);
+    const params = new URLSearchParams(window.location.search);
+    return params.get('id') || null;
+  }
+
+  function promptShareUrl(id) {
+    return `${window.location.origin}/prompts/${encodeURIComponent(id)}`;
+  }
+
+  // Reflect the currently open prompt in the address bar without a full
+  // page reload, so the browser's own URL is always shareable/copyable
+  // and back/forward navigation works.
+  function syncUrlForPrompt(id, replace) {
+    const url = id ? promptShareUrl(id) : '/prompts.html';
+    const state = { promptId: id || null };
+    if (replace) history.replaceState(state, '', url);
+    else history.pushState(state, '', url);
+  }
 
   const promptList = document.getElementById('promptList');
   const promptPreview = document.getElementById('promptPreview');
@@ -802,8 +828,34 @@
         created_at: p.created_at
       }));
       if (window.AUTH && AUTH.isLoggedIn()) await loadFavorites();
-      updateSubCategories();
-      applyFilters();
+
+      // ── deep link: land directly on a shared prompt, if the URL names one ──
+      const deepLinkId = getPromptIdFromLocation();
+      const deepLinkPrompt = deepLinkId ? prompts.find(p => p.id === deepLinkId) : null;
+      if (deepLinkId && !deepLinkPrompt) {
+        showToast('That prompt link is no longer available.', 'error');
+      }
+      if (deepLinkPrompt) {
+        // Widen the sidebar filter to whatever category the prompt lives in
+        // so it's actually visible in the list, and clear any leftover
+        // search/sub-category filters that might otherwise hide it.
+        currentCategory = deepLinkPrompt.category;
+        currentSubCategory = '';
+        currentSearch = '';
+        searchFilter.value = '';
+        document.querySelectorAll('.sidebar-item[data-category]').forEach(el => {
+          el.classList.toggle('active', el.dataset.category === currentCategory);
+        });
+        updateSubCategories();
+        subCategoryFilter.value = '';
+        suppressAutoSelect = true;
+        applyFilters();
+        suppressAutoSelect = false;
+        selectPrompt(deepLinkPrompt.id, { replaceUrl: true });
+      } else {
+        updateSubCategories();
+        applyFilters();
+      }
     } catch(err) {
       promptList.innerHTML = `<div class="prompt-list-empty">⚠️ ${escapeHtml(err.message)}</div>`;
       showToast(err.message, 'error');
@@ -848,6 +900,8 @@
     updateCounts();
     renderList();
 
+    if (suppressAutoSelect) return; // caller (deep link) will select explicitly
+
     if (!filteredPrompts.length) {
       selectedPromptId = null;
       showEmptyPreview();
@@ -855,7 +909,8 @@
     }
 
     // On mobile, never auto-open the detail/fullscreen preview on load or
-    // when filters change — only an explicit tap on a list item should do that.
+    // when filters change — only an explicit tap on a list item does that
+    // (a shared-link deep-link open counts as an explicit tap too).
     if (isMobile()) {
       if (!selectedPromptId || !filteredPrompts.some(p => p.id === selectedPromptId)) {
         selectedPromptId = null;
@@ -906,13 +961,18 @@
     }).join('');
   }
 
-  window.selectPrompt = function(id) {
+  window.selectPrompt = function(id, opts = {}) {
     selectedPromptId = id;
     renderList();
     renderPreview(id);
     sidebar.classList.remove('mobile-open');
     sidebarOverlay.classList.remove('visible');
-    // on mobile, expand preview fullscreen — only reached via explicit tap
+    // Keep the address bar in sync so the current prompt always has a
+    // shareable URL. Deep-link loads replace the initial history entry
+    // instead of pushing, so the back button doesn't just bounce between
+    // the same prompt twice.
+    syncUrlForPrompt(id, !!opts.replaceUrl);
+    // on mobile, expand preview fullscreen — reached via explicit tap or a shared link
     if (isMobile()) {
       promptPreview.classList.add('fullscreen-mobile');
       // add close button if not exists
@@ -935,6 +995,7 @@
       selectedPromptId = null;
       renderList();
       showEmptyPreview();
+      syncUrlForPrompt(null, false);
     }
   };
   // close on scroll to top? we keep it simple.
@@ -968,6 +1029,7 @@
         <button class="btn-primary" onclick="copyPrompt('${p.id}')"><i class="fas fa-copy"></i> Copy</button>
         <button class="btn-secondary" onclick="usePrompt('${p.id}')"><i class="fas fa-wand-magic-sparkles"></i> Use</button>
         <button class="btn-secondary" onclick="toggleFavorite('${p.id}')"><i class="fa${isFav?'s':'r'} fa-heart" style="${isFav?'color:#e1306c;':''}"></i> ${isFav?'Favorited':'Favorite'}</button>
+        <button class="btn-secondary" onclick="sharePrompt('${p.id}')"><i class="fas fa-share-nodes"></i> Share</button>
         ${p.tags?.length ? `<span style="display:flex;gap:4px;flex-wrap:wrap;margin-left:auto;">${p.tags.map(t=>`<span style="font-size:10px;color:#6a7a94;background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:8px;">#${escapeHtml(t)}</span>`).join('')}</span>` : ''}
       </div>
     `;
@@ -1002,6 +1064,27 @@
     window.location.href = page;
   };
 
+  window.sharePrompt = function(id) {
+    const p = prompts.find(p => p.id === id);
+    if (!p) return;
+    const url = promptShareUrl(id);
+    // Prefer the native share sheet on mobile/supporting browsers; fall
+    // back to copying the link to the clipboard everywhere else.
+    if (navigator.share) {
+      navigator.share({ title: p.headline, text: p.description || p.headline, url }).catch(() => {});
+      return;
+    }
+    navigator.clipboard.writeText(url).then(() => showToast('Link copied!', 'success')).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('Link copied!', 'success');
+    });
+  };
+
   window.toggleFavorite = async function(id) {
     if (!window.AUTH || !AUTH.isLoggedIn()) { showToast('Log in to favorite.','info'); return; }
     try {
@@ -1020,6 +1103,23 @@
   sortFilter.addEventListener('change', () => { currentSort = sortFilter.value; applyFilters(); });
 
   function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+  // ── back/forward navigation ──
+  // Pressing back after opening a shared prompt (or after clicking between
+  // prompts) should restore whichever prompt/state that history entry
+  // represents, rather than leaving the UI stuck on the last one shown.
+  window.addEventListener('popstate', (e) => {
+    const id = (e.state && e.state.promptId) || getPromptIdFromLocation();
+    if (id && prompts.some(p => p.id === id)) {
+      selectPrompt(id, { replaceUrl: true });
+    } else {
+      selectedPromptId = null;
+      renderList();
+      if (isMobile()) { promptPreview.classList.remove('fullscreen-mobile'); showEmptyPreview(); }
+      else if (filteredPrompts.length) selectPrompt(filteredPrompts[0].id, { replaceUrl: true });
+      else showEmptyPreview();
+    }
+  });
 
   // ── init ──
   loadPrompts();

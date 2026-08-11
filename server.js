@@ -153,6 +153,16 @@ app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 // ── Static Files ──
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── Shareable prompt-library deep link ──
+// /prompts/:id serves the same prompts.html shell; the page's client-side
+// JS reads the id from the URL and opens that prompt directly. This lets
+// prompt cards have a stable, shareable URL like
+// https://host/prompts/3f9a1c2e-....-b4d1 that lands a visitor straight on
+// that prompt instead of the generic library view.
+app.get('/prompts/:id', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'prompts.html'));
+});
+
 // ── Session Middleware (for coding-agent OAuth) ──
 app.use(session({
   name: 'sanjaihub.sid',
