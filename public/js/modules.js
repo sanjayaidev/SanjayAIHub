@@ -21,7 +21,7 @@ const MODULES = {
     'text-to-music': { tier: 'pro', icon: '🎵', name: 'Text to Song', free: false, pixazoTrial: true },
     'design-studio': { tier: 'pro', icon: '🎯', name: 'Design Studio', free: false },
     'chatbot-maker': { tier: 'enterprise', icon: '🤖', name: 'Chatbot Maker', free: false },
-    'mcp-integrator': { tier: 'enterprise', icon: '🔌', name: 'MCP & Extension Integrator', free: false }
+    'mcp-integrator': { tier: 'enterprise', icon: '🎬', name: 'Higgsfield', free: false }
   },
   
   // Tier hierarchy
