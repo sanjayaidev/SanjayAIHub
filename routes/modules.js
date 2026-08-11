@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, getTierLevel } = require('../middleware/auth');
 const pixazoTrial = require('../config/pixazo-trial');
 
 // Import module handlers
@@ -87,12 +87,8 @@ router.get('/', authenticateToken, async (req, res) => {
       [req.user.id]
     );
 
-    const tierOrder = { trial: 0, basic: 1, pro: 2, enterprise: 3 };
     const userTier = req.user.subscription_tier || 'trial';
-    const userTierLevel = tierOrder[userTier] || 0;
-
-    // Does this user already have their own NVIDIA key? Only relevant for
-    // deciding whether to offer the shared temporary key on text modules.
+    const userTierLevel = getTierLevel(userTier);
     let hasOwnNvidiaKey = false;
     if (TEMP_NVIDIA_API_KEY && userTierLevel === 0) {
       const nvidiaKeyResult = await pool.query(
@@ -112,7 +108,7 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 
     const modules = result.rows.map(mod => {
-      const requiredLevel = tierOrder[mod.required_tier] || 0;
+      const requiredLevel = getTierLevel(mod.required_tier);
       let hasAccessByTier = userTierLevel >= requiredLevel;
 
       // Free/trial users without their own NVIDIA key can borrow the app's
@@ -341,9 +337,8 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
 
     const module = moduleCheck.rows[0];
 
-    const tierOrder = { trial: 0, basic: 1, pro: 2, enterprise: 3 };
-    const userTierLevel = tierOrder[userTier] || 0;
-    const requiredLevel = tierOrder[module.required_tier] || 0;
+    const userTierLevel = getTierLevel(userTier);
+    const requiredLevel = getTierLevel(module.required_tier);
 
     const isFree = moduleKey === 'chatbot' || moduleKey === 'prompt-library';
     let hasAccess = isFree || (userTierLevel >= requiredLevel && module.is_allowed);
@@ -792,7 +787,7 @@ async function withPixazoTrialFallback(apiKeys, userId, userTierLevel) {
 // ──────────────────────────────────────────────
 router.post('/image-to-video/status', authenticateToken, async (req, res) => {
   const { requestId, provider = 'pixazo' } = req.body;
-  const userTierLevel = ({ trial: 0, basic: 1, pro: 2, enterprise: 3 })[req.user.subscription_tier || 'trial'] || 0;
+  const userTierLevel = getTierLevel(req.user.subscription_tier);
   
   if (!requestId) {
     return res.status(400).json({ success: false, message: 'Request ID is required' });
@@ -833,7 +828,7 @@ router.post('/image-to-video/status', authenticateToken, async (req, res) => {
 // ──────────────────────────────────────────────
 router.post('/video-to-video/status', authenticateToken, async (req, res) => {
   const { requestId, provider = 'pixazo' } = req.body;
-  const userTierLevel = ({ trial: 0, basic: 1, pro: 2, enterprise: 3 })[req.user.subscription_tier || 'trial'] || 0;
+  const userTierLevel = getTierLevel(req.user.subscription_tier);
 
   if (!requestId) {
     return res.status(400).json({ success: false, message: 'Request ID is required' });
@@ -873,7 +868,7 @@ router.post('/video-to-video/status', authenticateToken, async (req, res) => {
 // ──────────────────────────────────────────────
 router.post('/text-to-video/status', authenticateToken, async (req, res) => {
   const { requestId, provider = 'pixazo' } = req.body;
-  const userTierLevel = ({ trial: 0, basic: 1, pro: 2, enterprise: 3 })[req.user.subscription_tier || 'trial'] || 0;
+  const userTierLevel = getTierLevel(req.user.subscription_tier);
 
   if (!requestId) {
     return res.status(400).json({ success: false, message: 'Request ID is required' });
@@ -987,7 +982,7 @@ router.get('/text-to-speech/voices', authenticateToken, async (req, res) => {
 // ──────────────────────────────────────────────
 router.post('/text-to-music/status', authenticateToken, async (req, res) => {
   const { requestId } = req.body;
-  const userTierLevel = ({ trial: 0, basic: 1, pro: 2, enterprise: 3 })[req.user.subscription_tier || 'trial'] || 0;
+  const userTierLevel = getTierLevel(req.user.subscription_tier);
   
   if (!requestId) {
     return res.status(400).json({ success: false, message: 'Request ID is required' });

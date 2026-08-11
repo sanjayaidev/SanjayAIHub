@@ -26,10 +26,17 @@ function authenticateToken(req, res, next) {
   });
 }
 
+// Single source of truth for tier ordering — every route that needs to
+// compare a user's tier against a required tier should import TIER_ORDER
+// or getTierLevel from here rather than redeclaring this map locally.
+const TIER_ORDER = { trial: 0, basic: 1, pro: 2, enterprise: 3 };
+
+function getTierLevel(tier) {
+  return TIER_ORDER[tier] || 0;
+}
+
 // Optional: check if user has required tier
 function requireTier(minTier) {
-  const tierOrder = { trial: 0, basic: 1, pro: 2, enterprise: 3 };
-  
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ 
@@ -39,7 +46,7 @@ function requireTier(minTier) {
     }
     
     const userTier = req.user.subscription_tier || 'trial';
-    if (tierOrder[userTier] < tierOrder[minTier]) {
+    if (getTierLevel(userTier) < getTierLevel(minTier)) {
       return res.status(403).json({ 
         success: false, 
         message: `This feature requires ${minTier} tier or higher` 
@@ -49,4 +56,4 @@ function requireTier(minTier) {
   };
 }
 
-module.exports = { authenticateToken, requireTier };
+module.exports = { authenticateToken, requireTier, TIER_ORDER, getTierLevel };

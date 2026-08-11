@@ -1,13 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, requireTier } = require('../middleware/auth');
 const https = require('https');
 const AlibabaProvider = require('../providers/alibaba');
 
 // ── POST /api/designer/generate ──
 // Handles chat-based image generation using AI models (DeepSeek, etc.)
-router.post('/generate', authenticateToken, async (req, res) => {
+// Note: design-studio is NOT one of the modules covered by the shared
+// Pixazo trial (see config/pixazo-trial.js MODULES list), so unlike
+// routes/modules.js there is no trial fallback here — it's Pro-tier gated,
+// full stop, enforced by requireTier('pro') below. (A previous version of
+// this check queried `pixazo_trial_enabled` / `pixazo_trial_limit` columns
+// on `users` that were never part of the schema — those only ever existed
+// as constants in config/pixazo-trial.js — so that fallback always threw
+// instead of working. Removed rather than "fixed" since design-studio was
+// never meant to be trial-accessible in the first place.)
+router.post('/generate', authenticateToken, requireTier('pro'), async (req, res) => {
   try {
     const { prompt, conversationId, canvasState = null, model = 'deepseek' } = req.body;
 
@@ -33,28 +42,6 @@ router.post('/generate', authenticateToken, async (req, res) => {
         workspace_id: row.workspace_id,
         account_id: row.account_id,
       };
-    }
-
-    // Check if user has access to the design-studio module.
-    // Note: design-studio is NOT one of the modules covered by the shared
-    // Pixazo trial (see config/pixazo-trial.js MODULES list), so unlike
-    // routes/modules.js there is no trial fallback here — it's Pro-tier
-    // gated, full stop. (A previous version of this check queried
-    // `pixazo_trial_enabled` / `pixazo_trial_limit` columns on `users` that
-    // were never part of the schema — those only ever existed as constants
-    // in config/pixazo-trial.js — so that fallback always threw instead of
-    // working. Removed rather than "fixed" since design-studio was never
-    // meant to be trial-accessible in the first place.)
-    const tierLevels = { trial: 0, basic: 1, pro: 2, enterprise: 3 };
-    const userTier = req.user.subscription_tier || 'trial';
-    const userTierLevel = tierLevels[userTier] || 0;
-    const requiredTierLevel = tierLevels['pro'] || 2;
-
-    if (userTierLevel < requiredTierLevel) {
-      return res.status(403).json({
-        success: false,
-        message: 'Design Studio requires Pro tier or higher'
-      });
     }
 
     // Build the system prompt for design generation

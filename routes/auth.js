@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const pool = require('../db');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, getTierLevel } = require('../middleware/auth');
 const pixazoTrial = require('../config/pixazo-trial');
 const { validateEmailDomain } = require('../config/allowed-email-domains');
 const {
@@ -344,12 +344,11 @@ router.get('/modules/access', authenticateToken, async (req, res) => {
     );
 
     // Determine access based on subscription tier
-    const tierOrder = { trial: 0, basic: 1, pro: 2, enterprise: 3 };
     const userTier = req.user.subscription_tier || 'trial';
-    const userTierLevel = tierOrder[userTier] || 0;
+    const userTierLevel = getTierLevel(userTier);
 
     const modules = result.rows.map(mod => {
-      const requiredLevel = tierOrder[mod.required_tier] || 0;
+      const requiredLevel = getTierLevel(mod.required_tier);
       const hasAccessByTier = userTierLevel >= requiredLevel;
       
       // If no access record exists, create default based on tier
