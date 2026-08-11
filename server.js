@@ -12,6 +12,7 @@ const authRoutes = require('./routes/auth');
 const moduleRoutes = require('./routes/modules');
 const apiKeyRoutes = require('./routes/apikeys');
 const chatRoutes = require('./routes/chat');
+const chatbotMakerRoutes = require('./routes/chatbot-maker');
 const designerRoutes = require('./routes/designer');
 const reelsRoutes = require('./routes/reels');
 const uploadRoutes = require('./routes/upload');
@@ -190,6 +191,7 @@ app.use(session({
 app.use('/api/auth', authRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/chatbot-maker', chatbotMakerRoutes);
 app.use('/api/designer', designerRoutes);
 app.use('/api/reels', reelsRoutes);
 app.use('/api/upload', uploadRoutes);

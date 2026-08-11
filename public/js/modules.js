@@ -117,6 +117,7 @@ const MODULES = {
   // the roadmap) are omitted here and fall back to a "coming soon" notice.
   pages: {
     'chatbot': '/chatbot.html',
+    'chatbot-maker': '/chatbot-maker.html',
     'social-content': '/content.html',
     'message-writer': '/message.html',
     'prompt-library': '/prompts.html',
