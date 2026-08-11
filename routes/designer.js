@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 const https = require('https');
+const AlibabaProvider = require('../providers/alibaba');
 
 // ── POST /api/designer/generate ──
 // Handles chat-based image generation using AI models (DeepSeek, etc.)
@@ -86,13 +87,21 @@ router.post('/generate', authenticateToken, async (req, res) => {
 
     // Call the AI model API
     let aiResponse;
-    if (model === 'deepseek') {
-      aiResponse = await callDeepSeekAPI(fullPrompt, apiKeys.deepseek?.api_key);
-    } else if (model === 'nvidia') {
+    if (model === 'nvidia') {
       aiResponse = await callNvidiaAPI(fullPrompt, apiKeys.nvidia?.api_key);
     } else {
-      // Default to deepseek
-      aiResponse = await callDeepSeekAPI(fullPrompt, apiKeys.deepseek?.api_key);
+      // 'deepseek' (default) — and any other value — now runs through Alibaba
+      // Cloud Model Studio (DashScope), which hosts DeepSeek models
+      // (deepseek-v3.2, deepseek-v4-flash, deepseek-v4-pro) behind its
+      // OpenAI-compatible endpoint. This app has no standalone DeepSeek API
+      // key setup, only Alibaba (api_key + workspace_id) — see Profile > API Keys.
+      const deepseekModel = (model && model !== 'deepseek') ? model : 'deepseek-v3.2';
+      aiResponse = await callAlibabaDeepSeekAPI(
+        fullPrompt,
+        apiKeys.alibaba?.api_key,
+        apiKeys.alibaba?.workspace_id,
+        deepseekModel
+      );
     }
 
     // Save conversation to database
@@ -261,56 +270,36 @@ USER REQUEST:
 Output ONLY the complete JSON design spec now.`;
 }
 
-async function callDeepSeekAPI(prompt, apiKey) {
-  return new Promise((resolve, reject) => {
-    if (!apiKey) {
-      reject(new Error('DeepSeek API key not configured'));
-      return;
-    }
+// DeepSeek via Alibaba Cloud Model Studio (DashScope), using the same
+// OpenAI-compatible chat-completions wrapper as modules/chatbot.js and
+// modules/text-to-image.js (providers/alibaba.js). Requires the user to have
+// saved an Alibaba API key + Workspace ID under Profile > API Keys — there is
+// no separate "deepseek" provider/key in this app.
+async function callAlibabaDeepSeekAPI(prompt, apiKey, workspaceId, model = 'deepseek-v3.2') {
+  if (!apiKey || !workspaceId) {
+    throw new Error('Alibaba Cloud API key + Workspace ID not configured. Add them in Profile > API Keys.');
+  }
 
-    const postData = JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [
+  const alibaba = new AlibabaProvider(apiKey, workspaceId);
+
+  let data;
+  try {
+    data = await alibaba.chatCompletion(
+      [
         { role: 'system', content: 'You are a professional design assistant. Output ONLY valid JSON.' },
         { role: 'user', content: prompt }
       ],
-      temperature: 0.7,
-      max_tokens: 4000
-    });
+      { model, temperature: 0.7, max_tokens: 4000 }
+    );
+  } catch (err) {
+    throw new Error(`Alibaba API error: ${err.message}`);
+  }
 
-    const options = {
-      hostname: 'api.deepseek.com',
-      port: 443,
-      path: '/v1/chat/completions',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Length': Buffer.byteLength(postData)
-      }
-    };
-
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.choices && parsed.choices[0]) {
-            resolve(parsed.choices[0].message.content);
-          } else {
-            reject(new Error('Invalid response from DeepSeek API'));
-          }
-        } catch (e) {
-          reject(new Error(`Failed to parse DeepSeek response: ${e.message}`));
-        }
-      });
-    });
-
-    req.on('error', (e) => reject(new Error(`DeepSeek API request failed: ${e.message}`)));
-    req.write(postData);
-    req.end();
-  });
+  const reply = data?.choices?.[0]?.message?.content;
+  if (!reply) {
+    throw new Error('Invalid response from Alibaba API');
+  }
+  return reply;
 }
 
 async function callNvidiaAPI(prompt, apiKey) {
