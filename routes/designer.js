@@ -431,14 +431,21 @@ function extractJSON(s) {
   // sometimes emits values this way (e.g. "overlay": .80 instead of 0.80),
   // which JSON.parse rejects outright ("Unexpected token '.'").
   candidate = candidate.replace(/([:[,]\s*)(-?)\.(\d)/g, '$1$20.$3');
-  // Strip a stray '&' immediately before a numeric value, e.g. DeepSeek
-  // emitting "opacity": &35 or "overlay": &80 instead of 35 / 80. Same
-  // failure family as the bracket-escaping and bare-decimal quirks above.
-  // Only matches '&' directly after ':', '[', or ',' (optionally with
-  // whitespace) followed by a digit/decimal point, so it never touches a
-  // legitimate '&' inside a quoted string value (e.g. a URL query string
-  // like "...?w=1080&auto=format").
-  candidate = candidate.replace(/([:[,]\s*)&(?=-?\.?\d)/g, '$1');
+  // GENERIC catch-all: some models occasionally wrap a bare numeric value
+  // in decorator characters instead of emitting the plain number, e.g.
+  // "opacity": &35, "opacity": II35II, "opacity": **90**, "opacity": ~~42~~.
+  // Rather than patching each new decorator one-by-one as models invent new
+  // ones, strip ANY run of letters/markdown-style symbols that directly
+  // wraps a number in a value position (right after ':', '[', or ',' and
+  // right before the next ',', ']', or '}'), keeping only the number.
+  // This only fires when the value doesn't already start with '"', '{',
+  // '[', a digit, or '-', so it can never touch legitimate strings
+  // (including URLs with '&' in them, e.g. "...?w=1080&auto=format"),
+  // objects, arrays, or already-valid numbers.
+  candidate = candidate.replace(
+    /([:,[]\s*)([A-Za-z*_~`|\\#^!&]+)(-?\d+(?:\.\d+)?)[A-Za-z*_~`|\\#^!&]*(?=\s*[,\]}])/g,
+    '$1$3'
+  );
 
   try { return JSON.parse(candidate); } catch (e) {}
   
