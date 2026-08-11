@@ -1,1 +1,11 @@
-Nothing should be ignored based on the provided file changes. The only modified file is 'modules/designer/agent.js', which is a source code file and should not be added to .gitignore. No build artifacts, dependencies, or temporary files are present in the changes.
+```
+# Database migrations
+migrations/*.sql
+
+# Public assets
+public/*.html
+public/js/*.js
+
+# Routes
+routes/*.js
+```
