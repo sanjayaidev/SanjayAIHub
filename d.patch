@@ -1,0 +1,51 @@
+diff --git a/routes/designer.js b/routes/designer.js
+index a6309fd..410fde5 100644
+--- a/routes/designer.js
++++ b/routes/designer.js
+@@ -34,31 +34,26 @@ router.post('/generate', authenticateToken, async (req, res) => {
+       };
+     }
+ 
+-    // Check if user has access to design-studio module
++    // Check if user has access to the design-studio module.
++    // Note: design-studio is NOT one of the modules covered by the shared
++    // Pixazo trial (see config/pixazo-trial.js MODULES list), so unlike
++    // routes/modules.js there is no trial fallback here — it's Pro-tier
++    // gated, full stop. (A previous version of this check queried
++    // `pixazo_trial_enabled` / `pixazo_trial_limit` columns on `users` that
++    // were never part of the schema — those only ever existed as constants
++    // in config/pixazo-trial.js — so that fallback always threw instead of
++    // working. Removed rather than "fixed" since design-studio was never
++    // meant to be trial-accessible in the first place.)
+     const tierLevels = { trial: 0, basic: 1, pro: 2, enterprise: 3 };
+     const userTier = req.user.subscription_tier || 'trial';
+     const userTierLevel = tierLevels[userTier] || 0;
+     const requiredTierLevel = tierLevels['pro'] || 2;
+ 
+     if (userTierLevel < requiredTierLevel) {
+-      // Check if user has pixazo trial access
+-      const pixazoTrial = await pool.query(
+-        `SELECT pixazo_trial_enabled, pixazo_trial_used_count, pixazo_trial_limit, trial_ends_at
+-         FROM users WHERE id = $1`,
+-        [req.user.id]
+-      );
+-      
+-      const userData = pixazoTrial.rows[0];
+-      const hasPixazoTrial = userData?.pixazo_trial_enabled && 
+-                            userData?.pixazo_trial_used_count < (userData?.pixazo_trial_limit || 20) &&
+-                            new Date(userData?.trial_ends_at) > new Date();
+-      
+-      if (!hasPixazoTrial) {
+-        return res.status(403).json({
+-          success: false,
+-          message: 'Design Studio requires Pro tier or higher'
+-        });
+-      }
++      return res.status(403).json({
++        success: false,
++        message: 'Design Studio requires Pro tier or higher'
++      });
+     }
+ 
+     // Build the system prompt for design generation
+    
