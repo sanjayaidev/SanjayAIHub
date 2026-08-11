@@ -214,6 +214,64 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    /* ── Explore Grid with Hide Button ── */
+.explore-grid-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.23, 1, 0.32, 1), 
+              opacity 0.3s ease,
+              padding 0.3s ease;
+  max-height: 300px;
+  opacity: 1;
+  padding: 0;
+}
+
+.explore-grid-wrapper.hidden {
+  max-height: 0;
+  opacity: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  pointer-events: none;
+}
+
+.explore-grid-wrapper .toggle-btn {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  z-index: 5;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  color: #8896b0;
+  font-size: 10px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.explore-grid-wrapper .toggle-btn:hover {
+  background: rgba(255,255,255,0.12);
+  color: #eef2f9;
+  border-color: rgba(255,255,255,0.15);
+}
+.explore-grid-wrapper .toggle-btn i {
+  font-size: 9px;
+}
+
+/* Show toggle button only on larger screens (where it fits) */
+@media (max-width: 480px) {
+  .explore-grid-wrapper .toggle-btn {
+    top: 2px;
+    right: 4px;
+    font-size: 8px;
+    padding: 1px 6px;
+  }
+}
     .explore-card .card-image {
       width: 100%;
       border-radius: 6px;
@@ -805,40 +863,45 @@
       </div>
     </div>
 
-    <!-- EXPLORE GRID: compact, 2:1 image -->
-    <div class="explore-grid">
-      <a class="explore-card promo-course" href="https://sanjaymeher-ai-reels.vercel.app/aivideocourse.html" target="_blank" rel="noopener">
-        <div class="card-top">
-          <div class="thumb">
-            <img src="https://i.postimg.cc/BQHCgt6C/editor.webp" alt="Course" loading="lazy" />
-          </div>
-          <div class="info">
-            <div class="title">🎓 AI Course</div>
-            <div class="desc">Learn AI video editing</div>
-          </div>
-          <i class="fas fa-chevron-right arrow"></i>
+   <!-- EXPLORE GRID: compact, 2:1 image with hide toggle -->
+<div class="explore-grid-wrapper" id="exploreWrapper">
+  <button class="toggle-btn" id="toggleExploreBtn" aria-label="Toggle promo section">
+    <i class="fas fa-chevron-up"></i> Hide
+  </button>
+  <div class="explore-grid">
+    <a class="explore-card promo-course" href="https://sanjaymeher-ai-reels.vercel.app/aivideocourse.html" target="_blank" rel="noopener">
+      <div class="card-top">
+        <div class="thumb">
+          <img src="https://i.postimg.cc/BQHCgt6C/editor.webp" alt="Course" loading="lazy" />
         </div>
-        <div class="card-image">
-          <img src="https://i.postimg.cc/MT249gwG/ban1.png" alt="Course preview" loading="lazy" />
+        <div class="info">
+          <div class="title">🎓 AI Course</div>
+          <div class="desc">Learn AI video editing</div>
         </div>
-      </a>
+        <i class="fas fa-chevron-right arrow"></i>
+      </div>
+      <div class="card-image">
+        <img src="https://i.postimg.cc/MT249gwG/ban1.png" alt="Course preview" loading="lazy" />
+      </div>
+    </a>
 
-      <a class="explore-card promo-service" href="https://sanjaymeher-ai-reels.vercel.app/aivideoedit.html" target="_blank" rel="noopener">
-        <div class="card-top">
-          <div class="thumb">
-            <img src="https://i.postimg.cc/N0MTW0g7/edit.png" alt="Service" loading="lazy" />
-          </div>
-          <div class="info">
-            <div class="title">🎬 AI Service</div>
-            <div class="desc">Done-for-you edits</div>
-          </div>
-          <i class="fas fa-chevron-right arrow"></i>
+    <a class="explore-card promo-service" href="https://sanjaymeher-ai-reels.vercel.app/aivideoedit.html" target="_blank" rel="noopener">
+      <div class="card-top">
+        <div class="thumb">
+          <img src="https://i.postimg.cc/N0MTW0g7/edit.png" alt="Service" loading="lazy" />
         </div>
-        <div class="card-image">
-          <img src="https://i.postimg.cc/XqZCX1ZB/ban2.png" alt="Service preview" loading="lazy" />
+        <div class="info">
+          <div class="title">🎬 AI Service</div>
+          <div class="desc">Done-for-you edits</div>
         </div>
-      </a>
-    </div>
+        <i class="fas fa-chevron-right arrow"></i>
+      </div>
+      <div class="card-image">
+        <img src="https://i.postimg.cc/XqZCX1ZB/ban2.png" alt="Service preview" loading="lazy" />
+      </div>
+    </a>
+  </div>
+</div>
 
     <div class="filter-bar">
       <div class="filter-group">
@@ -1167,7 +1230,36 @@
     `;
     fetch(`/api/modules/prompt-library/${p.id}/view`, { method:'POST' }).catch(()=>{});
   }
+// ── Toggle Explore Section ──
+const exploreWrapper = document.getElementById('exploreWrapper');
+const toggleBtn = document.getElementById('toggleExploreBtn');
+let exploreHidden = false;
 
+if (toggleBtn && exploreWrapper) {
+  toggleBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    exploreHidden = !exploreHidden;
+    
+    if (exploreHidden) {
+      exploreWrapper.classList.add('hidden');
+      toggleBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Show';
+      toggleBtn.style.position = 'static';
+      toggleBtn.style.margin = '4px auto';
+      toggleBtn.style.width = 'fit-content';
+      toggleBtn.style.background = 'rgba(255,255,255,0.04)';
+      // Move button outside the hidden wrapper so it remains visible
+      exploreWrapper.insertAdjacentElement('afterend', toggleBtn);
+    } else {
+      exploreWrapper.classList.remove('hidden');
+      toggleBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Hide';
+      toggleBtn.style.position = 'absolute';
+      toggleBtn.style.margin = '0';
+      toggleBtn.style.width = 'auto';
+      toggleBtn.style.background = 'rgba(255,255,255,0.06)';
+      exploreWrapper.prepend(toggleBtn);
+    }
+  });
+}
   function showEmptyPreview() {
     promptPreview.innerHTML = `<div class="preview-empty"><i class="fas fa-hand-pointer"></i><p>Select a prompt to preview</p></div>`;
   }
