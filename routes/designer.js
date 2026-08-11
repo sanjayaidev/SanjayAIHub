@@ -123,6 +123,10 @@ router.post('/generate', authenticateToken, async (req, res) => {
     const designSpec = extractJSON(aiResponse);
     
     if (!designSpec) {
+      // Log the raw model output server-side so a future regression here
+      // (e.g. thinking-mode reasoning eating the token budget again) is
+      // diagnosable instead of just a generic client-facing message.
+      console.error('Designer: failed to extract JSON from AI response. Raw response:', aiResponse);
       return res.status(500).json({
         success: false,
         message: 'Failed to generate valid design specification'
@@ -289,7 +293,19 @@ async function callAlibabaDeepSeekAPI(prompt, apiKey, workspaceId, model = 'deep
         { role: 'system', content: 'You are a professional design assistant. Output ONLY valid JSON.' },
         { role: 'user', content: prompt }
       ],
-      { model, temperature: 0.7, max_tokens: 4000 }
+      {
+        model,
+        temperature: 0.7,
+        max_tokens: 4000,
+        // deepseek-v3.2+ is a hybrid reasoning model that thinks by default.
+        // We need the raw JSON spec, not a reasoning trace, and the two
+        // share the same max_tokens budget — without this, DeepSeek can
+        // spend the entire budget "thinking" and return an empty or
+        // truncated message.content, which then fails JSON extraction
+        // below with a generic "Failed to generate valid design
+        // specification" error. See providers/alibaba.js chatCompletion().
+        enable_thinking: false,
+      }
     );
   } catch (err) {
     throw new Error(`Alibaba API error: ${err.message}`);

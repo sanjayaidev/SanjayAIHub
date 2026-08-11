@@ -9,7 +9,7 @@ const { chatbotHandler, getModelCatalog: getChatModelCatalog } = require('../mod
 const promptLibrary = require('../modules/prompt-library');
 const { messageWriterHandler, getModelCatalog: getMessageModelCatalog } = require('../modules/message-writer');
 const { contentCreatorHandler, getModelCatalog: getContentModelCatalog } = require('../modules/content-creator');
-const { ttsHandler, getModelCatalog: getTTSModelCatalog } = require('../modules/text-to-speech');
+const { ttsHandler, getModelCatalog: getTTSModelCatalog, getVoices: getElevenLabsVoices } = require('../modules/text-to-speech');
 const { textToImageHandler, getModelCatalog: getImageModelCatalog } = require('../modules/text-to-image');
 const { imageToImageHandler, getModelCatalog: getImageEditModelCatalog } = require('../modules/image-to-image');
 const { textToVideoHandler, checkVideoStatus: checkT2VStatus, getModelCatalog: getVideoModelCatalog } = require('../modules/text-to-video');
@@ -944,6 +944,40 @@ router.get('/voice-clone/voices', authenticateToken, async (req, res) => {
     res.json({ success: true, ...data });
   } catch (error) {
     console.error('List voices error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to list voices' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// GET /api/modules/text-to-speech/voices - List available ElevenLabs preset
+// voices for this user, so the TTS module's voice dropdown can be populated.
+// (modules/text-to-speech.js already exports getVoices() for this, but no
+// route was ever wired up to call it — the dropdown was silently empty.)
+// ──────────────────────────────────────────────
+router.get('/text-to-speech/voices', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT api_key FROM user_api_keys
+       WHERE user_id = $1 AND provider = 'elevenlabs' AND is_active = true`,
+      [req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'ElevenLabs API key not configured'
+      });
+    }
+
+    const apiKeys = {
+      elevenlabs: { api_key: result.rows[0].api_key }
+    };
+
+    const voices = await getElevenLabsVoices(apiKeys);
+
+    res.json({ success: true, voices });
+  } catch (error) {
+    console.error('List ElevenLabs voices error:', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to list voices' });
   }
 });

@@ -324,6 +324,7 @@
           optgroup.appendChild(opt);
         });
         modelSelect.appendChild(optgroup);
+        loadElevenLabsVoiceOptions();
       }
 
       // Alibaba only appears in the catalog for paid tiers (server-gated in
@@ -358,6 +359,25 @@
       console.error('Error loading models:', err);
       els.model.innerHTML = '<option value="">Error loading models</option>';
     });
+
+  // Populate the ElevenLabs "Voice" dropdown from the user's ElevenLabs
+  // account. If they haven't configured an ElevenLabs key yet, fall back to
+  // the default preset voice so the select isn't left empty.
+  function loadElevenLabsVoiceOptions() {
+    fetch("/api/modules/text-to-speech/voices", { headers: AUTH.getAuthHeader() })
+      .then(r => r.json())
+      .then(data => {
+        const voices = (data.success && Array.isArray(data.voices)) ? data.voices : [];
+        const field = providerParameters.elevenlabs?.voice_id;
+        if (!field) return;
+        field.options = voices.map(v => ({ value: v.voice_id, label: v.name || v.voice_id }));
+        if (!field.options.length) {
+          field.options = [{ value: '21m00Tcm4TlvDq8ikWAM', label: 'Rachel (default)' }];
+        }
+        if (modelToProvider[els.model.value] === 'elevenlabs') refreshParamsForSelectedModel();
+      })
+      .catch(err => console.error('Failed to load ElevenLabs voices:', err));
+  }
 
   // Populate the Alibaba "Cloned Voice" dropdown from the user's own cloned
   // voices (Voice Cloning module). If they haven't configured Alibaba or

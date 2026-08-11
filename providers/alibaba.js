@@ -26,11 +26,22 @@ class AlibabaProvider {
       max_tokens = 2048,
       top_p = 1,
       stream = false,
+      // Hybrid reasoning models hosted here (deepseek-v3.2 and later,
+      // qwen3-*) think by default. Callers that need a direct, immediately
+      // parseable answer (e.g. strict-JSON output) should pass
+      // enable_thinking: false, or the reasoning trace can eat the whole
+      // max_tokens budget before the model ever emits its final answer,
+      // leaving `message.content` empty or truncated. Omit this option
+      // entirely to leave the model's own default behavior untouched.
+      enable_thinking,
     } = options;
 
     if (!model) throw new Error('Alibaba chatCompletion requires a model');
 
     const payload = { model, messages, temperature, max_tokens, top_p, stream };
+    if (enable_thinking !== undefined) {
+      payload.enable_thinking = enable_thinking;
+    }
 
     const response = await fetch(`${this.chatBaseUrl}/chat/completions`, {
       method: 'POST',

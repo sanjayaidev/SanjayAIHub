@@ -1,0 +1,64 @@
+diff --git a/providers/alibaba.js b/providers/alibaba.js
+index 513ccfc..0ba22e1 100644
+--- a/providers/alibaba.js
++++ b/providers/alibaba.js
+@@ -26,11 +26,22 @@ class AlibabaProvider {
+       max_tokens = 2048,
+       top_p = 1,
+       stream = false,
++      // Hybrid reasoning models hosted here (deepseek-v3.2 and later,
++      // qwen3-*) think by default. Callers that need a direct, immediately
++      // parseable answer (e.g. strict-JSON output) should pass
++      // enable_thinking: false, or the reasoning trace can eat the whole
++      // max_tokens budget before the model ever emits its final answer,
++      // leaving `message.content` empty or truncated. Omit this option
++      // entirely to leave the model's own default behavior untouched.
++      enable_thinking,
+     } = options;
+ 
+     if (!model) throw new Error('Alibaba chatCompletion requires a model');
+ 
+     const payload = { model, messages, temperature, max_tokens, top_p, stream };
++    if (enable_thinking !== undefined) {
++      payload.enable_thinking = enable_thinking;
++    }
+ 
+     const response = await fetch(`${this.chatBaseUrl}/chat/completions`, {
+       method: 'POST',
+diff --git a/routes/designer.js b/routes/designer.js
+index f2bd16a..71c8771 100644
+--- a/routes/designer.js
++++ b/routes/designer.js
+@@ -123,6 +123,10 @@ router.post('/generate', authenticateToken, async (req, res) => {
+     const designSpec = extractJSON(aiResponse);
+     
+     if (!designSpec) {
++      // Log the raw model output server-side so a future regression here
++      // (e.g. thinking-mode reasoning eating the token budget again) is
++      // diagnosable instead of just a generic client-facing message.
++      console.error('Designer: failed to extract JSON from AI response. Raw response:', aiResponse);
+       return res.status(500).json({
+         success: false,
+         message: 'Failed to generate valid design specification'
+@@ -289,7 +293,19 @@ async function callAlibabaDeepSeekAPI(prompt, apiKey, workspaceId, model = 'deep
+         { role: 'system', content: 'You are a professional design assistant. Output ONLY valid JSON.' },
+         { role: 'user', content: prompt }
+       ],
+-      { model, temperature: 0.7, max_tokens: 4000 }
++      {
++        model,
++        temperature: 0.7,
++        max_tokens: 4000,
++        // deepseek-v3.2+ is a hybrid reasoning model that thinks by default.
++        // We need the raw JSON spec, not a reasoning trace, and the two
++        // share the same max_tokens budget — without this, DeepSeek can
++        // spend the entire budget "thinking" and return an empty or
++        // truncated message.content, which then fails JSON extraction
++        // below with a generic "Failed to generate valid design
++        // specification" error. See providers/alibaba.js chatCompletion().
++        enable_thinking: false,
++      }
+     );
+   } catch (err) {
+     throw new Error(`Alibaba API error: ${err.message}`);
+
