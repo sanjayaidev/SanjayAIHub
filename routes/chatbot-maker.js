@@ -179,7 +179,23 @@ router.get('/embed/:id', async (req, res) => {
     }
 
     const config = result.rows[0];
-    
+
+    // Escape a value for safe interpolation into a single-quoted JS string
+    // literal inside the generated embed script. Order matters: backslashes
+    // must be escaped BEFORE quotes, otherwise a value ending in '\' (e.g.
+    // a business name like 'Acme Corp \') swallows the closing quote and
+    // breaks the whole script with a syntax error. Newlines are escaped
+    // too since these fields can end up multi-line from copy/paste even
+    // though the UI only exposes single-line inputs. '</script' is escaped
+    // so a value containing it can't prematurely close the embed <script>
+    // tag and break (or hijack) the host page's markup.
+    const esc = (v) => String(v ?? '')
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r')
+      .replace(/<\/script/gi, '<\\/script');
+
     // Generate the embed script
     const embedScript = `
 <!-- SanjayAIHub Chatbot -->
@@ -187,11 +203,11 @@ router.get('/embed/:id', async (req, res) => {
 (function() {
   const CHATBOT_CONFIG = {
     id: '${config.id}',
-    name: '${config.name.replace(/'/g, "\\'")}',
-    businessName: '${config.business_name.replace(/'/g, "\\'")}',
+    name: '${esc(config.name)}',
+    businessName: '${esc(config.business_name)}',
     businessColor: '${config.business_color}',
-    welcomeMessage: '${config.welcome_message.replace(/'/g, "\\'")}',
-    placeholderText: '${config.placeholderText?.replace(/'/g, "\\'") || 'Type your message...'}',
+    welcomeMessage: '${esc(config.welcome_message)}',
+    placeholderText: '${esc(config.placeholder_text) || 'Type your message...'}',
     position: '${config.position || 'bottom-right'}',
     apiEndpoint: '${process.env.API_URL || window.location.origin}/api/chatbot-maker/chat'
   };
