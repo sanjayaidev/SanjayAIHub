@@ -419,6 +419,11 @@ function extractJSON(s) {
   // \" \\ \/ \b \f \n \r \t \uXXXX are), so unescaping them is always safe,
   // never destructive to genuinely valid JSON.
   candidate = candidate.replace(/\\([[\]])/g, '$1');
+  // Add the leading 0 to bare decimals like ": .80" or "[-.5". JavaScript
+  // allows a number to start with just ".", but JSON does not — DeepSeek
+  // sometimes emits values this way (e.g. "overlay": .80 instead of 0.80),
+  // which JSON.parse rejects outright ("Unexpected token '.'").
+  candidate = candidate.replace(/([:[,]\s*)(-?)\.(\d)/g, '$1$20.$3');
 
   try { return JSON.parse(candidate); } catch (e) {}
   
