@@ -10,11 +10,17 @@ const DOM = {
   styleHint: document.getElementById('styleHint'),
   step1: document.getElementById('step1'),
   step2: document.getElementById('step2'),
+  step3: document.getElementById('step3'),
+  step4: document.getElementById('step4'),
   productContainer: document.getElementById('productContainer'),
+  reviewContainer: document.getElementById('reviewContainer'),
   stepper: document.getElementById('stepper'),
   selectedStyleChip: document.getElementById('selectedStyleChip'),
+  selectedStyleChipStep3: document.getElementById('selectedStyleChipStep3'),
   tempKeyBanner: document.getElementById('tempKeyBanner'),
   useTempKeyBtn: document.getElementById('useTempKeyBtn'),
+  finalPromptOutput: document.getElementById('finalPromptOutput'),
+  sceneBreakdown: document.getElementById('sceneBreakdown'),
 };
 
 let stylesCache = [];
@@ -65,11 +71,18 @@ let maxStepReached = 1;
 function showStep(step) {
   if (step > maxStepReached + 1) return;
   if (step === 2 && !validateStep1()) return;
+  if (step === 3 && !validateStep2()) return;
 
   maxStepReached = Math.max(maxStepReached, step);
 
   DOM.step1.style.display = step === 1 ? 'block' : 'none';
   DOM.step2.style.display = step === 2 ? 'block' : 'none';
+  DOM.step3.style.display = step === 3 ? 'block' : 'none';
+  DOM.step4.style.display = step === 4 ? 'block' : 'none';
+
+  if (step === 3) {
+    renderReview();
+  }
 
   updateStepper(step);
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -109,6 +122,209 @@ function validateStep1() {
     return false;
   }
   return true;
+}
+
+function validateStep2() {
+  const cards = DOM.productContainer.querySelectorAll('.product-card');
+  if (cards.length === 0) {
+    alert('Please add at least one product.');
+    return false;
+  }
+
+  let valid = true;
+  cards.forEach(card => {
+    const nameInput = card.querySelector('.product-name');
+    const descInput = card.querySelector('.product-description');
+    if (!nameInput || !nameInput.value.trim()) {
+      nameInput?.closest('.form-group')?.classList.add('invalid');
+      valid = false;
+    }
+    if (!descInput || !descInput.value.trim()) {
+      descInput?.closest('.form-group')?.classList.add('invalid');
+      valid = false;
+    }
+  });
+
+  if (!valid) {
+    alert('Please fill in product names and descriptions for all products.');
+  }
+  return valid;
+}
+
+// ============================================
+// REVIEW (STEP 3)
+// ============================================
+
+function renderReview() {
+  const brandName = document.getElementById('brandName').value.trim();
+  const category = document.getElementById('category').value;
+  const tagline = document.getElementById('tagline').value.trim();
+  const style = stylesCache.find(s => s.id === state.selectedStyle);
+
+  if (DOM.selectedStyleChipStep3 && style) {
+    DOM.selectedStyleChipStep3.innerHTML = `${style.icon} ${style.name}`;
+  }
+
+  const cards = DOM.productContainer.querySelectorAll('.product-card');
+  let html = '';
+
+  cards.forEach((card, index) => {
+    const name = card.querySelector('.product-name')?.value.trim() || 'Unnamed';
+    const price = card.querySelector('.product-price')?.value.trim() || '-';
+    const description = card.querySelector('.product-description')?.value.trim() || 'No description';
+    const visual = card.querySelector('.product-visual')?.value.trim() || 'No visual details';
+
+    html += `
+      <div class="review-card">
+        <h4><span class="product-badge">${index + 1}</span> ${escapeHtml(name)}</h4>
+        <div class="review-item">
+          <span class="review-label">Price</span>
+          <span class="review-value">${escapeHtml(price)}</span>
+        </div>
+        <div class="review-item">
+          <span class="review-label">Description</span>
+          <span class="review-value" style="text-align:left;max-width:70%">${escapeHtml(description)}</span>
+        </div>
+        <div class="review-item">
+          <span class="review-label">Visual Details</span>
+          <span class="review-value" style="text-align:left;max-width:70%">${escapeHtml(visual)}</span>
+        </div>
+      </div>
+    `;
+  });
+
+  DOM.reviewContainer.innerHTML = html;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ============================================
+// GENERATE FINAL PROMPT (STEP 4)
+// ============================================
+
+async function generateFinalPrompt() {
+  const btn = document.getElementById('generatePromptBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating...';
+
+  try {
+    const brandName = document.getElementById('brandName').value.trim();
+    const category = document.getElementById('category').value;
+    const tagline = document.getElementById('tagline').value.trim();
+    const style = stylesCache.find(s => s.id === state.selectedStyle);
+
+    const products = [];
+    DOM.productContainer.querySelectorAll('.product-card').forEach(card => {
+      products.push({
+        name: card.querySelector('.product-name')?.value.trim() || '',
+        price: card.querySelector('.product-price')?.value.trim() || '',
+        description: card.querySelector('.product-description')?.value.trim() || '',
+        visualDetails: card.querySelector('.product-visual')?.value.trim() || '',
+      });
+    });
+
+    const payload = {
+      action: 'generate_full_prompt',
+      brandName,
+      category,
+      tagline,
+      styleId: state.selectedStyle,
+      styleName: style?.name || '',
+      styleDescription: style?.description || '',
+      products,
+      useTemporaryKey: state.useTemporaryKey,
+    };
+
+    const response = await fetch('/api/modules/prompt-builder', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...AUTH.getAuthHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (data.success && data.data?.prompt) {
+      // Display the final prompt
+      DOM.finalPromptOutput.textContent = data.data.prompt;
+
+      // Display scene breakdown
+      if (data.data.scenes && Array.isArray(data.data.scenes)) {
+        let scenesHtml = '';
+        data.data.scenes.forEach((scene, index) => {
+          scenesHtml += `
+            <div class="scene-item">
+              <h5>Scene ${index + 1}: ${escapeHtml(scene.title || 'Product Shot')}</h5>
+              <p>${escapeHtml(scene.description || '')}</p>
+            </div>
+          `;
+        });
+        DOM.sceneBreakdown.innerHTML = scenesHtml;
+      }
+
+      showStep(4);
+      showToast('Prompt generated successfully!');
+    } else if (data.canUseTemporaryKey) {
+      DOM.tempKeyBanner.classList.add('visible');
+      alert('No NVIDIA key configured — use the trial key banner in Step 2, or add your own in Profile.');
+    } else {
+      alert(data.message || 'Failed to generate prompt. Please try again.');
+    }
+  } catch (error) {
+    console.error('Error generating prompt:', error);
+    alert('Network error: ' + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+function copyFinalPrompt() {
+  const promptText = DOM.finalPromptOutput?.textContent;
+  if (!promptText) return;
+
+  navigator.clipboard.writeText(promptText)
+    .then(() => showToast('Prompt copied to clipboard!'))
+    .catch(() => {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = promptText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      showToast('Prompt copied to clipboard!');
+    });
+}
+
+function startOver() {
+  if (confirm('Start a new project? All current data will be lost.')) {
+    // Reset form fields
+    document.getElementById('brandName').value = '';
+    document.getElementById('tagline').value = '';
+    document.getElementById('category').selectedIndex = 0;
+    DOM.styleSelect.selectedIndex = 0;
+    DOM.styleHint.textContent = '';
+    state.selectedStyle = null;
+
+    // Clear products
+    DOM.productContainer.innerHTML = '';
+    productCount = 0;
+    updateProductCount();
+
+    // Reset stepper
+    maxStepReached = 1;
+    showStep(1);
+
+    showToast('Ready for a new project!');
+  }
 }
 
 // ============================================
@@ -444,6 +660,20 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('enhanceAllBtn').addEventListener('click', enhanceAllProducts);
+
+  // Step 3: Review -> Generate Prompt
+  document.getElementById('generatePromptBtn')?.addEventListener('click', generateFinalPrompt);
+
+  // Step 4: Copy prompt button
+  document.getElementById('copyPromptBtn')?.addEventListener('click', copyFinalPrompt);
+
+  // Step 4: Regenerate button
+  document.getElementById('regenerateBtn')?.addEventListener('click', () => {
+    showStep(3);
+  });
+
+  // Step 4: Start over button
+  document.getElementById('startOverBtn')?.addEventListener('click', startOver);
 
   DOM.stepper.querySelectorAll('.step-node').forEach(node => {
     node.addEventListener('click', () => {

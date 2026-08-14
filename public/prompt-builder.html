@@ -159,6 +159,16 @@
         <span class="step-circle">2</span>
         <span class="step-label">Products</span>
       </button>
+      <span class="step-line"></span>
+      <button class="step-node" data-step="3" type="button">
+        <span class="step-circle">3</span>
+        <span class="step-label">Review</span>
+      </button>
+      <span class="step-line"></span>
+      <button class="step-node" data-step="4" type="button">
+        <span class="step-circle">4</span>
+        <span class="step-label">Prompt</span>
+      </button>
     </nav>
 
     <!-- STEP 1: Style + Brand Info -->
@@ -232,6 +242,47 @@
 
       <div class="form-actions">
         <button class="btn btn-secondary" onclick="showStep(1)">← Back</button>
+        <button id="toStep3Btn" class="btn btn-primary">Next: Review →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Review -->
+    <div id="step3" class="step" style="display:none">
+      <h2>Review Your Catalog</h2>
+      <p class="step-hint">Check all product details before generating the final prompt.</p>
+      <div class="selected-style-chip" id="selectedStyleChipStep3"></div>
+      <div id="reviewContainer"></div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" onclick="showStep(2)">← Back</button>
+        <button id="generatePromptBtn" class="btn btn-primary">🚀 Generate Final Prompt</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: Final Prompt Output -->
+    <div id="step4" class="step" style="display:none">
+      <h2>Your Prompt is Ready!</h2>
+      <p class="step-hint">Copy the prompt below and use it with your favorite AI video generator.</p>
+      
+      <div class="prompt-output-container">
+        <div class="prompt-card">
+          <div class="prompt-header">
+            <h3>📝 Generated Video Prompt</h3>
+            <button id="copyPromptBtn" class="btn btn-icon btn-copy-prompt" title="Copy to clipboard">📋 Copy</button>
+          </div>
+          <pre id="finalPromptOutput" class="prompt-text"></pre>
+        </div>
+        
+        <div class="prompt-card">
+          <h3>🎬 Scene Breakdown</h3>
+          <div id="sceneBreakdown" class="scene-list"></div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" onclick="showStep(3)">← Back</button>
+        <button id="regenerateBtn" class="btn btn-secondary">🔄 Regenerate</button>
+        <button id="startOverBtn" class="btn btn-primary">✨ Start New Project</button>
       </div>
     </div>
   </div>
