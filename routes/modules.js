@@ -7,6 +7,7 @@ const pixazoTrial = require('../config/pixazo-trial');
 // Import module handlers
 const { chatbotHandler, getModelCatalog: getChatModelCatalog } = require('../modules/chatbot');
 const promptLibrary = require('../modules/prompt-library');
+const promptBuilder = require('../modules/prompt-builder');
 const { messageWriterHandler, getModelCatalog: getMessageModelCatalog } = require('../modules/message-writer');
 const { contentCreatorHandler, getModelCatalog: getContentModelCatalog } = require('../modules/content-creator');
 const { ttsHandler, getModelCatalog: getTTSModelCatalog, getVoices: getElevenLabsVoices } = require('../modules/text-to-speech');
@@ -24,7 +25,7 @@ const { voiceCloneHandler, synthesizeHandler: voiceSynthesizeHandler, listVoices
 // usage_limit) before being asked to add their own. Leave unset in .env to
 // disable this entirely — the app behaves exactly as before.
 const TEMP_NVIDIA_API_KEY = process.env.NVIDIA_FREE_TIER_API_KEY || '';
-const TEMPORARY_KEY_MODULES = new Set(['chatbot', 'message-writer', 'social-content']);
+const TEMPORARY_KEY_MODULES = new Set(['chatbot', 'message-writer', 'social-content', 'prompt-builder']);
 
 // ── Temporary shared key (Pixazo trial for trial-tier users) ──
 // Optional shared PIXAZO_FREE_TIER_API_KEY (config/pixazo-trial.js) lets
@@ -340,7 +341,7 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
     const userTierLevel = getTierLevel(userTier);
     const requiredLevel = getTierLevel(module.required_tier);
 
-    const isFree = moduleKey === 'chatbot' || moduleKey === 'prompt-library';
+    const isFree = moduleKey === 'chatbot' || moduleKey === 'prompt-library' || moduleKey === 'prompt-builder';
     let hasAccess = isFree || (userTierLevel >= requiredLevel && module.is_allowed);
 
     // ── Pixazo trial override ──
@@ -384,6 +385,7 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
       'coding-agent': ['nvidia'],
       'social-content': ['nvidia'],
       'message-writer': ['nvidia'],
+      'prompt-builder': ['nvidia'],
       'text-to-image': ['alibaba', 'pixazo', 'cloudflare'],
       'image-edit': ['alibaba'],
       'text-to-video': ['alibaba', 'pixazo'],
@@ -510,6 +512,9 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
         break;
       case 'message-writer':
         result = await messageWriterHandler(req.body, apiKeys, userId);
+        break;
+      case 'prompt-builder':
+        result = await promptBuilder.enhanceField(req.body, apiKeys, userId);
         break;
       case 'social-content':
         result = await contentCreatorHandler(req.body, apiKeys, userId);
@@ -728,6 +733,24 @@ router.get('/prompt-library/prompts', async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
+// ──────────────────────────────────────────────
+// GET /api/modules/prompt-builder/styles - List available visual styles for the dropdown
+// Public: static list, no AI call, no auth needed.
+// ──────────────────────────────────────────────
+router.get('/prompt-builder/styles', (req, res) => {
+  try {
+    const styles = promptBuilder.listStyles();
+    res.json({ success: true, styles });
+  } catch (error) {
+    console.error('List prompt-builder styles error:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Per-field AI enhancement (POST /api/modules/prompt-builder) is handled by
+// the generic dispatcher below — see the 'prompt-builder' case in the
+// switch statement, which calls promptBuilder.enhanceField().
 
 // ──────────────────────────────────────────────
 // GET /api/modules/prompt-library/favorites - Current user's favorited prompt IDs

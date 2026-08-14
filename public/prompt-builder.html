@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SanjayAIHub · Structured Prompt Builder</title>
+  <link rel="stylesheet" href="/prompt-builder.css">
+  <style>
+    /* Hub back-link + additions for the dropdown/enhance redesign, layered
+       on top of the tool's original dark theme in prompt-builder.css */
+    .hub-back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 16px 0 0 16px;
+      color: #999;
+      text-decoration: none;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    .hub-back-link:hover { color: #fff; }
+
+    .field-with-enhance { position: relative; }
+    .enhance-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 6px;
+    }
+    .btn-enhance {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #7c3aed, #db2777);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity .15s, transform .15s;
+    }
+    .btn-enhance:hover:not(:disabled) { transform: translateY(-1px); }
+    .btn-enhance:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-enhance.enhancing { opacity: .7; cursor: progress; }
+
+    .style-select-group select { width: 100%; }
+    .style-select-hint { font-size: 12px; color: #888; margin-top: 6px; }
+
+    .enhance-error {
+      font-size: 12px;
+      color: #f87171;
+      margin-top: 6px;
+      display: none;
+    }
+    .enhance-error.visible { display: block; }
+
+    .temp-key-banner {
+      background: rgba(124, 58, 237, 0.12);
+      border: 1px solid rgba(124, 58, 237, 0.4);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: #ddd;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .temp-key-banner.visible { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .temp-key-banner button {
+      background: #7c3aed;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .catalog-actions-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .btn-enhance-all {
+      background: linear-gradient(135deg, #7c3aed, #db2777);
+      border: none;
+    }
+    .btn-enhance-all:disabled { opacity: .6; cursor: not-allowed; }
+    .enhance-all-status { font-size: 13px; color: #999; }
+
+    .enhance-row { gap: 8px; }
+    .enhance-row .btn-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      color: #ccc;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .enhance-row .btn-icon:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+    .enhance-row .btn-icon:disabled { opacity: .4; cursor: not-allowed; }
+
+    .field-enhanced-flag {
+      display: none;
+      font-size: 11px;
+      color: #34d399;
+      margin-top: 4px;
+    }
+    .field-enhanced-flag.visible { display: block; }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1a1d24;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 13px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+      z-index: 999;
+    }
+    .toast.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <a href="/home.html" class="hub-back-link">&larr; Back to SanjayAIHub</a>
+
+  <div class="app-container">
+    <header>
+      <h1>🎬 Structured Prompt Builder</h1>
+      <p>Set your catalog style, add products, then let AI enhance each description</p>
+    </header>
+
+    <!-- STEP TRACKER -->
+    <nav class="stepper" id="stepper" aria-label="Progress">
+      <button class="step-node" data-step="1" type="button">
+        <span class="step-circle">1</span>
+        <span class="step-label">Style &amp; Brand</span>
+      </button>
+      <span class="step-line"></span>
+      <button class="step-node" data-step="2" type="button">
+        <span class="step-circle">2</span>
+        <span class="step-label">Products</span>
+      </button>
+    </nav>
+
+    <!-- STEP 1: Style + Brand Info -->
+    <div id="step1" class="step">
+      <h2>Choose a Style &amp; Tell Us About Your Brand</h2>
+      <p class="step-hint">The style applies to your whole catalog — every product's Enhance button will use it.</p>
+
+      <div class="form-container">
+        <fieldset class="form-section">
+          <legend>Catalog style</legend>
+          <div class="form-group style-select-group">
+            <label for="styleSelect">Visual Style <span class="req">*</span></label>
+            <select id="styleSelect">
+              <option value="">Loading styles…</option>
+            </select>
+            <p class="style-select-hint" id="styleHint"></p>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-section">
+          <legend>Brand basics</legend>
+          <div class="form-group">
+            <label for="brandName">Brand/Product Name <span class="req">*</span></label>
+            <input type="text" id="brandName" placeholder="e.g., Dheeraj Ujjaini Poha">
+            <small class="field-error" id="brandNameError">Brand name is required</small>
+          </div>
+          <div class="form-group">
+            <label for="category">Category <span class="req">*</span></label>
+            <select id="category">
+              <option value="food">Food & Beverage</option>
+              <option value="fashion">Fashion & Clothing</option>
+              <option value="jewellery">Jewellery & Accessories</option>
+              <option value="furniture">Home & Furniture</option>
+              <option value="appliances">Electronics & Appliances</option>
+              <option value="travel">Travel & Hospitality</option>
+              <option value="beauty">Beauty & Wellness</option>
+              <option value="tech">Tech & Gadgets</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="tagline">Tagline/Slogan</label>
+            <input type="text" id="tagline" placeholder="e.g., Authentic Taste of Chhattisgarh">
+          </div>
+        </fieldset>
+
+        <div class="form-actions">
+          <button class="btn btn-primary" id="toStep2Btn">Next: Add Products →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Products -->
+    <div id="step2" class="step" style="display:none">
+      <h2>Add Your Products</h2>
+      <p class="step-hint">Add 1–5 products, type a rough description and visual details, then hit ✨ Enhance on each field.</p>
+      <div class="selected-style-chip" id="selectedStyleChip"></div>
+
+      <div class="temp-key-banner" id="tempKeyBanner">
+        <span>No NVIDIA key on your account yet — you can try Enhance a few times using the app's shared trial key.</span>
+        <button id="useTempKeyBtn" type="button">Use trial key</button>
+      </div>
+
+      <div class="catalog-actions-row">
+        <button id="enhanceAllBtn" class="btn btn-primary btn-enhance-all" type="button">✨ Enhance All Products</button>
+        <span class="enhance-all-status" id="enhanceAllStatus"></span>
+      </div>
+
+      <div id="productContainer"></div>
+      <button id="addProductBtn" class="btn btn-secondary btn-add">+ Add Product</button>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" onclick="showStep(1)">← Back</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/prompt-builder.js"></script>
+</body>
+</html>
