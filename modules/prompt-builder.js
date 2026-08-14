@@ -41,6 +41,20 @@ const FIELD_LABELS = {
   visualDetails: 'visual / on-screen scene details for an AI video generator',
 };
 
+// List available styles (for GET /api/modules/prompt-builder/styles)
+function listStyles() {
+  return STYLE_OPTIONS;
+}
+
+// Get model catalog (for future model selection UI)
+function getModelCatalog() {
+  return NVIDIA_MODELS.map(model => ({
+    id: model,
+    name: model.replace('meta/', 'Meta ').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    description: model.includes('70b') ? 'Most capable model for complex prompts' : 'Fast, efficient model for quick iterations',
+  }));
+}
+
 // Generate full prompt for all products at once (Step 4)
 async function generateFullPrompt(requestBody, apiKeys, userId) {
   const {
@@ -239,82 +253,7 @@ Respond with ONLY the rewritten text. No preamble, no quotes, no markdown, no la
 
   let enhanced = data.choices?.[0]?.message?.content?.trim() || '';
   // Strip accidental wrapping quotes the model sometimes adds.
-  enhanced = enhanced.replace(/^["']["]$/s, '$1').trim();
-
-  return {
-    field,
-    enhanced,
-    model,
-    usage: data.usage,
-  };
-}
-
-module.exports = {
-  listStyles,
-  enhanceField,
-  generateFullPrompt,
-  getModelCatalog,
-  STYLE_OPTIONS,
-  NVIDIA_MODELS,
-};
-  const {
-    field,
-    text = '',
-    styleId,
-    brandName = '',
-    category = '',
-    tagline = '',
-    productName = '',
-    price = '',
-    model: requestedModel,
-  } = requestBody;
-
-  if (!field || !FIELD_LABELS[field]) {
-    throw new Error('field must be "description" or "visualDetails"');
-  }
-  if (!text || !text.trim()) {
-    throw new Error(`Enter some ${FIELD_LABELS[field]} text before enhancing it`);
-  }
-  if (!apiKeys.nvidia?.api_key) {
-    throw new Error('NVIDIA API key not configured. Add it in Profile > API Keys.');
-  }
-
-  const style = STYLE_MAP[styleId] || null;
-  const model = NVIDIA_MODELS.includes(requestedModel) ? requestedModel : DEFAULT_MODEL;
-
-  const contextLines = [
-    brandName && `Brand: ${brandName}`,
-    category && `Category: ${category}`,
-    tagline && `Tagline: ${tagline}`,
-    productName && `Product: ${productName}`,
-    price && `Price: ${price}`,
-    style && `Visual style for the whole catalog: ${style.name} — ${style.description}`,
-  ].filter(Boolean).join('\n');
-
-  const systemPrompt = `You are an expert copywriter for AI video/image generation prompts.
-You will be given a ${FIELD_LABELS[field]} that the user already wrote, plus context about the brand, product, and chosen visual style.
-Rewrite ONLY that text to be more vivid, specific, and production-ready — keep the user's original intent and any facts they included (price, materials, etc.), but sharpen the language, add concrete sensory/visual detail appropriate to the chosen style, and keep it concise (1-3 sentences).
-Respond with ONLY the rewritten text. No preamble, no quotes, no markdown, no labels.`;
-
-  const userPrompt = `${contextLines}\n\nCurrent ${FIELD_LABELS[field]}:\n"""${text.trim()}"""\n\nRewrite it now.`;
-
-  const nvidia = new NvidiaProvider(apiKeys.nvidia.api_key);
-  let data;
-  try {
-    data = await nvidia.chatCompletion(
-      [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      { model, temperature: 0.8, max_tokens: 300 }
-    );
-  } catch (err) {
-    throw new Error(`NVIDIA API error: ${err.message}`);
-  }
-
-  let enhanced = data.choices?.[0]?.message?.content?.trim() || '';
-  // Strip accidental wrapping quotes the model sometimes adds.
-  enhanced = enhanced.replace(/^["'“](.*)["'”]$/s, '$1').trim();
+  enhanced = enhanced.replace(/^["'""](.*?)["'"]$/s, '$1').trim();
 
   return {
     field,
