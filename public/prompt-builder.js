@@ -21,6 +21,8 @@ const DOM = {
   useTempKeyBtn: document.getElementById('useTempKeyBtn'),
   finalPromptOutput: document.getElementById('finalPromptOutput'),
   sceneBreakdown: document.getElementById('sceneBreakdown'),
+  toStep2Btn: null, // set after DOM ready
+  toStep3Btn: null, // set after DOM ready
 };
 
 let stylesCache = [];
@@ -638,12 +640,16 @@ function showError(msg) {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Initialize button references
+  DOM.toStep2Btn = document.getElementById('toStep2Btn');
+  DOM.toStep3Btn = document.getElementById('toStep3Btn');
+
   fetchStyles();
   showStep(1);
 
   document.getElementById('addProductBtn').addEventListener('click', addProduct);
 
-  document.getElementById('toStep2Btn').addEventListener('click', () => {
+  DOM.toStep2Btn?.addEventListener('click', () => {
     if (validateStep1()) {
       showStep(2);
       if (productCount === 0) addProduct();
@@ -652,6 +658,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('brandName').addEventListener('input', () => {
     document.getElementById('brandName').closest('.form-group').classList.remove('invalid');
+  });
+
+  // Step 2 -> Step 3 navigation
+  DOM.toStep3Btn?.addEventListener('click', () => {
+    if (validateStep2()) {
+      showStep(3);
+    }
   });
 
   DOM.useTempKeyBtn.addEventListener('click', () => {
