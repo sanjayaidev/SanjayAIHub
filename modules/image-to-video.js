@@ -116,7 +116,10 @@ async function imageToVideoHandler(requestBody, apiKeys, userId) {
         model,
         media,
         resolution: resolution || '720P',
-        duration: parseInt(duration) || 5,
+        // Clip generation is capped at 10 seconds — clamp regardless of
+        // what the client sends, since the UI only offers 5/10 but this
+        // is the last line of defense.
+        duration: Math.min(parseInt(duration) || 5, 10),
         seed: seed ? parseInt(seed) : undefined,
         negative_prompt,
         prompt_extend,
@@ -136,16 +139,21 @@ async function imageToVideoHandler(requestBody, apiKeys, userId) {
     model = PIXAZO_VIDEO_MODEL;
     
     try {
+      const resolvedFrameRate = parseInt(frame_rate) || 24;
+      // Clip generation is capped at 10 seconds. LTX 2.3 requires the
+      // "8k+1" frame-count form, so clamp down to the largest 8k+1 value
+      // that stays within 10s at the chosen frame rate.
+      const maxFramesFor10s = Math.floor((resolvedFrameRate * 10 - 1) / 8) * 8 + 1;
       const params = {
         prompt,
         image_url, // Required for image-to-video
         // Pixazo's LTX API field is `aspect`, not `aspect_ratio` — sending
         // the wrong key meant the user's chosen ratio was silently dropped.
         aspect,
-        frame_rate: parseInt(frame_rate) || 24,
+        frame_rate: resolvedFrameRate,
         width: parseInt(width) || 1280,
         height: parseInt(height) || 704,
-        num_frames: parseInt(num_frames) || 121,
+        num_frames: Math.min(parseInt(num_frames) || 121, maxFramesFor10s),
         enhance_prompt,
       };
       if (seed) params.seed = parseInt(seed);

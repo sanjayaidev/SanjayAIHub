@@ -402,6 +402,15 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
 
     requiredProviders = providerMap[moduleKey] || [];
 
+    // Prompt Builder's "generate_full_prompt" step (Step 4) is template-based
+    // — it stitches the preset per-style template with the brand/product
+    // fields and never calls an AI model, so it needs no NVIDIA key. Only
+    // the per-field "Enhance" action (action === 'enhance_field', the
+    // default) actually calls NVIDIA.
+    if (moduleKey === 'prompt-builder' && req.body.action === 'generate_full_prompt') {
+      requiredProviders = [];
+    }
+
     let apiKeys = {};
     if (requiredProviders.length > 0) {
       const keyResult = await pool.query(
