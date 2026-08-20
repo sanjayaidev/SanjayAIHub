@@ -21,6 +21,7 @@
 // Enhance calls only.
 
 const NvidiaProvider = require('../providers/nvidia');
+const pool = require('../db');
 
 // Visual styles offered in the dropdown. Used both to populate the UI and
 // to steer the AI enhancement toward a consistent look across a catalog.
@@ -233,6 +234,14 @@ async function enhanceField(requestBody, apiKeys, userId) {
     return generateFullPrompt(requestBody);
   }
 
+  // Handle rewrite_prompt action — "Rewrite Prompt" mode. Unlike
+  // generate_full_prompt, this DOES call the AI model (see rewritePrompt
+  // below), so it goes through the normal NVIDIA key / temp-key gate in
+  // routes/modules.js like enhance_field does.
+  if (action === 'rewrite_prompt') {
+    return rewritePrompt(requestBody, apiKeys);
+  }
+
   // Original enhance_field behavior
   if (!field || !FIELD_LABELS[field]) {
     throw new Error('field must be "description" or "visualDetails"');
@@ -289,11 +298,172 @@ Respond with ONLY the rewritten text. No preamble, no quotes, no markdown, no la
   };
 }
 
+// ──────────────────────────────────────────────
+// "Rewrite Prompt" mode — backed by prompt_rewrite_templates (see
+// migrations/add_prompt_rewrite_templates_table.sql). Rows are inserted
+// manually. Flow: user picks Category -> Prompt (both loaded from this
+// table), fills in brand/tagline/items/address/contact, and an NVIDIA
+// model rewrites the selected reference prompt around those details —
+// unlike Step 4's generate_full_prompt, this DOES call an AI model, since
+// the reference prompts are free-form prose (no fixed {placeholder}
+// tokens) and the item count varies, so the beat/scene structure and any
+// timing math has to be re-flowed rather than substituted.
+// ──────────────────────────────────────────────
+
+// GET /api/modules/prompt-builder/rewrite-categories
+async function listRewriteCategories() {
+  const result = await pool.query(
+    `SELECT DISTINCT category FROM prompt_rewrite_templates WHERE is_active = true ORDER BY category ASC`
+  );
+  return result.rows.map(r => r.category);
+}
+
+// GET /api/modules/prompt-builder/rewrite-templates?category=...
+async function listRewriteTemplates(category) {
+  if (!category || !category.trim()) {
+    throw new Error('category is required');
+  }
+  const result = await pool.query(
+    `SELECT id, name, duration, prompt
+     FROM prompt_rewrite_templates
+     WHERE category = $1 AND is_active = true
+     ORDER BY name ASC`,
+    [category.trim()]
+  );
+  return result.rows;
+}
+
+async function getRewriteTemplateById(id) {
+  const result = await pool.query(
+    `SELECT id, name, category, duration, prompt
+     FROM prompt_rewrite_templates
+     WHERE id = $1 AND is_active = true`,
+    [id]
+  );
+  return result.rows[0] || null;
+}
+
+// action: 'rewrite_prompt' (dispatched from enhanceField above)
+// body: {
+//   templateId: string,          // id of a prompt_rewrite_templates row
+//   brandName: string,           // required
+//   tagline: string,             // optional
+//   items: [{ name, price }],    // 1-5, at least one named item required
+//   address: string,             // required
+//   contact: string,             // required
+//   model                        // optional override
+// }
+//
+// Note: the reference prompt text itself is always re-fetched from the DB
+// by templateId rather than trusted from the request body, so the model
+// only ever rewrites vetted template content, never arbitrary client text.
+async function rewritePrompt(requestBody, apiKeys) {
+  const {
+    templateId,
+    brandName = '',
+    tagline = '',
+    items = [],
+    address = '',
+    contact = '',
+    model: requestedModel,
+  } = requestBody;
+
+  if (!templateId) {
+    throw new Error('Pick a prompt template first');
+  }
+  if (!brandName.trim()) {
+    throw new Error('Brand name is required');
+  }
+  if (!address.trim()) {
+    throw new Error('Address is required');
+  }
+  if (!contact.trim()) {
+    throw new Error('Contact is required');
+  }
+  const cleanItems = (items || [])
+    .filter(i => i && i.name && i.name.trim())
+    .slice(0, 5)
+    .map(i => ({ name: i.name.trim(), price: (i.price || '').trim() }));
+  if (!cleanItems.length) {
+    throw new Error('Add at least one item');
+  }
+  if (!apiKeys.nvidia?.api_key) {
+    throw new Error('NVIDIA API key not configured. Add it in Profile > API Keys.');
+  }
+
+  const template = await getRewriteTemplateById(templateId);
+  if (!template) {
+    throw new Error('Selected template was not found or is no longer active.');
+  }
+
+  const model = NVIDIA_MODELS.includes(requestedModel) ? requestedModel : DEFAULT_MODEL;
+
+  const itemsList = cleanItems
+    .map((it, i) => `${i + 1}. ${it.name}${it.price ? ` — ${it.price}` : ''}`)
+    .join('\n');
+
+  const systemPrompt = `You are an expert AI video-prompt copywriter.
+You will be given a REFERENCE PROMPT — a full, structured AI-video-generation prompt written for a different brand — and REPLACEMENT DETAILS for a new brand.
+
+Regenerate the prompt by replacing the brand name, address, contact and the items as given here, while preserving the reference prompt's structure, format, and technical directives (aspect ratio, duration, style, lighting notes).
+
+Rules:
+- Replace every brand name, tagline, address, and contact/phone mention with the new brand's details.
+- The reference prompt has its own number of item "beats"/scenes. The new brand has a different number of items — add, remove, or merge beat blocks so there is exactly one beat per new item, in the order given, renumbering beats and recalculating any timing math (total duration, per-beat seconds, timestamps) so it stays internally consistent for the new item count.
+- Keep all non-brand-specific creative direction unchanged: camera language, lighting style, transitions, aesthetic, aspect ratio, overall format.
+- If no tagline is provided, omit the tagline line rather than inventing one.
+- Output ONLY the complete rewritten prompt as plain text. No preamble, no explanation, no markdown code fences, no labels.`;
+
+  const userPrompt = `REFERENCE PROMPT:
+"""
+${template.prompt}
+"""
+
+REPLACEMENT DETAILS:
+Brand Name: ${brandName.trim()}
+Tagline: ${tagline.trim() || '(none provided — omit tagline line)'}
+Address: ${address.trim()}
+Contact: ${contact.trim()}
+Items (use exactly these, one beat per item, in this order):
+${itemsList}
+
+Rewrite the prompt now.`;
+
+  const nvidia = new NvidiaProvider(apiKeys.nvidia.api_key);
+  let data;
+  try {
+    data = await nvidia.chatCompletion(
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      { model, temperature: 0.7, max_tokens: 2000 }
+    );
+  } catch (err) {
+    throw new Error(`NVIDIA API error: ${err.message}`);
+  }
+
+  let rewritten = data.choices?.[0]?.message?.content?.trim() || '';
+  // Strip accidental markdown code fences the model sometimes adds.
+  rewritten = rewritten.replace(/^```[a-z]*\n?/i, '').replace(/```$/, '').trim();
+
+  return {
+    prompt: rewritten,
+    templateId: template.id,
+    templateName: template.name,
+    model,
+    usage: data.usage,
+  };
+}
+
 module.exports = {
   listStyles,
   enhanceField,
   generateFullPrompt,
   getModelCatalog,
+  listRewriteCategories,
+  listRewriteTemplates,
+  rewritePrompt,
   STYLE_OPTIONS,
   NVIDIA_MODELS,
 };

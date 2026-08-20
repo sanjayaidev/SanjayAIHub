@@ -757,9 +757,49 @@ router.get('/prompt-builder/styles', (req, res) => {
   }
 });
 
-// Per-field AI enhancement (POST /api/modules/prompt-builder) is handled by
-// the generic dispatcher below — see the 'prompt-builder' case in the
-// switch statement, which calls promptBuilder.enhanceField().
+// ──────────────────────────────────────────────
+// GET /api/modules/prompt-builder/rewrite-categories - Category filter options
+// for "Rewrite Prompt" mode. Public: read-only list, no AI call, no auth needed.
+// ──────────────────────────────────────────────
+router.get('/prompt-builder/rewrite-categories', async (req, res) => {
+  try {
+    const categories = await promptBuilder.listRewriteCategories();
+    res.json({ success: true, categories });
+  } catch (error) {
+    console.error('List rewrite-template categories error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// GET /api/modules/prompt-builder/rewrite-templates?category=... - Prompt
+// dropdown options for a given category, incl. reference text + duration so
+// the frontend can auto-fill the Reference Prompt box with one request.
+// Public: read-only list, no AI call, no auth needed.
+// ──────────────────────────────────────────────
+router.get('/prompt-builder/rewrite-templates', async (req, res) => {
+  try {
+    const { category } = req.query;
+    if (!category) {
+      return res.status(400).json({ success: false, message: 'category query param is required' });
+    }
+    const templates = await promptBuilder.listRewriteTemplates(category);
+    res.json({ success: true, templates });
+  } catch (error) {
+    console.error('List rewrite templates error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Per-field AI enhancement and the "Rewrite Prompt" AI action (both
+// POST /api/modules/prompt-builder) are handled by the generic dispatcher
+// below — see the 'prompt-builder' case in the switch statement, which
+// calls promptBuilder.enhanceField(). That function internally branches on
+// req.body.action ('enhance_field' default / 'generate_full_prompt' /
+// 'rewrite_prompt'). Only 'generate_full_prompt' is template-based and
+// skips the NVIDIA key requirement (see the requiredProviders override
+// above) — 'rewrite_prompt' calls the model, so it goes through the normal
+// key / temp-key gate just like 'enhance_field'.
 
 // ──────────────────────────────────────────────
 // GET /api/modules/prompt-library/favorites - Current user's favorited prompt IDs

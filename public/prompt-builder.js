@@ -636,6 +636,299 @@ function showError(msg) {
 }
 
 // ============================================
+// MODE SWITCHER — Guided Builder vs Rewrite Prompt
+// ============================================
+
+function setMode(mode) {
+  const guidedPanel = document.getElementById('guidedBuilderPanel');
+  const rewritePanel = document.getElementById('rewritePanel');
+  const guidedTab = document.getElementById('modeTabGuided');
+  const rewriteTab = document.getElementById('modeTabRewrite');
+
+  const showRewrite = mode === 'rewrite';
+  guidedPanel.style.display = showRewrite ? 'none' : 'block';
+  rewritePanel.style.display = showRewrite ? 'block' : 'none';
+  guidedTab.classList.toggle('active', !showRewrite);
+  rewriteTab.classList.toggle('active', showRewrite);
+  guidedTab.setAttribute('aria-selected', String(!showRewrite));
+  rewriteTab.setAttribute('aria-selected', String(showRewrite));
+
+  if (showRewrite && !rewriteState.categoriesLoaded) {
+    fetchRewriteCategories();
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ============================================
+// REWRITE PROMPT — state
+// ============================================
+
+const rewriteState = {
+  categoriesLoaded: false,
+  templatesByCategory: {}, // cache: category -> [{id, name, duration, prompt}]
+  selectedTemplate: null,  // {id, name, duration, prompt}
+  itemCount: 0,
+  useTemporaryKey: false,
+};
+
+// TEMP mock data — used only if the real endpoints below 404 / aren't wired
+// up yet on the backend. Once GET /api/modules/prompt-builder/rewrite-categories
+// and /rewrite-templates exist and return real prompt_rewrite_templates rows,
+// these fetches succeed and this mock is never touched.
+const REWRITE_MOCK_TEMPLATES = [
+  {
+    id: 'mock-restaurant-menu-book',
+    name: '3D Menu Book Reveal',
+    category: 'Restaurant/Cafe',
+    duration: '14 Seconds',
+    prompt: `Restaurant/Cafe — 3D Menu Book Reveal
+ASPECT RATIO: 9:16 Vertical. DURATION: 14 Seconds (7 scenes × 2 sec each). STYLE: Hyper-realistic, 8k, cinematic macro-lens, warm modern-bistro commercial aesthetic, soft ambient restaurant lighting, 60fps smooth slow-motion, shallow depth of field, rich appetizing color grading (warm browns, fresh greens, creamy whites).
+
+GENERAL SETUP: Background is a cozy modern restaurant table setting — dark wood table, a lit tealight candle softly out of focus, faint hanging pendant lights and blurred restaurant seating in the background bokeh. Foreground: A clean, premium hardcover menu book lies closed flat on the table, matte cover with a simple embossed logo. A pair of hands rest near the edge, ready to open it.
+
+BEAT 1 (SEC 0.0 – 2.0): THE COVER
+Opening shot: Tight close-up on the closed menu book. The matte cover is [ACCENT COLOR] with a clean embossed logo mark, centered text in a modern serif font:
+"[RESTAURANT NAME]"
+with a smaller line beneath: "[TAGLINE]"
+...(remaining beats follow the same per-item hologram-reveal pattern, one BEAT per item, ending with a closing brand card showing "[RESTAURANT NAME]" and "Order Now · [PHONE/HANDLE]")`,
+  },
+  {
+    id: 'mock-retail-showcase',
+    name: 'Floating Product Grid',
+    category: 'Retail',
+    duration: '10 Seconds',
+    prompt: `Retail — Floating Product Grid
+ASPECT RATIO: 9:16 Vertical. DURATION: 10 Seconds. STYLE: Clean studio product photography, soft gradient backdrop, minimal kinetic motion.
+...(placeholder reference prompt — replace with a real row in prompt_rewrite_templates)`,
+  },
+  {
+    id: 'mock-salon-mirror',
+    name: 'Mirror Reveal Intro',
+    category: 'Salon/Spa',
+    duration: '12 Seconds',
+    prompt: `Salon/Spa — Mirror Reveal Intro
+ASPECT RATIO: 9:16 Vertical. DURATION: 12 Seconds. STYLE: Warm boutique-spa lighting, soft focus, calm pacing.
+...(placeholder reference prompt — replace with a real row in prompt_rewrite_templates)`,
+  },
+];
+
+async function fetchRewriteCategories() {
+  const select = document.getElementById('rewriteCategorySelect');
+  try {
+    const res = await fetch('/api/modules/prompt-builder/rewrite-categories');
+    if (!res.ok) throw new Error('not implemented yet');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'failed');
+    populateCategorySelect(data.categories);
+  } catch (err) {
+    // Backend not wired up yet — fall back to mock data so the UI stays usable.
+    const categories = [...new Set(REWRITE_MOCK_TEMPLATES.map(t => t.category))];
+    populateCategorySelect(categories);
+  }
+  rewriteState.categoriesLoaded = true;
+}
+
+function populateCategorySelect(categories) {
+  const select = document.getElementById('rewriteCategorySelect');
+  select.innerHTML = '<option value="">Select a category…</option>' +
+    categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+}
+
+async function fetchRewriteTemplates(category) {
+  const promptSelect = document.getElementById('rewritePromptSelect');
+  promptSelect.disabled = true;
+  promptSelect.innerHTML = '<option value="">Loading prompts…</option>';
+
+  let templates;
+  try {
+    const res = await fetch(`/api/modules/prompt-builder/rewrite-templates?category=${encodeURIComponent(category)}`);
+    if (!res.ok) throw new Error('not implemented yet');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'failed');
+    templates = data.templates;
+  } catch (err) {
+    templates = REWRITE_MOCK_TEMPLATES.filter(t => t.category === category);
+  }
+
+  rewriteState.templatesByCategory[category] = templates;
+
+  if (!templates.length) {
+    promptSelect.innerHTML = '<option value="">No prompts in this category yet</option>';
+    return;
+  }
+
+  promptSelect.innerHTML = '<option value="">Select a prompt…</option>' +
+    templates.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+  promptSelect.disabled = false;
+}
+
+function onRewriteTemplateSelected(templateId) {
+  const refBox = document.getElementById('referencePromptBox');
+  const hint = document.getElementById('rewriteTemplateHint');
+  const category = document.getElementById('rewriteCategorySelect').value;
+  const templates = rewriteState.templatesByCategory[category] || [];
+  const template = templates.find(t => t.id === templateId) || null;
+
+  rewriteState.selectedTemplate = template;
+
+  if (!template) {
+    refBox.value = '';
+    refBox.classList.remove('filled');
+    hint.innerHTML = '';
+  } else {
+    refBox.value = template.prompt;
+    refBox.classList.add('filled');
+    hint.innerHTML = template.duration
+      ? `<span class="duration-pill">⏱ ${escapeHtml(template.duration)}</span>`
+      : '';
+  }
+  updateRewriteSubmitState();
+}
+
+// ============================================
+// REWRITE PROMPT — items (max 5, same cap pattern as products)
+// ============================================
+
+function addRewriteItem() {
+  if (rewriteState.itemCount >= 5) {
+    alert('Maximum 5 items allowed');
+    return;
+  }
+  rewriteState.itemCount++;
+  const container = document.getElementById('rewriteItemsContainer');
+
+  const row = document.createElement('div');
+  row.className = 'rewrite-item-row';
+  row.innerHTML = `
+    <div class="form-group">
+      <label>Product Name <span class="req">*</span></label>
+      <input type="text" class="rewrite-item-name" placeholder="e.g., Butter Naan">
+    </div>
+    <div class="form-group">
+      <label>Price</label>
+      <input type="text" class="rewrite-item-price" placeholder="e.g., ₹ 45/-">
+    </div>
+    <button type="button" class="rewrite-item-remove" title="Remove item">🗑️</button>
+  `;
+  container.appendChild(row);
+
+  row.querySelector('.rewrite-item-remove').addEventListener('click', () => {
+    row.remove();
+    rewriteState.itemCount--;
+    updateAddRewriteItemBtn();
+    updateRewriteSubmitState();
+  });
+  row.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', updateRewriteSubmitState);
+  });
+
+  updateAddRewriteItemBtn();
+  updateRewriteSubmitState();
+}
+
+function updateAddRewriteItemBtn() {
+  const btn = document.getElementById('addRewriteItemBtn');
+  btn.textContent = rewriteState.itemCount >= 5 ? '✖ Maximum 5 reached' : '+ Add Item';
+  btn.disabled = rewriteState.itemCount >= 5;
+}
+
+// ============================================
+// REWRITE PROMPT — validation + submit (stub)
+// ============================================
+
+function collectRewriteItems() {
+  const rows = document.querySelectorAll('#rewriteItemsContainer .rewrite-item-row');
+  return Array.from(rows).map(row => ({
+    name: row.querySelector('.rewrite-item-name').value.trim(),
+    price: row.querySelector('.rewrite-item-price').value.trim(),
+  }));
+}
+
+function validateRewriteForm({ silent = true } = {}) {
+  const template = rewriteState.selectedTemplate;
+  const brand = document.getElementById('rewriteBrandName').value.trim();
+  const address = document.getElementById('rewriteAddress').value.trim();
+  const contact = document.getElementById('rewriteContact').value.trim();
+  const items = collectRewriteItems();
+  const hasAtLeastOneNamedItem = items.some(i => i.name);
+
+  const ok = !!template && !!brand && !!address && !!contact && hasAtLeastOneNamedItem;
+
+  if (!silent) {
+    document.getElementById('rewriteBrandNameError').style.display = brand ? 'none' : 'block';
+    document.getElementById('rewriteAddressError').style.display = address ? 'none' : 'block';
+    document.getElementById('rewriteContactError').style.display = contact ? 'none' : 'block';
+  }
+
+  return ok;
+}
+
+function updateRewriteSubmitState() {
+  document.getElementById('rewriteSubmitBtn').disabled = !validateRewriteForm({ silent: true });
+}
+
+async function submitRewritePrompt() {
+  const btn = document.getElementById('rewriteSubmitBtn');
+  const errorEl = document.getElementById('rewriteFormError');
+  errorEl.style.display = 'none';
+
+  if (!validateRewriteForm({ silent: false })) {
+    errorEl.textContent = 'Fill in all required fields (brand, at least one item, address, contact) and pick a template.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  const payload = {
+    action: 'rewrite_prompt',
+    templateId: rewriteState.selectedTemplate.id,
+    referencePrompt: rewriteState.selectedTemplate.prompt,
+    brandName: document.getElementById('rewriteBrandName').value.trim(),
+    tagline: document.getElementById('rewriteTagline').value.trim(),
+    items: collectRewriteItems().filter(i => i.name),
+    address: document.getElementById('rewriteAddress').value.trim(),
+    contact: document.getElementById('rewriteContact').value.trim(),
+    useTemporaryKey: rewriteState.useTemporaryKey,
+  };
+
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Rewriting...';
+
+  try {
+    const response = await fetch('/api/modules/prompt-builder', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...AUTH.getAuthHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+
+    if (data.success && data.data?.prompt) {
+      document.getElementById('rewriteFinalPromptOutput').textContent = data.data.prompt;
+      document.getElementById('rewriteOutputContainer').style.display = 'grid';
+      showToast('Prompt rewritten!');
+    } else if (data.canUseTemporaryKey) {
+      document.getElementById('rewriteTempKeyBanner').classList.add('visible');
+      errorEl.textContent = 'No NVIDIA key configured — use the trial key banner above, or add your own in Profile.';
+      errorEl.style.display = 'block';
+    } else {
+      // Backend action not implemented yet — surface clearly rather than
+      // silently failing, since this UI is being built ahead of the API.
+      errorEl.textContent = data.message || 'Rewrite failed (backend action may not be implemented yet).';
+      errorEl.style.display = 'block';
+    }
+  } catch (error) {
+    errorEl.textContent = `Network error: ${error.message}`;
+    errorEl.style.display = 'block';
+  } finally {
+    btn.disabled = !validateRewriteForm({ silent: true });
+    btn.textContent = originalLabel;
+  }
+}
+
+// ============================================
 // INIT
 // ============================================
 
@@ -693,5 +986,60 @@ document.addEventListener('DOMContentLoaded', () => {
       const target = parseInt(node.dataset.step, 10);
       if (target <= maxStepReached) showStep(target);
     });
+  });
+
+  // ── Mode switcher ──
+  document.getElementById('modeTabGuided').addEventListener('click', () => setMode('guided'));
+  document.getElementById('modeTabRewrite').addEventListener('click', () => setMode('rewrite'));
+
+  // ── Rewrite Prompt panel ──
+  document.getElementById('rewriteCategorySelect').addEventListener('change', (e) => {
+    const category = e.target.value;
+    document.getElementById('referencePromptBox').value = '';
+    document.getElementById('referencePromptBox').classList.remove('filled');
+    document.getElementById('rewriteTemplateHint').innerHTML = '';
+    rewriteState.selectedTemplate = null;
+    updateRewriteSubmitState();
+    if (category) {
+      fetchRewriteTemplates(category);
+    } else {
+      const promptSelect = document.getElementById('rewritePromptSelect');
+      promptSelect.disabled = true;
+      promptSelect.innerHTML = '<option value="">Select a category first…</option>';
+    }
+  });
+
+  document.getElementById('rewritePromptSelect').addEventListener('change', (e) => {
+    onRewriteTemplateSelected(e.target.value);
+  });
+
+  document.getElementById('rewriteBrandName').addEventListener('input', updateRewriteSubmitState);
+  document.getElementById('rewriteAddress').addEventListener('input', updateRewriteSubmitState);
+  document.getElementById('rewriteContact').addEventListener('input', updateRewriteSubmitState);
+
+  document.getElementById('addRewriteItemBtn').addEventListener('click', addRewriteItem);
+  addRewriteItem(); // start with one item row, like the guided builder's products step
+
+  document.getElementById('rewriteUseTempKeyBtn').addEventListener('click', () => {
+    rewriteState.useTemporaryKey = true;
+    document.getElementById('rewriteTempKeyBanner').classList.remove('visible');
+  });
+
+  document.getElementById('rewriteSubmitBtn').addEventListener('click', submitRewritePrompt);
+
+  document.getElementById('rewriteCopyBtn').addEventListener('click', () => {
+    const text = document.getElementById('rewriteFinalPromptOutput').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('Copied to clipboard'))
+      .catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('Copied to clipboard');
+      });
   });
 });
