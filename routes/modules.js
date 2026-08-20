@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const { authenticateToken, getTierLevel } = require('../middleware/auth');
+const { authenticateToken, optionalAuth, getTierLevel } = require('../middleware/auth');
 const pixazoTrial = require('../config/pixazo-trial');
 
 // Import module handlers
@@ -26,6 +26,99 @@ const { voiceCloneHandler, synthesizeHandler: voiceSynthesizeHandler, listVoices
 // disable this entirely — the app behaves exactly as before.
 const TEMP_NVIDIA_API_KEY = process.env.NVIDIA_FREE_TIER_API_KEY || '';
 const TEMPORARY_KEY_MODULES = new Set(['chatbot', 'message-writer', 'social-content', 'prompt-builder']);
+
+// ── Guest (no-login) access for free modules ──
+// These modules don't require an account at all — a signed-out visitor
+// can use them straight away, backed by the shared free-tier NVIDIA key
+// above. Deliberately a *static* list (not looked up from the `modules`
+// DB table) so guest access keeps working even if that table's seed rows
+// haven't been migrated yet in a given environment — this is also what
+// fixes the "Module not found" error some deployments hit on
+// prompt-builder when its `modules` row (migrations/add_prompt_builder_
+// module.sql) was never applied.
+const GUEST_FREE_MODULES = new Set(['chatbot', 'prompt-builder']);
+
+// Simple in-memory per-IP rate limit for guest requests, since guests have
+// no user_module_access row to track usage against. Not shared across
+// server instances/restarts — fine for a soft abuse guard on a free tier,
+// not meant to be a hard security boundary.
+const GUEST_RATE_LIMIT_MAX = parseInt(process.env.GUEST_RATE_LIMIT_MAX || '15', 10); // requests
+const GUEST_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // per hour
+const guestUsage = new Map(); // key: `${ip}:${moduleKey}` -> { count, resetAt }
+
+function checkGuestRateLimit(ip, moduleKey) {
+  const key = `${ip}:${moduleKey}`;
+  const now = Date.now();
+  const entry = guestUsage.get(key);
+  if (!entry || now >= entry.resetAt) {
+    guestUsage.set(key, { count: 1, resetAt: now + GUEST_RATE_LIMIT_WINDOW_MS });
+    return { allowed: true, remaining: GUEST_RATE_LIMIT_MAX - 1 };
+  }
+  if (entry.count >= GUEST_RATE_LIMIT_MAX) {
+    return { allowed: false, remaining: 0, resetAt: entry.resetAt };
+  }
+  entry.count += 1;
+  return { allowed: true, remaining: GUEST_RATE_LIMIT_MAX - entry.count };
+}
+
+// Handles POST /api/modules/:moduleKey for signed-out visitors on the free
+// modules only (see GUEST_FREE_MODULES). Mirrors the authenticated path's
+// module dispatch, but skips every DB-backed step that depends on a real
+// user row (module/user_module_access lookup, usage increments, Pixazo
+// trial, generation_history) and always uses the shared free-tier NVIDIA
+// key instead of a personal one.
+async function handleGuestModuleRequest(req, res, moduleKey) {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection?.remoteAddress || 'unknown';
+  const rate = checkGuestRateLimit(ip, moduleKey);
+  if (!rate.allowed) {
+    return res.status(429).json({
+      success: false,
+      message: 'Free guest usage limit reached for now. Log in (still free) for a higher limit, or try again later.',
+      resetAt: rate.resetAt
+    });
+  }
+
+  if (!TEMP_NVIDIA_API_KEY) {
+    return res.status(503).json({
+      success: false,
+      message: 'Guest access isn\'t configured on this server yet (missing NVIDIA_FREE_TIER_API_KEY). Please log in, or ask the site admin to enable free guest access.'
+    });
+  }
+
+  const apiKeys = { nvidia: { api_key: TEMP_NVIDIA_API_KEY, temporary: true } };
+
+  try {
+    let result;
+    switch (moduleKey) {
+      case 'chatbot':
+        result = await chatbotHandler(req.body, apiKeys, null, 'trial');
+        break;
+      case 'prompt-builder':
+        result = await promptBuilder.enhanceField(req.body, apiKeys, null);
+        break;
+      default:
+        return res.status(501).json({ success: false, message: `Module '${moduleKey}' not implemented yet` });
+    }
+
+    if (result && typeof result === 'object') {
+      result.usedTemporaryKey = true;
+      result.guest = true;
+    }
+
+    res.json({
+      success: true,
+      data: result,
+      remaining: rate.remaining,
+      guest: true
+    });
+  } catch (error) {
+    console.error(`Guest module ${moduleKey} error:`, error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Module execution failed'
+    });
+  }
+}
 
 // ── Temporary shared key (Pixazo trial for trial-tier users) ──
 // Optional shared PIXAZO_FREE_TIER_API_KEY (config/pixazo-trial.js) lets
@@ -308,8 +401,21 @@ router.get('/pixazo-trial/status', authenticateToken, async (req, res) => {
 // ──────────────────────────────────────────────
 // POST /api/modules/:moduleKey - Execute module
 // ──────────────────────────────────────────────
-router.post('/:moduleKey', authenticateToken, async (req, res) => {
+router.post('/:moduleKey', optionalAuth, async (req, res) => {
   const { moduleKey } = req.params;
+
+  // Signed-out visitor: only the designated free modules are allowed, and
+  // they run through a separate lightweight path that never needs login.
+  if (!req.user) {
+    if (!GUEST_FREE_MODULES.has(moduleKey)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Please log in to use this module.'
+      });
+    }
+    return handleGuestModuleRequest(req, res, moduleKey);
+  }
+
   const userId = req.user.id;
   const userTier = req.user.subscription_tier || 'trial';
 
@@ -333,7 +439,15 @@ router.post('/:moduleKey', authenticateToken, async (req, res) => {
     );
 
     if (moduleCheck.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Module not found' });
+      // Most common cause: the module's seed row was never inserted into
+      // the `modules` table (e.g. migrations/add_prompt_builder_module.sql
+      // hasn't been run against this DB yet), not that the module itself
+      // doesn't exist in the codebase. Surface that clearly instead of a
+      // bare 404 so it's obvious this is a migration/setup issue.
+      const hint = moduleKey === 'prompt-builder'
+        ? ' Run migrations/add_prompt_builder_module.sql against the database to register this module.'
+        : '';
+      return res.status(404).json({ success: false, message: `Module not found.${hint}` });
     }
 
     const module = moduleCheck.rows[0];

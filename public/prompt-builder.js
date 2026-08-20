@@ -437,13 +437,6 @@ async function enhanceField(btn, opts = {}) {
   errorEl.classList.remove('visible');
   errorEl.textContent = '';
 
-  if (!AUTH.isLoggedIn()) {
-    if (!silent) {
-      errorEl.textContent = 'Please log in to use Enhance.';
-      errorEl.classList.add('visible');
-    }
-    return false;
-  }
   if (!state.selectedStyle) {
     if (!silent) {
       errorEl.textContent = 'Pick a catalog style in Step 1 first.';
@@ -570,10 +563,6 @@ async function enhanceAllProducts() {
   const btn = document.getElementById('enhanceAllBtn');
   const statusEl = document.getElementById('enhanceAllStatus');
 
-  if (!AUTH.isLoggedIn()) {
-    statusEl.textContent = 'Please log in to use Enhance.';
-    return;
-  }
   if (!state.selectedStyle) {
     statusEl.textContent = 'Pick a catalog style in Step 1 first.';
     return;

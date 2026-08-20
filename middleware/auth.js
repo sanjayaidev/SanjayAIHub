@@ -35,6 +35,30 @@ function getTierLevel(tier) {
   return TIER_ORDER[tier] || 0;
 }
 
+// Like authenticateToken, but never rejects the request. If a valid
+// Bearer token is present, req.user is populated exactly as before; if
+// it's missing, empty, or invalid, req.user is simply left undefined and
+// the request continues as a guest. Routes that want to offer free/guest
+// access (e.g. the chatbot and prompt-builder modules) use this instead of
+// authenticateToken and then branch on `req.user` themselves.
+function optionalAuth(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+  if (!token) {
+    return next();
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (!err) {
+      req.user = decoded;
+    }
+    // Invalid/expired token from a guest session just falls back to
+    // guest access rather than hard-failing the request.
+    next();
+  });
+}
+
 // Optional: check if user has required tier
 function requireTier(minTier) {
   return (req, res, next) => {
@@ -56,4 +80,4 @@ function requireTier(minTier) {
   };
 }
 
-module.exports = { authenticateToken, requireTier, TIER_ORDER, getTierLevel };
+module.exports = { authenticateToken, optionalAuth, requireTier, TIER_ORDER, getTierLevel };
