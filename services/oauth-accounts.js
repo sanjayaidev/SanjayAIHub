@@ -47,6 +47,26 @@ async function grantDefaultModuleAccess(userId) {
   }
 }
 
+// Ensures a user_module_access row exists (and is_allowed = TRUE) for
+// EVERY active module, not just the free-trial set above. The per-module
+// tier gate in routes/modules.js (userTierLevel >= requiredLevel) is what
+// actually restricts which modules a given tier can use — this function
+// just makes sure the row exists at all, so that check isn't short-circuited
+// by a missing/NULL `is_allowed` from an absent row. Call this whenever a
+// user's subscription_tier changes (upgrade or downgrade), so newly
+// unlocked modules aren't blocked by a stale/missing access row.
+async function grantAllModuleAccess(userId, usageLimit = 100000) {
+  await pool.query(
+    `INSERT INTO user_module_access (user_id, module_id, is_allowed, usage_limit, used_count)
+     SELECT $1, m.id, TRUE, $2, 0
+     FROM modules m
+     WHERE m.is_active = true
+     ON CONFLICT (user_id, module_id) DO UPDATE
+       SET is_allowed = TRUE`,
+    [userId, usageLimit]
+  );
+}
+
 // Signs the standard app JWT for a user row.
 function issueToken(user, expiresIn = JWT_EXPIRY) {
   return jwt.sign(
@@ -162,6 +182,7 @@ async function findOrCreateOAuthUser({ provider, providerId, email, name, avatar
 
 module.exports = {
   grantDefaultModuleAccess,
+  grantAllModuleAccess,
   issueToken,
   generateUniqueUsername,
   getBaseUrl,

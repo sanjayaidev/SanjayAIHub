@@ -24,6 +24,7 @@ const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
+const { grantAllModuleAccess } = require('../services/oauth-accounts');
 
 const router = express.Router();
 
@@ -85,6 +86,14 @@ async function upgradeUserTier(user_id, plan_tier) {
      WHERE id = $1`,
     [user_id, plan_tier]
   );
+
+  // The tier column alone doesn't grant anything — routes/modules.js also
+  // requires a user_module_access row with is_allowed = TRUE for the target
+  // module. grantDefaultModuleAccess() at signup only covers the free-trial
+  // module set, so without this, every newly-unlocked module on an upgrade
+  // would 403 with "requires X tier or higher" even though the tier check
+  // itself passes. Ensure a row exists for every active module now.
+  await grantAllModuleAccess(user_id);
 }
 
 // ─── Create Order ────────────────────────────────────────────────────────────
