@@ -229,9 +229,33 @@ window.AdaptiveParams = (function () {
       if (opts.onChange) opts.onChange(getValues());
     }
 
+    // Programmatically set a single field's value after mount (e.g. to
+    // pre-fill width/height once the source video's real resolution is
+    // known). Updates both internal state and the rendered control so
+    // getValues() and the UI stay in sync. No-op for unknown fields.
+    function setValue(key, value) {
+      if (!(key in schema)) return;
+      const def = schema[key];
+      const fe = fieldEls[key];
+
+      state[key] = (def.type === 'range' && def.step && def.step < 1)
+        ? parseFloat(value)
+        : (def.type === 'range' ? parseInt(value, 10) : value);
+
+      if (fe && fe.input) {
+        fe.input.value = value;
+        if (def.type === 'range') {
+          const valueSpan = fe.wrap.querySelector('.ap-range-value');
+          if (valueSpan) valueSpan.textContent = value;
+        }
+      }
+
+      emitChange();
+    }
+
     setSchema(initialSchema);
 
-    return { getValues, setSchema, container };
+    return { getValues, setSchema, setValue, container };
   }
 
   return { mount };

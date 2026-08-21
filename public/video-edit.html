@@ -256,6 +256,7 @@
            selected model's schema (select / range / checkbox only — see
            /js/adaptive-params.js). Swaps automatically when the model changes. -->
       <div id="paramsPanel" class="params-panel"></div>
+      <div id="resolutionHint" class="hint" style="display:none;"></div>
 
       <button type="submit" class="generate" id="genBtn">🎬 Transform Video</button>
       <div class="error-box" id="errorBox"></div>
@@ -305,6 +306,7 @@
     keyStatus: document.getElementById("keyStatus"),
     upload_pane: document.getElementById("upload_pane"),
     url_pane: document.getElementById("url_pane"),
+    resolutionHint: document.getElementById("resolutionHint"),
   };
 
   // Adaptive parameter panel — mounted once, its schema is swapped every
@@ -316,6 +318,34 @@
   function refreshParamsForSelectedModel() {
     const provider = modelToProvider[els.model.value] || 'pixazo';
     paramsPanel.setSchema(providerParameters[provider] || {});
+  }
+
+  // Pixazo's width/height are fixed dropdown steps (not free-form), so we
+  // can't send the source video's exact resolution — but we can snap to
+  // whichever allowed value is closest, instead of leaving the Width/Height
+  // fields on their hardcoded 1280x704 default regardless of what was
+  // actually uploaded/linked.
+  function nearestOption(value, options) {
+    if (!options || !options.length) return null;
+    return options.reduce((best, opt) =>
+      Math.abs(opt - value) < Math.abs(best - value) ? opt : best
+    );
+  }
+
+  function applyDetectedResolution(videoWidth, videoHeight) {
+    if (!videoWidth || !videoHeight) return;
+    const schema = providerParameters.pixazo || {};
+    const widthOpts = schema.width && schema.width.options;
+    const heightOpts = schema.height && schema.height.options;
+    const w = nearestOption(videoWidth, widthOpts);
+    const h = nearestOption(videoHeight, heightOpts);
+    if (w != null) paramsPanel.setValue('width', w);
+    if (h != null) paramsPanel.setValue('height', h);
+    if (w != null || h != null) {
+      els.resolutionHint.textContent =
+        `Detected source: ${videoWidth}×${videoHeight} — output set to closest match ${w || '?'}×${h || '?'}`;
+      els.resolutionHint.style.display = 'block';
+    }
   }
 
   // Load model catalog dynamically from API
@@ -385,7 +415,32 @@
 
   els.video_file.addEventListener("change", () => {
     const file = els.video_file.files[0];
-    if (file) { els.video_preview.src = URL.createObjectURL(file); els.video_preview.style.display = "block"; }
+    if (file) {
+      els.video_preview.src = URL.createObjectURL(file);
+      els.video_preview.style.display = "block";
+    }
+  });
+
+  els.video_preview.addEventListener("loadedmetadata", () => {
+    applyDetectedResolution(els.video_preview.videoWidth, els.video_preview.videoHeight);
+  });
+
+  // Best-effort resolution probe for pasted URLs. Many hosts block
+  // cross-origin metadata reads, so this silently no-ops on failure —
+  // the Width/Height fields just stay on their defaults in that case.
+  let urlProbeTimer = null;
+  els.video_url.addEventListener("input", () => {
+    clearTimeout(urlProbeTimer);
+    const url = els.video_url.value.trim();
+    if (!url) return;
+    urlProbeTimer = setTimeout(() => {
+      const probe = document.createElement("video");
+      probe.preload = "metadata";
+      probe.muted = true;
+      probe.onloadedmetadata = () => applyDetectedResolution(probe.videoWidth, probe.videoHeight);
+      probe.onerror = () => {};
+      probe.src = url;
+    }, 500);
   });
 
   function isUploadActive(){ return document.querySelector(".src-btn.active").dataset.src === "upload"; }
