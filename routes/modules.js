@@ -94,7 +94,7 @@ async function handleGuestModuleRequest(req, res, moduleKey) {
         result = await chatbotHandler(req.body, apiKeys, null, 'trial');
         break;
       case 'prompt-builder':
-        result = await promptBuilder.enhanceField(req.body, apiKeys, null);
+        result = await promptBuilder.rewritePrompt(req.body, apiKeys);
         break;
       default:
         return res.status(501).json({ success: false, message: `Module '${moduleKey}' not implemented yet` });
@@ -516,15 +516,6 @@ router.post('/:moduleKey', optionalAuth, async (req, res) => {
 
     requiredProviders = providerMap[moduleKey] || [];
 
-    // Prompt Builder's "generate_full_prompt" step (Step 4) is template-based
-    // — it stitches the preset per-style template with the brand/product
-    // fields and never calls an AI model, so it needs no NVIDIA key. Only
-    // the per-field "Enhance" action (action === 'enhance_field', the
-    // default) actually calls NVIDIA.
-    if (moduleKey === 'prompt-builder' && req.body.action === 'generate_full_prompt') {
-      requiredProviders = [];
-    }
-
     let apiKeys = {};
     if (requiredProviders.length > 0) {
       const keyResult = await pool.query(
@@ -637,7 +628,7 @@ router.post('/:moduleKey', optionalAuth, async (req, res) => {
         result = await messageWriterHandler(req.body, apiKeys, userId);
         break;
       case 'prompt-builder':
-        result = await promptBuilder.enhanceField(req.body, apiKeys, userId);
+        result = await promptBuilder.rewritePrompt(req.body, apiKeys);
         break;
       case 'social-content':
         result = await contentCreatorHandler(req.body, apiKeys, userId);
@@ -858,62 +849,24 @@ router.get('/prompt-library/prompts', async (req, res) => {
 });
 
 // ──────────────────────────────────────────────
-// GET /api/modules/prompt-builder/styles - List available visual styles for the dropdown
-// Public: static list, no AI call, no auth needed.
+// GET /api/modules/prompt-builder/durations - Max-duration dropdown options
+// (seconds). Public: static list, no AI call, no auth needed.
 // ──────────────────────────────────────────────
-router.get('/prompt-builder/styles', (req, res) => {
+router.get('/prompt-builder/durations', (req, res) => {
   try {
-    const styles = promptBuilder.listStyles();
-    res.json({ success: true, styles });
+    const durations = promptBuilder.listDurations();
+    res.json({ success: true, durations });
   } catch (error) {
-    console.error('List prompt-builder styles error:', error);
+    console.error('List prompt-builder durations error:', error);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
-// ──────────────────────────────────────────────
-// GET /api/modules/prompt-builder/rewrite-categories - Category filter options
-// for "Rewrite Prompt" mode. Public: read-only list, no AI call, no auth needed.
-// ──────────────────────────────────────────────
-router.get('/prompt-builder/rewrite-categories', async (req, res) => {
-  try {
-    const categories = await promptBuilder.listRewriteCategories();
-    res.json({ success: true, categories });
-  } catch (error) {
-    console.error('List rewrite-template categories error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// ──────────────────────────────────────────────
-// GET /api/modules/prompt-builder/rewrite-templates?category=... - Prompt
-// dropdown options for a given category, incl. reference text + duration so
-// the frontend can auto-fill the Reference Prompt box with one request.
-// Public: read-only list, no AI call, no auth needed.
-// ──────────────────────────────────────────────
-router.get('/prompt-builder/rewrite-templates', async (req, res) => {
-  try {
-    const { category } = req.query;
-    if (!category) {
-      return res.status(400).json({ success: false, message: 'category query param is required' });
-    }
-    const templates = await promptBuilder.listRewriteTemplates(category);
-    res.json({ success: true, templates });
-  } catch (error) {
-    console.error('List rewrite templates error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// Per-field AI enhancement and the "Rewrite Prompt" AI action (both
-// POST /api/modules/prompt-builder) are handled by the generic dispatcher
-// below — see the 'prompt-builder' case in the switch statement, which
-// calls promptBuilder.enhanceField(). That function internally branches on
-// req.body.action ('enhance_field' default / 'generate_full_prompt' /
-// 'rewrite_prompt'). Only 'generate_full_prompt' is template-based and
-// skips the NVIDIA key requirement (see the requiredProviders override
-// above) — 'rewrite_prompt' calls the model, so it goes through the normal
-// key / temp-key gate just like 'enhance_field'.
+// The actual rewrite (POST /api/modules/prompt-builder) is handled by the
+// generic dispatcher below — see the 'prompt-builder' case in the switch
+// statement, which calls promptBuilder.rewritePrompt(). It always calls
+// the Qwen3 model on NVIDIA, so it goes through the normal key / temp-key
+// gate above like the other text modules.
 
 // ──────────────────────────────────────────────
 // GET /api/modules/prompt-library/favorites - Current user's favorited prompt IDs

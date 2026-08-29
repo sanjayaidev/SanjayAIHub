@@ -3,11 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SanjayAIHub · Structured Prompt Builder</title>
+  <title>SanjayAIHub · Prompt Rewriter</title>
   <link rel="stylesheet" href="/prompt-builder.css">
   <style>
-    /* Hub back-link + additions for the dropdown/enhance redesign, layered
-       on top of the tool's original dark theme in prompt-builder.css */
     .hub-back-link {
       display: inline-flex;
       align-items: center;
@@ -20,41 +18,93 @@
     }
     .hub-back-link:hover { color: #fff; }
 
-    .field-with-enhance { position: relative; }
-    .enhance-row {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 6px;
+    .rewrite-grid { max-width: 700px; margin: 0 auto; }
+
+    .duration-options {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
     }
-    .btn-enhance {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: linear-gradient(135deg, #7c3aed, #db2777);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 6px 14px;
-      font-size: 13px;
-      font-weight: 600;
+    .duration-option {
+      background: #1A1A2E;
+      border: 2px solid #2A2A4A;
+      border-radius: 10px;
+      padding: 14px 8px;
+      text-align: center;
       cursor: pointer;
-      font-family: inherit;
-      transition: opacity .15s, transform .15s;
+      color: #ccc;
+      font-weight: 600;
+      transition: all 0.2s ease;
     }
-    .btn-enhance:hover:not(:disabled) { transform: translateY(-1px); }
-    .btn-enhance:disabled { opacity: .55; cursor: not-allowed; }
-    .btn-enhance.enhancing { opacity: .7; cursor: progress; }
+    .duration-option:hover { border-color: #4A4A7A; }
+    .duration-option.selected {
+      border-color: #00F0FF;
+      color: #00F0FF;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+    }
+    .duration-option small { display: block; font-weight: 400; color: #888; margin-top: 2px; }
 
-    .style-select-group select { width: 100%; }
-    .style-select-hint { font-size: 12px; color: #888; margin-top: 6px; }
+    .product-row {
+      display: grid;
+      grid-template-columns: 1.4fr 0.9fr auto;
+      gap: 10px;
+      align-items: end;
+      background: #1A1A2E;
+      border: 1px solid #2A2A4A;
+      border-radius: 10px;
+      padding: 14px 14px 4px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 640px) {
+      .product-row { grid-template-columns: 1fr; }
+    }
+    .product-row .form-group { margin-bottom: 12px; }
+    .product-row-remove {
+      background: none;
+      border: none;
+      color: #FF2D55;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 10px;
+      border-radius: 6px;
+      transition: background 0.2s;
+      height: fit-content;
+    }
+    .product-row-remove:hover { background: rgba(255, 45, 85, 0.1); }
+    .product-row-remove:disabled { opacity: 0.3; cursor: not-allowed; }
 
-    .enhance-error {
-      font-size: 12px;
-      color: #f87171;
-      margin-top: 6px;
+    .products-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .products-header span { color: #888; font-size: 0.8rem; }
+
+    .reference-prompt-box {
+      width: 100%;
+      min-height: 160px;
+      padding: 14px 16px;
+      background: #0D0D1A;
+      border: 1px solid #2A2A4A;
+      border-radius: 8px;
+      color: #ccc;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      font-family: 'Courier New', monospace;
+      resize: vertical;
+    }
+
+    .field-error {
       display: none;
+      color: #FF2D55;
+      font-size: 0.8rem;
+      margin-top: 4px;
     }
-    .enhance-error.visible { display: block; }
+    .form-group.invalid input,
+    .form-group.invalid textarea { border-color: #FF2D55; }
+    .form-group.invalid .field-error { display: block; }
+    .req { color: #FF2D55; }
 
     .temp-key-banner {
       background: rgba(124, 58, 237, 0.12);
@@ -66,7 +116,7 @@
       margin-bottom: 16px;
       display: none;
     }
-    .temp-key-banner.visible { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .temp-key-banner.visible { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
     .temp-key-banner button {
       background: #7c3aed;
       color: #fff;
@@ -78,44 +128,45 @@
       font-family: inherit;
     }
 
-    .catalog-actions-row {
+    .rewrite-submit-row {
       display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
+      justify-content: flex-end;
+      margin-top: 8px;
     }
-    .btn-enhance-all {
+    .btn-rewrite {
       background: linear-gradient(135deg, #7c3aed, #db2777);
-      border: none;
+      color: #fff;
     }
-    .btn-enhance-all:disabled { opacity: .6; cursor: not-allowed; }
-    .enhance-all-status { font-size: 13px; color: #999; }
+    .btn-rewrite:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(124, 58, 237, 0.3);
+    }
+    .btn-rewrite:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
-    .enhance-row { gap: 8px; }
-    .enhance-row .btn-icon {
+    .form-error {
+      font-size: 12px;
+      color: #f87171;
+      margin-top: 6px;
+      text-align: right;
+      display: none;
+    }
+    .form-error.visible { display: block; }
+
+    .btn-copy-prompt {
+      background: linear-gradient(135deg, #7c3aed, #db2777);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      width: 30px;
-      height: 30px;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.04);
-      color: #ccc;
-      cursor: pointer;
-      font-size: 13px;
+      gap: 6px;
+      transition: all 0.3s ease;
     }
-    .enhance-row .btn-icon:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
-    .enhance-row .btn-icon:disabled { opacity: .4; cursor: not-allowed; }
-
-    .field-enhanced-flag {
-      display: none;
-      font-size: 11px;
-      color: #34d399;
-      margin-top: 4px;
-    }
-    .field-enhanced-flag.visible { display: block; }
+    .btn-copy-prompt:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(124, 58, 237, 0.3); }
 
     .toast {
       position: fixed;
@@ -133,159 +184,7 @@
       transition: opacity .2s, transform .2s;
       z-index: 999;
     }
-    .toast.visible {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    /* ============================================
-       Mode switcher — Guided Builder vs Rewrite Prompt
-       ============================================ */
-    .mode-switcher {
-      display: flex;
-      gap: 8px;
-      max-width: 560px;
-      margin: 0 auto 32px;
-      background: #1A1A2E;
-      border: 1px solid #2A2A4A;
-      border-radius: 12px;
-      padding: 6px;
-    }
-    .mode-tab {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background: none;
-      border: none;
-      border-radius: 8px;
-      padding: 12px 16px;
-      color: #888;
-      font-family: inherit;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.25s ease;
-    }
-    .mode-tab:hover:not(.active) { color: #ccc; background: rgba(255,255,255,0.04); }
-    .mode-tab.active {
-      background: linear-gradient(135deg, #00F0FF, #9B59B6);
-      color: #0A0A1A;
-      box-shadow: 0 4px 20px rgba(0, 240, 255, 0.25);
-    }
-
-    /* ============================================
-       Rewrite Prompt panel
-       ============================================ */
-    .rewrite-grid { max-width: 700px; margin: 0 auto; }
-
-    .filter-select-row {
-      display: grid;
-      grid-template-columns: 1fr 1.4fr;
-      gap: 14px;
-    }
-    @media (max-width: 640px) {
-      .filter-select-row { grid-template-columns: 1fr; }
-    }
-
-    .template-meta-hint {
-      font-size: 12px;
-      color: #888;
-      margin-top: 6px;
-    }
-    .template-meta-hint .duration-pill {
-      display: inline-block;
-      background: rgba(0, 240, 255, 0.1);
-      color: #00F0FF;
-      border: 1px solid rgba(0, 240, 255, 0.25);
-      border-radius: 20px;
-      padding: 2px 10px;
-      font-size: 11px;
-      margin-left: 6px;
-    }
-
-    .reference-prompt-box {
-      width: 100%;
-      min-height: 140px;
-      padding: 14px 16px;
-      background: #0D0D1A;
-      border: 1px solid #2A2A4A;
-      border-radius: 8px;
-      color: #888;
-      font-size: 0.85rem;
-      line-height: 1.6;
-      font-family: 'Courier New', monospace;
-      resize: vertical;
-      white-space: pre-wrap;
-    }
-    .reference-prompt-box:disabled,
-    .reference-prompt-box[readonly] {
-      cursor: default;
-      opacity: 0.85;
-    }
-    .reference-prompt-box.filled { color: #ccc; }
-
-    .rewrite-item-row {
-      display: grid;
-      grid-template-columns: 1.4fr 0.9fr auto;
-      gap: 10px;
-      align-items: end;
-      background: #1A1A2E;
-      border: 1px solid #2A2A4A;
-      border-radius: 10px;
-      padding: 14px 14px 4px;
-      margin-bottom: 12px;
-    }
-    @media (max-width: 640px) {
-      .rewrite-item-row { grid-template-columns: 1fr; }
-    }
-    .rewrite-item-row .form-group { margin-bottom: 12px; }
-    .rewrite-item-remove {
-      background: none;
-      border: none;
-      color: #FF2D55;
-      cursor: pointer;
-      font-size: 1rem;
-      padding: 10px;
-      border-radius: 6px;
-      transition: background 0.2s;
-      height: fit-content;
-    }
-    .rewrite-item-remove:hover { background: rgba(255, 45, 85, 0.1); }
-    .rewrite-item-remove:disabled { opacity: 0.3; cursor: not-allowed; }
-
-    .rewrite-items-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-    .rewrite-items-header span { color: #888; font-size: 0.8rem; }
-
-    .address-contact-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-    @media (max-width: 640px) {
-      .address-contact-row { grid-template-columns: 1fr; }
-    }
-
-    .rewrite-submit-row {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 8px;
-    }
-    .btn-rewrite {
-      background: linear-gradient(135deg, #7c3aed, #db2777);
-      color: #fff;
-    }
-    .btn-rewrite:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 30px rgba(124, 58, 237, 0.3);
-    }
-    .btn-rewrite:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+    .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
   </style>
 </head>
 <body>
@@ -293,256 +192,71 @@
 
   <div class="app-container">
     <header>
-      <h1>🎬 Structured Prompt Builder</h1>
-      <p>Set your catalog style, add products, then let AI enhance each description</p>
+      <h1>🪄 Prompt Rewriter</h1>
+      <p>Paste a reference prompt, add your products &amp; branding, and let Qwen3 rewrite the whole thing for you</p>
     </header>
 
-    <!-- MODE SWITCHER -->
-    <div class="mode-switcher" role="tablist" aria-label="Prompt builder mode">
-      <button type="button" class="mode-tab active" id="modeTabGuided" role="tab" aria-selected="true">🧩 Guided Builder</button>
-      <button type="button" class="mode-tab" id="modeTabRewrite" role="tab" aria-selected="false">🪄 Rewrite Prompt</button>
-    </div>
+    <div class="rewrite-grid">
 
-    <!-- ============================================
-         GUIDED BUILDER PANEL (existing 4-step flow)
-         ============================================ -->
-    <div id="guidedBuilderPanel">
-
-    <!-- STEP TRACKER -->
-    <nav class="stepper" id="stepper" aria-label="Progress">
-      <button class="step-node" data-step="1" type="button">
-        <span class="step-circle">1</span>
-        <span class="step-label">Style &amp; Brand</span>
-      </button>
-      <span class="step-line"></span>
-      <button class="step-node" data-step="2" type="button">
-        <span class="step-circle">2</span>
-        <span class="step-label">Products</span>
-      </button>
-      <span class="step-line"></span>
-      <button class="step-node" data-step="3" type="button">
-        <span class="step-circle">3</span>
-        <span class="step-label">Review</span>
-      </button>
-      <span class="step-line"></span>
-      <button class="step-node" data-step="4" type="button">
-        <span class="step-circle">4</span>
-        <span class="step-label">Prompt</span>
-      </button>
-    </nav>
-
-    <!-- STEP 1: Style + Brand Info -->
-    <div id="step1" class="step">
-      <h2>Choose a Style &amp; Tell Us About Your Brand</h2>
-      <p class="step-hint">The style applies to your whole catalog — every product's Enhance button will use it.</p>
-
-      <div class="form-container">
-        <fieldset class="form-section">
-          <legend>Catalog style</legend>
-          <div class="form-group style-select-group">
-            <label for="styleSelect">Visual Style <span class="req">*</span></label>
-            <select id="styleSelect">
-              <option value="">Loading styles…</option>
-            </select>
-            <p class="style-select-hint" id="styleHint"></p>
-          </div>
-        </fieldset>
-
-        <fieldset class="form-section">
-          <legend>Brand basics</legend>
-          <div class="form-group">
-            <label for="brandName">Brand/Product Name <span class="req">*</span></label>
-            <input type="text" id="brandName" placeholder="e.g., Dheeraj Ujjaini Poha">
-            <small class="field-error" id="brandNameError">Brand name is required</small>
-          </div>
-          <div class="form-group">
-            <label for="category">Category <span class="req">*</span></label>
-            <select id="category">
-              <option value="food">Food & Beverage</option>
-              <option value="fashion">Fashion & Clothing</option>
-              <option value="jewellery">Jewellery & Accessories</option>
-              <option value="furniture">Home & Furniture</option>
-              <option value="appliances">Electronics & Appliances</option>
-              <option value="travel">Travel & Hospitality</option>
-              <option value="beauty">Beauty & Wellness</option>
-              <option value="tech">Tech & Gadgets</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="tagline">Tagline/Slogan</label>
-            <input type="text" id="tagline" placeholder="e.g., Authentic Taste of Chhattisgarh">
-          </div>
-        </fieldset>
-
-        <div class="form-actions">
-          <button class="btn btn-primary" id="toStep2Btn">Next: Add Products →</button>
+      <fieldset class="form-section">
+        <legend>Reference prompt</legend>
+        <div class="form-group">
+          <label for="referencePromptBox">Paste your prompt <span class="req">*</span></label>
+          <textarea id="referencePromptBox" class="reference-prompt-box" placeholder="Paste any AI video-generation prompt here — it'll be used as the style/structure guide for the rewrite…"></textarea>
+          <small class="field-error" id="referencePromptError">Paste a reference prompt first</small>
         </div>
-      </div>
-    </div>
+      </fieldset>
 
-    <!-- STEP 2: Products -->
-    <div id="step2" class="step" style="display:none">
-      <h2>Add Your Products</h2>
-      <p class="step-hint">Add 1–5 products, type a rough description and visual details, then hit ✨ Enhance on each field.</p>
-      <div class="selected-style-chip" id="selectedStyleChip"></div>
+      <fieldset class="form-section">
+        <legend>Max duration</legend>
+        <div class="duration-options" id="durationOptions">
+          <!-- populated by JS -->
+        </div>
+      </fieldset>
+
+      <fieldset class="form-section">
+        <legend>Products</legend>
+        <div class="products-header">
+          <span>Add 1–10 products — just a name, or a name + price</span>
+        </div>
+        <div id="productsContainer"></div>
+        <button id="addProductBtn" type="button" class="btn btn-secondary btn-add">+ Add Product</button>
+      </fieldset>
+
+      <fieldset class="form-section">
+        <legend>Branding</legend>
+        <div class="form-group">
+          <label for="brandName">Brand Name <span class="req">*</span></label>
+          <input type="text" id="brandName" placeholder="e.g., Dheeraj Ujjaini Poha">
+          <small class="field-error" id="brandNameError">Brand name is required</small>
+        </div>
+        <div class="form-group">
+          <label for="tagline">Tagline/Slogan</label>
+          <input type="text" id="tagline" placeholder="e.g., Authentic Taste of Chhattisgarh (optional)">
+        </div>
+      </fieldset>
 
       <div class="temp-key-banner" id="tempKeyBanner">
-        <span>No NVIDIA key on your account yet — you can try Enhance a few times using the app's shared trial key.</span>
+        <span>No NVIDIA key on your account yet — you can try this a few times using the app's shared trial key.</span>
         <button id="useTempKeyBtn" type="button">Use trial key</button>
       </div>
 
-      <div class="catalog-actions-row">
-        <button id="enhanceAllBtn" class="btn btn-primary btn-enhance-all" type="button">✨ Enhance All Products</button>
-        <span class="enhance-all-status" id="enhanceAllStatus"></span>
+      <div class="rewrite-submit-row">
+        <button id="regenerateBtn" type="button" class="btn btn-rewrite">🔄 Regenerate</button>
       </div>
+      <p class="form-error" id="formError"></p>
 
-      <div id="productContainer"></div>
-      <button id="addProductBtn" class="btn btn-secondary btn-add">+ Add Product</button>
-
-      <div class="form-actions">
-        <button class="btn btn-secondary" onclick="showStep(1)">← Back</button>
-        <button id="toStep3Btn" class="btn btn-primary">Next: Review →</button>
-      </div>
-    </div>
-
-    <!-- STEP 3: Review -->
-    <div id="step3" class="step" style="display:none">
-      <h2>Review Your Catalog</h2>
-      <p class="step-hint">Check all product details before generating the final prompt.</p>
-      <div class="selected-style-chip" id="selectedStyleChipStep3"></div>
-      <div id="reviewContainer"></div>
-
-      <div class="form-actions">
-        <button class="btn btn-secondary" onclick="showStep(2)">← Back</button>
-        <button id="generatePromptBtn" class="btn btn-primary">🚀 Generate Final Prompt</button>
-      </div>
-    </div>
-
-    <!-- STEP 4: Final Prompt Output -->
-    <div id="step4" class="step" style="display:none">
-      <h2>Your Prompt is Ready!</h2>
-      <p class="step-hint">Copy the prompt below and use it with your favorite AI video generator.</p>
-      
-      <div class="prompt-output-container">
-        <div class="prompt-card">
-          <div class="prompt-header">
-            <h3>📝 Generated Video Prompt</h3>
-            <button id="copyPromptBtn" class="btn btn-icon btn-copy-prompt" title="Copy to clipboard">📋 Copy</button>
-          </div>
-          <pre id="finalPromptOutput" class="prompt-text"></pre>
-        </div>
-        
-        <div class="prompt-card">
-          <h3>🎬 Scene Breakdown</h3>
-          <div id="sceneBreakdown" class="scene-list"></div>
-        </div>
-      </div>
-
-      <div class="form-actions">
-        <button class="btn btn-secondary" onclick="showStep(3)">← Back</button>
-        <button id="regenerateBtn" class="btn btn-secondary">🔄 Regenerate</button>
-        <button id="startOverBtn" class="btn btn-primary">✨ Start New Project</button>
-      </div>
-    </div>
-
-    </div><!-- /#guidedBuilderPanel -->
-
-    <!-- ============================================
-         REWRITE PROMPT PANEL
-         ============================================ -->
-    <div id="rewritePanel" style="display:none">
-      <h2>🪄 Rewrite a Reference Prompt</h2>
-      <p class="step-hint">Pick a template, fill in your brand and items, and AI rewrites the whole prompt around them.</p>
-
-      <div class="rewrite-grid">
-
-        <fieldset class="form-section">
-          <legend>Choose a template</legend>
-
-          <div class="filter-select-row">
-            <div class="form-group">
-              <label for="rewriteCategorySelect">Category <span class="req">*</span></label>
-              <select id="rewriteCategorySelect">
-                <option value="">Loading categories…</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="rewritePromptSelect">Prompt <span class="req">*</span></label>
-              <select id="rewritePromptSelect" disabled>
-                <option value="">Select a category first…</option>
-              </select>
-              <p class="template-meta-hint" id="rewriteTemplateHint"></p>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="referencePromptBox">Reference Prompt</label>
-            <textarea id="referencePromptBox" class="reference-prompt-box" readonly placeholder="The full reference template will appear here once you pick a prompt above…"></textarea>
-          </div>
-        </fieldset>
-
-        <fieldset class="form-section">
-          <legend>Brand basics</legend>
-          <div class="form-group">
-            <label for="rewriteBrandName">Brand Name <span class="req">*</span></label>
-            <input type="text" id="rewriteBrandName" placeholder="e.g., Dheeraj Ujjaini Poha">
-            <small class="field-error" id="rewriteBrandNameError">Brand name is required</small>
-          </div>
-          <div class="form-group">
-            <label for="rewriteTagline">Tagline/Slogan</label>
-            <input type="text" id="rewriteTagline" placeholder="e.g., Authentic Taste of Chhattisgarh (optional)">
-          </div>
-        </fieldset>
-
-        <fieldset class="form-section">
-          <legend>Items</legend>
-          <div class="rewrite-items-header">
-            <span>Add 1–5 items — each becomes a beat/scene in the rewritten prompt</span>
-          </div>
-          <div id="rewriteItemsContainer"></div>
-          <button id="addRewriteItemBtn" type="button" class="btn btn-secondary btn-add">+ Add Item</button>
-        </fieldset>
-
-        <fieldset class="form-section">
-          <legend>Address &amp; contact</legend>
-          <div class="address-contact-row">
-            <div class="form-group">
-              <label for="rewriteAddress">Address <span class="req">*</span></label>
-              <input type="text" id="rewriteAddress" placeholder="e.g., MG Road, Raipur">
-              <small class="field-error" id="rewriteAddressError">Address is required</small>
-            </div>
-            <div class="form-group">
-              <label for="rewriteContact">Contact <span class="req">*</span></label>
-              <input type="text" id="rewriteContact" placeholder="e.g., +91 98765 43210">
-              <small class="field-error" id="rewriteContactError">Contact is required</small>
-            </div>
-          </div>
-        </fieldset>
-
-        <div class="temp-key-banner" id="rewriteTempKeyBanner">
-          <span>No NVIDIA key on your account yet — you can try this a few times using the app's shared trial key.</span>
-          <button id="rewriteUseTempKeyBtn" type="button">Use trial key</button>
-        </div>
-
-        <div class="rewrite-submit-row">
-          <button id="rewriteSubmitBtn" type="button" class="btn btn-rewrite" disabled>🪄 Rewrite Prompt</button>
-        </div>
-        <p class="enhance-error visible" id="rewriteFormError" style="display:none;text-align:right;"></p>
-
-      </div>
-
-      <div class="prompt-output-container" id="rewriteOutputContainer" style="display:none">
+      <div class="prompt-output-container" id="outputContainer" style="display:none">
         <div class="prompt-card">
           <div class="prompt-header">
             <h3>📝 Rewritten Prompt</h3>
-            <button id="rewriteCopyBtn" class="btn btn-icon btn-copy-prompt" title="Copy to clipboard">📋 Copy</button>
+            <button id="copyBtn" class="btn-copy-prompt" title="Copy to clipboard">📋 Copy</button>
           </div>
-          <pre id="rewriteFinalPromptOutput" class="prompt-text"></pre>
+          <pre id="finalPromptOutput" class="prompt-text"></pre>
         </div>
       </div>
-    </div><!-- /#rewritePanel -->
 
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>

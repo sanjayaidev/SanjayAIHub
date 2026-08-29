@@ -11,7 +11,8 @@ class NvidiaProvider {
       model = 'meta/llama-3.1-70b-instruct',
       temperature = 0.7,
       max_tokens = 2048,
-      stream = false
+      stream = false,
+      extra = {}, // optional raw fields merged into the payload (e.g. Qwen3's chat_template_kwargs)
     } = options;
 
     const payload = {
@@ -20,7 +21,8 @@ class NvidiaProvider {
       temperature,
       max_tokens,
       top_p: 1,
-      stream
+      stream,
+      ...extra,
     };
 
     const response = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {

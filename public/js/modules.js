@@ -11,7 +11,7 @@ const MODULES = {
     'social-content': { tier: 'trial', icon: '✍️', name: 'Social Content & Resume', free: false },
     'message-writer': { tier: 'trial', icon: '🌍', name: 'Wish with Multilanguage', free: false },
     'prompt-library': { tier: 'trial', icon: '📚', name: 'Prompt Library', free: true },
-    'prompt-builder': { tier: 'trial', icon: '🎬', name: 'Structured Prompt Builder', free: true },
+    'prompt-builder': { tier: 'trial', icon: '🪄', name: 'Prompt Rewriter', free: true },
     'text-to-image': { tier: 'trial', icon: '🖼️', name: 'Text to Image', free: false, pixazoTrial: true },
     'image-edit': { tier: 'basic', icon: '🎨', name: 'Image to Image', free: false },
     'voice-clone': { tier: 'basic', icon: '🗣️', name: 'Voice Cloning', free: false },
